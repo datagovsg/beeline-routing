@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <link href='http://fonts.googleapis.com/css?family=Lato&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+    <script src="bundle.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <title>Beeline Operator Tool</title>
+    <style>
+google-map {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+    </style>
+</head>
+<body>
+  <google-map :center="{lat:1.38, lng:103.8}" :zoom="12">
+    <route-line v-for="route in routes" :route="route">
+    </route-line>
+    <request-line v-for="request in requests" :request="request">
+    </request-line>
+    <google-marker v-for="busStop in busStops"
+      :position="busStop">
+    </google-marker>
+  </google-map>
+</body>
+</html>
