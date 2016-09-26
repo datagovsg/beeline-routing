@@ -21,28 +21,11 @@ class BasicRoutingProblem(val busStops: Seq[BusStop], val suggestions: Seq[Sugge
   println(s"Only ${requests.size} suggestions used")
 
   val distanceMatrix = {
-    val m = Array.ofDim[Double](busStops.size, busStops.size)
-    val busStopsArr = busStops.toArray
-    
-    for (i <- 0 until busStopsArr.size) {
-      busStopsArr(i).index = i
-    }
-    //
-    // for (i <- 0 until busStopsArr.size; j <- 0 until busStopsArr.size) {
-    //   if (j == 0)
-    //     println(s"Bus stops for ... ${i}")
-    //
-    //   m(i)(j) = Geo.travelTime(
-    //     busStopsArr(i).coordinates,
-    //     busStopsArr(j).coordinates
-    //   )
-    for (i <- 0 until busStopsArr.size; j <- 0 until busStopsArr.size) {
-      val dist = Math.sqrt(kdtreeQuery.squaredDistance(
-        busStopsArr(i).xy, busStopsArr(j).xy))
-      m(i)(j) = dist
-      m(j)(i) = dist
-    }
-    m
+    val ois = new java.io.ObjectInputStream(
+                new java.util.zip.GZIPInputStream(
+                  new java.io.FileInputStream("./distances_cache.dat.gz")))
+
+    ois.readObject().asInstanceOf[Array[Array[Double]]]
   }
 
   // The current set of routes for the current iteration

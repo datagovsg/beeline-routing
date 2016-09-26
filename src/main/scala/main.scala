@@ -2,6 +2,52 @@ package sg.beeline
 
 object Hi {
   def main(args: Array[String]) {
+    println(args.length)
+    for (arg <- args) {
+      println(arg)
+    }
+    if (args.length == 0 || args(0) == "route") {
+      route()
+    }
+    else if (args(0) == "cache") {
+      cache()
+    }
+  }
+
+  def cache() {
+    val busStops = Import.getBusStops
+
+    val distanceMatrix = {
+      val m = Array.ofDim[Double](busStops.size, busStops.size)
+      val busStopsArr = busStops.toArray
+
+      for (i <- 0 until busStopsArr.size) {
+        busStopsArr(i).index = i
+      }
+
+      for (i <- 0 until busStopsArr.size;
+           j <- 0 until busStopsArr.size) {
+
+        if (j == 0)
+          println(s"Bus stops for ... ${i}")
+
+        m(i)(j) = Geo.travelTime(
+          busStopsArr(i).coordinates,
+          busStopsArr(j).coordinates
+        )
+      }
+      m
+    }
+
+    val oos = new java.io.ObjectOutputStream(
+      new java.util.zip.GZIPOutputStream(
+        new java.io.FileOutputStream("./distances_cache.dat.gz")))
+
+    oos.writeObject(distanceMatrix)
+    oos.close()
+  }
+
+  def route() {
     val problem = new BasicRoutingProblem(Import.getBusStops, Import.getRequests)
 
     def iterSolution(routes : List[Route], requests : List[Request])
