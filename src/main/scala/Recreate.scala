@@ -1,5 +1,7 @@
 package sg.beeline
 
+import scala.util.Random
+
 object Recreate {
   var count : Int = 0
 
@@ -19,8 +21,8 @@ object Recreate {
       // Construct new route
       new Route(problem,
                 List(new StartActivity,
-                     new Pickup(request, request.startStops.head),
-                     new Dropoff(request, request.endStops.head),
+                     new Pickup(request, request.startStops({Random.nextInt % request.startStops.size})),
+                     new Dropoff(request, request.endStops({Random.nextInt % request.startStops.size})),
                      new EndActivity), request.time) :: routes
     }
     else {

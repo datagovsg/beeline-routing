@@ -42,35 +42,6 @@ class BasicRoutingProblem(val busStops: Seq[BusStop], val suggestions: Seq[Sugge
   // Start with a solution where everyone is ferried directly from the nearest
   // point
   def initialize = {
-    // val groupedRoutes = requests.groupBy(req => {
-    //   val pStop = req.startStops.head
-    //   val dStop = req.endStops.head
-    //   (pStop, dStop, req.time)
-    // })
-    //
-    // val routes = groupedRoutes.toSeq.map(p => p match {
-    //   case ((pStop, dStop, time), requests) => {
-    //     val initialInsertionPoint : (Activity, Activity) = (new StartActivity, new EndActivity)
-    //     val initialRoute = new Route(this, List(initialInsertionPoint._1, initialInsertionPoint._2), time)
-    //
-    //     requests.foldLeft(
-    //       (initialRoute, initialInsertionPoint)
-    //     )(
-    //       (acc, request) => {
-    //         val pickup = new Pickup(request, pStop)
-    //         val dropoff = new Dropoff(request, dStop)
-    //         val newRoute = acc match {
-    //           case (route, ip) => route.insert(pickup, dropoff, ip, ip)
-    //         }
-    //         val newIp = (pickup, dropoff)
-    //         (newRoute, newIp)
-    //       }
-    //     )
-    //   }
-    // }).map(_._1)
-
-    // Run the recreate algorithm
-
     val routes = Recreate.recreate(this, List(), requests)
 
     (routes, requests)
