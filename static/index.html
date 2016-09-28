@@ -15,17 +15,50 @@ google-map {
   right: 0;
   bottom: 0;
 }
+    .left-panel {
+      position: absolute;
+      left: 0;
+      width: 20%;
+      top: 0;
+      bottom: 0;
+      overflow: scroll;
+    }
+    .right-panel {
+      position: absolute;
+      left: 20%;
+      right: 0;
+      top: 0;
+      bottom: 0;
+    }
+    .selected {
+      background-color: #CCC;
+    }
     </style>
 </head>
 <body>
-  <google-map :center="{lat:1.38, lng:103.8}" :zoom="12">
-    <route-line v-for="route in routes" :route="route">
-    </route-line>
-    <request-line v-for="request in requests" :request="request">
-    </request-line>
-    <google-marker v-for="busStop in busStops"
-      :position="busStop">
-    </google-marker>
-  </google-map>
+
+  <div class="left-panel">
+    <button @click="refresh">
+      Refresh
+    </button>
+    <ul>
+      <li v-for="route in routes" @click="selectRoute(route)"
+        :class="{selected: selectedRoute == route}">
+        {{ route.totalCount }} --
+        {{ route.stops[0].description }} to
+        {{ route.stops[route.stops.length - 1].description }}
+      </li>
+    </ul>
+
+  </div>
+
+  <div class="right-panel">
+    <google-map :center="{lat:1.38, lng:103.8}" :zoom="12">
+      <route-suggestion v-for="route in routes"
+                        :selected="selectedRoute == route"
+                        :route="route"></route-suggestion>
+    </google-map>
+  </div>
+
 </body>
 </html>

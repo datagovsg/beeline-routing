@@ -7,11 +7,16 @@ object Hi {
       println(arg)
     }
     if (args.length == 0 || args(0) == "route") {
+      web()
       route()
     }
     else if (args(0) == "cache") {
       cache()
     }
+    else if (args(0) == "web") {
+      web()
+    }
+    else require(false)
   }
 
   def cache() {
@@ -47,6 +52,18 @@ object Hi {
     oos.close()
   }
 
+  def web() {
+    import akka.io.IO
+    import akka.actor._
+    import spray.can.Http
+
+    implicit val system = ActorSystem()
+
+    val service = system.actorOf(Props[IntelligentRoutingService], "intelligent-routing")
+
+    IO(Http) ! Http.Bind(service, interface = "localhost", port = 8080)
+  }
+
   def route() {
     val problem = new BasicRoutingProblem(Import.getBusStops, Import.getRequests)
 
@@ -73,6 +90,10 @@ object Hi {
         // FIXME: Use Threshold Annealing
         if (nextScore > previousScore) {
           println(s"Score decreased to ${nextScore}")
+
+          // Make the routes available for web access
+          CurrentSolution.updateRoutes(nextRouteList)
+
           (nextRouteList, requestList, nextScore)
         }
         else {

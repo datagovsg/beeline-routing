@@ -75,14 +75,14 @@ class Route(val routingProblem: RoutingProblem,
 
     val activities2 = a1 +: activities :+ a2
 
-    val minTimes = activities2.sliding(2).scanLeft(m1)((acc, p) => p match {
-      case Seq(lastActivity, currentActivity) =>
+    val minTimes = activities2.sliding(2).scanLeft(m1) {
+      case (acc, Seq(lastActivity, currentActivity)) =>
         Math.max(acc + startTimeDifference(lastActivity, currentActivity), currentActivity.minTime)
-    })
-    val maxTimes = activities2.sliding(2).scanRight(n2)((p, acc) => p match {
-      case Seq(currentActivity, nextActivity) =>
+    }
+    val maxTimes = activities2.sliding(2).scanRight(n2) {
+      case (Seq(currentActivity, nextActivity), acc) =>
         Math.min(currentActivity.maxTime, acc - startTimeDifference(currentActivity, nextActivity) )
-    })
+    }
 
     val isFeasible = (minTimes zip maxTimes).forall(x => x._1 <= x._2)
 

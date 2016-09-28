@@ -38,3 +38,4 @@ TODO
   b. Max detour time (as % of max route)
 4. Other scoring functions?
 5. Threshold annealing (Liwei)
+6. Best regret route creation

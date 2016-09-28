@@ -10,7 +10,7 @@ abstract class Activity {
 
 case class Pickup(request : Request, _location: BusStop) extends Activity {
   /* say, one hour for pickup */
-  def minTime = request.time - 2*3600000
+  def minTime = request.time - 1*3600000
   def maxTime = request.time
   def dwellTime = 60000
   def serviceTime = 0

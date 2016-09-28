@@ -24,55 +24,81 @@ document.addEventListener('DOMContentLoaded', () => {
   Vue.component('google-info-window', InfoWindow);
   Vue.component('window-frame', Window);
 
-  Vue.component('route-line', {
+  Vue.component('route-suggestion', {
     template: `
-<google-polyline
-  :path="route.path" :options="options" v-if="route.count > 15">
-  </google-polyline>
+<google-polyline :path="path" :options="pathOptions">
+</google-polyline>
+
+<google-circle v-for="stop in route.stops"
+  v-if="stop.numBoard"
+  :center="stop"
+  :radius="stop.numBoard * radiusScale"
+  :options="boardCircleOptions"
+  @g-mouseover="showPopup(stop)"
+>
+</google-circle>
+<google-circle v-for="stop in route.stops"
+ v-if="stop.numAlight"
+ :center="stop"
+ :radius="stop.numAlight * radiusScale"
+ :options="alightCircleOptions"
+ @g-mouseover="showPopup(stop)"
+>
+</google-circle>
+<google-info-window v-if="stop" :position="stop"
+    :opened.sync="popupShown">
+  {{stop.description}}
+  <br>
+  Boarding: {{stop.numBoard}}
+  <br>
+  Alighting: {{stop.numAlight}}
+</google-info-window>
     `,
     data() {
-      return {options: {}}
+      return {
+        stop: null,
+        popupShown: false,
+        radiusScale: 100
+      }
     },
-    props: ['route'],
-    computed: {
-    },
-    created() {
-      loaded.then(() => {
-        this.options = {
-          strokeOpacity: 0.3,
-          strokeColor: '#FF0000',
-          strokeWeight: this.route.count / 10,
-          zIndex: 1000
-        }
-      })
-    }
-  })
-  Vue.component('request-line', {
-    template: `
-<google-polyline
-  :path="path" :options="options">
-  </google-polyline>
-    `,
-    data() {
-      return {options: {}}
-    },
-    props: ['request'],
+    props: ['route', 'selected'],
     computed: {
       path() {
-        debugger;
-        return [
-          this.request.start,
-          this.request.end
-        ]
+        return this.route.stops.map(s => _.pick(s, ['lat', 'lng']))
+      },
+      pathOptions() {
+        return {
+          strokeOpacity: this.selected ? 1 : 0.1,
+          strokeColor: '#000000',
+          strokeWeight: this.selected ? 3 : 0.5,
+          zIndex: 1000
+        }
+      },
+      alightCircleOptions() {
+        return {
+          strokeColor: '#000000',
+          strokeOpacity: 0.3,
+          strokeWeight: 1,
+          fillOpacity: this.selected ? 1 : 0.3,
+          fillColor: '#990000',
+        }
+      },
+      boardCircleOptions() {
+        return {
+          strokeColor: '#000000',
+          strokeOpacity: 0.3,
+          strokeWeight: 1,
+          fillOpacity: this.selected ? 1 : 0.3,
+          fillColor: '#009900',
+        }
+      }
+    },
+    methods: {
+      showPopup(stop) {
+        this.stop = stop;
       }
     },
     created() {
-      loaded.then(() => {
-        this.options = {
-          strokeOpacity: 0.3,
-          strokeColor: '#CCCCCC'
-        }
-      })
     }
   })
 
@@ -84,21 +110,31 @@ document.addEventListener('DOMContentLoaded', () => {
       styles,
       busStops: [],
       requests: [],
-      routes: []
+      routes: [],
+      selectedRoute: null,
     },
     computed: {
       routeStyle: {}
     },
     created() {
-      this.$http.get('./routes.json')
-        .then((response) => response.json())
-        .then(r => this.routes = r)
-      this.$http.get('./problem.json')
-        .then((response) => response.json())
-        .then(r => this.requests = r)
-      // this.$http.get('./busStops.json')
-      //   .then((response) => response.json())
-      //   .then(r => this.busStops = r)
+      this.refresh();
+    },
+    methods: {
+      refresh() {
+        this.$http.get('/currentRoutes')
+          .then(response => response.json())
+          .then(routes => {
+            // Decorate with additional data
+            for (let route of routes) {
+              route.totalCount = _.sumBy(route.stops, r => r.numBoard)
+            }
+
+            this.routes = routes
+          })
+      },
+      selectRoute(route) {
+        this.selectedRoute = route;
+      }
     }
   })
 
