@@ -34,25 +34,19 @@ document.addEventListener('DOMContentLoaded', () => {
   :center="stop"
   :radius="stop.numBoard * radiusScale"
   :options="boardCircleOptions"
-  @g-mouseover="showPopup(stop)"
+  @g-mouseover="showPopup($event, stop)"
+  @g-click="click($event, stop)"
 >
 </google-circle>
 <google-circle v-for="stop in route.stops"
- v-if="stop.numAlight"
- :center="stop"
- :radius="stop.numAlight * radiusScale"
- :options="alightCircleOptions"
- @g-mouseover="showPopup(stop)"
+  v-if="stop.numAlight"
+  :center="stop"
+  :radius="stop.numAlight * radiusScale"
+  :options="alightCircleOptions"
+  @g-mouseover="showPopup($event, stop)"
+  @g-click="click($event, stop)"
 >
 </google-circle>
-<google-info-window v-if="stop" :position="stop"
-    :opened.sync="popupShown">
-  {{stop.description}}
-  <br>
-  Boarding: {{stop.numBoard}}
-  <br>
-  Alighting: {{stop.numAlight}}
-</google-info-window>
     `,
     data() {
       return {
@@ -94,8 +88,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     methods: {
-      showPopup(stop) {
+      showPopup($event, stop) {
         this.stop = stop;
+        this.popupShown = true;
+        this.$emit('mouseover', stop)
+      },
+      click($event, stop) {
+        this.$emit('click', stop)
       }
     },
     created() {
@@ -112,6 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
       requests: [],
       routes: [],
       selectedRoute: null,
+      hoveredRoute: null,
+
+      popupShown: false,
+      hoveredStop: null
     },
     computed: {
       routeStyle: {}
@@ -134,6 +137,10 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       selectRoute(route) {
         this.selectedRoute = route;
+      },
+      hoverRoute($event, route) {
+        this.hoveredStop = $event
+        this.hoveredRoute = route
       }
     }
   })

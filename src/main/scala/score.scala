@@ -4,7 +4,6 @@ object Score {
   // FIXME: A better scoring function!
   // The higher the better
   def score(routes: Seq[Route]) : Double = {
-
     return +numPassengers(topNRoutes(30)(routes))
   }
 
@@ -36,7 +35,7 @@ object Score {
   }
 }
 
-// ||-ize recreate step
 // restrict by region
 // compute the actual routing time (and cache the results)
-// add more constraints -- to ensure that routes are feasible, not too much detour
+// Web interface: Provide the route path between points
+// Add more constraints -- limit the maximum detour of the routes

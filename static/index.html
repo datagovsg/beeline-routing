@@ -55,8 +55,21 @@ google-map {
   <div class="right-panel">
     <google-map :center="{lat:1.38, lng:103.8}" :zoom="12">
       <route-suggestion v-for="route in routes"
-                        :selected="selectedRoute == route"
-                        :route="route"></route-suggestion>
+                        :selected="(hoveredRoute && hoveredRoute == route) || selectedRoute == route"
+                        :route="route"
+                        @mouseover="hoverRoute($event, route)"
+                        @click="selectRoute(route)"
+      ></route-suggestion>
+
+
+    <google-info-window v-if="hoveredStop" :position="hoveredStop"
+                        :opened.sync="popupShown">
+      {{hoveredStop.description}}
+      <br>
+      Boarding: {{hoveredStop.numBoard}}
+      <br>
+      Alighting: {{hoveredStop.numAlight}}
+    </google-info-window>
     </google-map>
   </div>
 
