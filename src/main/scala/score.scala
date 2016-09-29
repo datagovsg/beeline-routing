@@ -2,9 +2,10 @@ package sg.beeline
 object Score {
 
   // FIXME: A better scoring function!
+  // The higher the better
   def score(routes: Seq[Route]) : Double = {
 
-    return -meanTravelTime(routes) + numPassengers(topNRoutes(30)(routes))
+    return +numPassengers(topNRoutes(30)(routes))
   }
 
   private def meanTravelTime(routes: Seq[Route]) = {

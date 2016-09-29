@@ -12,7 +12,7 @@ object LowestRegretRecreate {
   var costCache : Map[Request, Map[Route, Insertion]] = new HashMap
   var costCacheMutex = new Object
 
-  private def tryCreateRoute(problem : RoutingProblem)(request : Request) = {
+  def tryCreateRoute(problem : RoutingProblem)(request : Request) = {
     // Construct new route
     val randomPickup = new Pickup(request, request.startStops({
       Random.nextInt % request.startStops.size
