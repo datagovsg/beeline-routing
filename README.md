@@ -31,8 +31,6 @@ OR
 TODO
 ====
 
-1. Set up the web server to preview routes (DS)
-2. Parallelize create step (DS)
 3. More constraints on route feasibility
   a. Max detour time (hard coded time)
   b. Max detour time (as % of max route)

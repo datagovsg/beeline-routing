@@ -14,7 +14,7 @@ object Recreate {
 
     val (routes, badRequests) = acc
 
-    val routeCosts = routes
+    val routeCosts = routes.par
       .map(r => r.jobTryInsertion(request))
 
     val routeCostsRoutes = routeCosts.zip(routes)

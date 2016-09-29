@@ -75,7 +75,7 @@ object Hi {
       }
 
     val (routes, requests, badRequests) = problem.initialize
-    val (newRoutes, newBadRequests, score) = (0 until 10)
+    val (newRoutes, newBadRequests, score) = (0 until 100)
       .foldLeft(
           (routes.toList, badRequests, Double.NegativeInfinity)
         )((acc, iterCount) => {
