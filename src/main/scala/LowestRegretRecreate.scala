@@ -1,55 +1,112 @@
+package sg.beeline
+
+import scala.annotation.tailrec
 import scala.util.Random
+import scala.collection.immutable.HashMap
 
 object LowestRegretRecreate {
+
+  type Insertion = (Double, Activity, Activity, (Activity, Activity), (Activity, Activity))
+
   var count : Int = 0
+  var costCache = new HashMap[Request, HashMap[Route, Insertion]]
+  var costCacheMutex = new Object
 
-  def iterRequest(problem : RoutingProblem)(acc : (List[Route], List[Request]), request: Request)
-  : (List[Route], List[Request]) = {
-    if (count % 100 == 0) {
-      println(count)
-    }
-    count += 1
+  private def tryCreateRoute(problem : RoutingProblem)(request : Request) = {
+    // Construct new route
+    val randomPickup = new Pickup(request, request.startStops({
+      Random.nextInt % request.startStops.size
+    }))
+    val randomDropoff = new Dropoff(request, request.endStops({
+      Random.nextInt % request.endStops.size
+    }))
 
-    val (routes, badRequests) = acc
+    // Check if it's possible...
+    if (Route.distCost(problem)(randomPickup.location, randomDropoff.location) == Double.PositiveInfinity)
+      None
+    else
+      Some(new Route(
+        problem,
+        List(new StartActivity, randomPickup, randomDropoff, new EndActivity),
+        request.time
+      ))
+  }
 
-    val routeCosts = routes.par
-      .map(r => r.jobTryInsertion(request))
-
-    val routeCostsRoutes = routeCosts.zip(routes)
-      .filter({case (None, _) => false case _ => true})
-
-    if (routeCosts.forall({case None => true case _ => false})) {
-      // Construct new route
-      val randomPickup = new Pickup(request, request.startStops({Random.nextInt % request.startStops.size}))
-      val randomDropoff = new Dropoff(request, request.endStops({Random.nextInt % request.endStops.size}))
-
-      if (Route.distCost(problem)(randomPickup.location, randomDropoff.location) == Double.PositiveInfinity)
-        (routes, request :: badRequests)
-      else {
-        val newRoutes = new Route(problem, List(new StartActivity, randomPickup, randomDropoff, new EndActivity), request.time) :: routes
-
-        (newRoutes, badRequests)
+  private def computeRegret(route : Route, request : Request) : Insertion = {
+    route.jobTryInsertion(request) match {
+      case None => (Double.PositiveInfinity, null, null, null, null)
+      case Some(insertion) => {
+        insertion
       }
-    }
-    else {
-      // Insert into min cost route
-      val minCostRoute = routeCostsRoutes
-        .minBy(_._1.orNull._1)
-
-      val newRoutes = routes.map(r =>
-        if (r == minCostRoute._2) {
-          val (cost, a1, a2, ip1, ip2) = minCostRoute._1.orNull
-          r.insert(a1, a2, ip1, ip2)
-        }
-        else r
-      )
-      (newRoutes, badRequests)
     }
   }
 
-  def recreate(problem : RoutingProblem, preservedRoutes : Seq[Route], unservedRequests : Traversable[Request]) =
-    // ||-ize
-    Random.shuffle(unservedRequests).foldLeft(
-      (preservedRoutes.toList, List[Request]())
-    )(iterRequest(problem))
+  private def getRegret(route : Route, request : Request) : Insertion = {
+    costCache.get(request) match {
+      case Some(routeCache) => routeCache.get(route) match {
+        case Some(regret) => regret
+        case None => computeRegret(route, request)
+      }
+      case None => computeRegret(route, request)
+    }
+  }
+
+  def recreate(problem : RoutingProblem, preservedRoutes : Seq[Route], unservedRequests : Traversable[Request]) = {
+    @tailrec
+    def next(unservedRequests: Set[Request], routes: Set[Route], badRequests: List[Request])
+    : (Set[Route], List[Request]) = {
+      if (count % 10 == 0) {
+        println((routes.size, unservedRequests.size, badRequests.size))
+        println(count)
+      }
+
+      count += 1
+
+      if (unservedRequests.isEmpty) (routes, badRequests)
+      else {
+        // Get the minimum regret
+        // Use a lazy to avoid choking on empty route list
+        lazy val best = {
+          // For all requests, compute the regret
+          val requestCosts = unservedRequests.par.map(req => {
+            val routeCosts = routes.map(route => (route, getRegret(route, req)))
+              .minBy(_._2._1)
+
+            costCacheMutex.synchronized({
+              costCache = costCache + (req -> HashMap.apply(routeCosts))
+            })
+
+            (req, routeCosts)
+          })
+
+          requestCosts.minBy(_._2._2._1)
+        }
+
+        if (routes.isEmpty || best._2._2._1 == Double.PositiveInfinity) {
+          val someRequest = unservedRequests.head
+
+          tryCreateRoute(problem)(someRequest) match {
+            // Couldn't create
+            case None => next(unservedRequests - someRequest, routes, someRequest::badRequests)
+            case Some(route) => next(unservedRequests - someRequest, routes + route, badRequests)
+          }
+        }
+        else {
+          val (request, (route, insertion)) = best
+          costCache = costCache - request
+
+          next(
+            unservedRequests - request,
+            routes - route +
+              route.insert(insertion._2, insertion._3, insertion._4, insertion._5),
+            badRequests
+          )
+        }
+      }
+    }
+
+    next(unservedRequests.toSet, preservedRoutes.toSet, List[Request]()) match {
+      case (a,b) => (a.toList, b.toList)
+    }
+  }
 }

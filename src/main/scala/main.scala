@@ -69,12 +69,15 @@ object Hi {
         val (preservedRoutes, unservedRequests) = Ruin.ruin(problem, routes, badRequests)
 
         // Recreate
-        val (newRoutes, newBadRequests) = Recreate.recreate(problem, preservedRoutes, unservedRequests)
+        val (newRoutes, newBadRequests) = LowestRegretRecreate.recreate(problem, preservedRoutes, unservedRequests)
 
         (newRoutes, newBadRequests)
       }
 
     val (routes, requests, badRequests) = problem.initialize
+
+    CurrentSolution.updateRoutes(routes)
+
     val (newRoutes, newBadRequests, score) = (0 until 100)
       .foldLeft(
           (routes.toList, badRequests, Double.NegativeInfinity)

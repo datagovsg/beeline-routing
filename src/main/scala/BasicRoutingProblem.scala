@@ -42,7 +42,7 @@ class BasicRoutingProblem(val busStops: Seq[BusStop], val suggestions: Seq[Sugge
   // Start with a solution where everyone is ferried directly from the nearest
   // point
   def initialize = {
-    val (routes, badRequests) = Recreate.recreate(this, List(), requests)
+    val (routes, badRequests) = LowestRegretRecreate.recreate(this, List(), requests)
 
     (routes, requests, badRequests)
   }

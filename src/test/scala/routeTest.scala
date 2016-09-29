@@ -6,8 +6,8 @@ class RouteSpec extends FlatSpec with Matchers {
 
   object ZeroDistance {
     val busStops = Array(
-      new BusStop((103.8, 1.38), "BS1", "BS Road"),
-      new BusStop((103.8, 1.38), "BS1", "BS Road")
+      new BusStop((103.8, 1.38), "BS1", "BS Road", 0),
+      new BusStop((103.8, 1.38), "BS1", "BS Road", 1)
     )
   }
 

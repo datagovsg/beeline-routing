@@ -11,7 +11,7 @@ class RuinSpec extends FlatSpec with Matchers {
   def randomLatLng = {(Math.random() * 0.5 - 0.25 + 103.8, Math.random() * 0.5 - 0.25 + 1.38)}
   val latlngs = for (i <- 0 until 100) yield randomLatLng
   val busStops = latlngs.zipWithIndex.map({
-    case (ll, i) => new BusStop(ll, s"BS ${i}", s"R ${i}")
+    case (ll, i) => new BusStop(ll, s"BS ${i}", s"R ${i}", i)
     case _ => throw new Error()
   })
 
@@ -60,4 +60,15 @@ class RuinSpec extends FlatSpec with Matchers {
     recreatedRequestSet should be (r2.toSet)
   }
 
+  "LowestRegretRecreate" should "preserve all requests" in {
+    val recreated = LowestRegretRecreate.recreate(problem, preserved, ruined)
+
+    val recreatedRequestSet = recreated._1.map(r => r.activities.map({
+      case Pickup(req, loc) => Some(req)
+      case Dropoff(req, loc) => Some(req)
+      case _ => None
+    })).flatten.flatten.toSet
+
+    recreatedRequestSet should be (r2.toSet)
+  }
 }
