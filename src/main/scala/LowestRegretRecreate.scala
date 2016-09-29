@@ -9,7 +9,7 @@ object LowestRegretRecreate {
   type Insertion = (Double, Activity, Activity, (Activity, Activity), (Activity, Activity))
 
   var count : Int = 0
-  var costCache = new HashMap[Request, HashMap[Route, Insertion]]
+  var costCache : Map[Request, Map[Route, Insertion]] = new HashMap
   var costCacheMutex = new Object
 
   private def tryCreateRoute(problem : RoutingProblem)(request : Request) = {
@@ -42,9 +42,13 @@ object LowestRegretRecreate {
   }
 
   private def getRegret(route : Route, request : Request) : Insertion = {
+
     costCache.get(request) match {
-      case Some(routeCache) => routeCache.get(route) match {
-        case Some(regret) => regret
+      case Some(routeCache) =>
+        routeCache.get(route) match {
+        case Some(regret) => {
+          regret
+        }
         case None => computeRegret(route, request)
       }
       case None => computeRegret(route, request)
@@ -55,7 +59,7 @@ object LowestRegretRecreate {
     @tailrec
     def next(unservedRequests: Set[Request], routes: Set[Route], badRequests: List[Request])
     : (Set[Route], List[Request]) = {
-      if (count % 10 == 0) {
+      if (count % 100 == 0) {
         println((routes.size, unservedRequests.size, badRequests.size))
         println(count)
       }
@@ -70,13 +74,13 @@ object LowestRegretRecreate {
           // For all requests, compute the regret
           val requestCosts = unservedRequests.par.map(req => {
             val routeCosts = routes.map(route => (route, getRegret(route, req)))
-              .minBy(_._2._1)
+            val minRouteCosts = routeCosts.minBy(_._2._1)
 
             costCacheMutex.synchronized({
-              costCache = costCache + (req -> HashMap.apply(routeCosts))
+              costCache = costCache + (req -> routeCosts.toMap)
             })
 
-            (req, routeCosts)
+            (req, minRouteCosts)
           })
 
           requestCosts.minBy(_._2._2._1)
@@ -93,7 +97,7 @@ object LowestRegretRecreate {
         }
         else {
           val (request, (route, insertion)) = best
-          costCache = costCache - request
+          costCache = costCache.mapValues(_ - route)
 
           next(
             unservedRequests - request,
@@ -104,6 +108,12 @@ object LowestRegretRecreate {
         }
       }
     }
+
+    val requestSet = unservedRequests.toSet
+    val routeSet = preservedRoutes.toSet
+
+    // Routes have changed... remove the non-existent routes from the cache
+    costCache = costCache.mapValues(h => h -- h.keys.filterNot(r => preservedRoutes.contains(r)))
 
     next(unservedRequests.toSet, preservedRoutes.toSet, List[Request]()) match {
       case (a,b) => (a.toList, b.toList)
