@@ -9,18 +9,24 @@ object Import {
     val jsonText = Source.fromFile("bus-stops.json").mkString
     val jsonData = parse(jsonText).asInstanceOf[JArray]
 
-    jsonData.arr
+    val busStops = jsonData.arr
       .filter(v =>
         (v \ "Latitude").extract[Double] != 0.0
       )
-      .map(v => new BusStop(
-        (
-          (v \ "Longitude").extract[Double],
-          (v \ "Latitude").extract[Double]
-        ),
-        (v \ "Description").extract[String],
-        (v \ "RoadName").extract[String]
-      ))
+        .zipWithIndex
+        .map({
+          case (v, i) => new BusStop(
+            (
+              (v \ "Longitude").extract[Double],
+              (v \ "Latitude").extract[Double]
+              ),
+            (v \ "Description").extract[String],
+            (v \ "RoadName").extract[String],
+            i
+          )
+        })
+
+    busStops
   }
 
   // Return the number of seconds since midnight

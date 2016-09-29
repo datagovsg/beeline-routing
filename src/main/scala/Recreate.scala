@@ -5,11 +5,14 @@ import scala.util.Random
 object Recreate {
   var count : Int = 0
 
-  def iterRequest(problem : RoutingProblem)(routes : List[Route], request: Request) : List[Route] = {
+  def iterRequest(problem : RoutingProblem)(acc : (List[Route], List[Request]), request: Request)
+  : (List[Route], List[Request]) = {
     if (count % 100 == 0) {
       println(count)
     }
     count += 1
+
+    val (routes, badRequests) = acc
 
     val routeCosts = routes
       .map(r => r.jobTryInsertion(request))
@@ -19,11 +22,16 @@ object Recreate {
 
     if (routeCosts.forall({case None => true case _ => false})) {
       // Construct new route
-      new Route(problem,
-                List(new StartActivity,
-                     new Pickup(request, request.startStops({Random.nextInt % request.startStops.size})),
-                     new Dropoff(request, request.endStops({Random.nextInt % request.startStops.size})),
-                     new EndActivity), request.time) :: routes
+      val randomPickup = new Pickup(request, request.startStops({Random.nextInt % request.startStops.size}))
+      val randomDropoff = new Dropoff(request, request.endStops({Random.nextInt % request.endStops.size}))
+
+      if (Route.distCost(problem)(randomPickup.location, randomDropoff.location) == Double.PositiveInfinity)
+        (routes, request :: badRequests)
+      else {
+        val newRoutes = new Route(problem, List(new StartActivity, randomPickup, randomDropoff, new EndActivity), request.time) :: routes
+
+        (newRoutes, badRequests)
+      }
     }
     else {
       // Insert into min cost route
@@ -37,11 +45,13 @@ object Recreate {
         }
         else r
       )
-      newRoutes
+      (newRoutes, badRequests)
     }
   }
 
   def recreate(problem : RoutingProblem, preservedRoutes : Seq[Route], unservedRequests : Traversable[Request]) =
     // ||-ize
-    unservedRequests.foldLeft(preservedRoutes.toList)(iterRequest(problem))
+    Random.shuffle(unservedRequests).foldLeft(
+      (preservedRoutes.toList, List[Request]())
+    )(iterRequest(problem))
 }

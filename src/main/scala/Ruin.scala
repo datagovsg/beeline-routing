@@ -6,15 +6,10 @@ object Ruin {
   val RUIN_PROBABILITY = 0.5
 
   // Random ruin
-  def ruin(problem: RoutingProblem, routes: List[Route], requests: Seq[Request]) = {
+  def ruin(problem: RoutingProblem, routes: List[Route], badRequests: Seq[Request]) = {
 
     // Collect the set of all stops
-    val allStops = routes
-      .map(r => r.activities
-        .map(_.location)
-        .flatten
-      )
-      .flatten
+    val allStops = routes.flatMap(r => r.activities.flatMap(_.location))
       .toSet
 
     println(s"${allStops.size} stops")
@@ -27,14 +22,13 @@ object Ruin {
     )((acc, route) => {
       val (routeList, unservedRequests) = acc
 
-      val allUnservedRequests = unservedRequests ++
+      val allUnservedRequests = unservedRequests ++ badRequests ++
         route.activities
-            .map({
+            .flatMap({
               case Pickup(req, loc) => if (stopsToDestroy contains loc) Some(req) else None
               case Dropoff(req, loc) => if (stopsToDestroy contains loc) Some(req) else None
               case _ => None
             })
-            .flatten
 
       val newActivities = route.activities.filter({
         case Pickup(req, loc) => !(allUnservedRequests contains req)

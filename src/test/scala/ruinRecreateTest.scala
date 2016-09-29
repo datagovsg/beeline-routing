@@ -25,7 +25,7 @@ class RuinSpec extends FlatSpec with Matchers {
 
   val problem = new BasicRoutingProblem(busStops, requests)
 
-  val (r1, r2) = problem.initialize
+  val (r1, r2, _) = problem.initialize
 
   val (preserved, ruined) = Ruin.ruin(problem, r1.toList, r2)
 
@@ -36,11 +36,11 @@ class RuinSpec extends FlatSpec with Matchers {
   }
 
   "Ruin" should "preserve all requests" in {
-    val preservedRequestSet = preserved.map(r => r.activities.map({
+    val preservedRequestSet = preserved.flatMap(r => r.activities.flatMap({
       case Pickup(req, loc) => Some(req)
       case Dropoff(req, loc) => Some(req)
       case _ => None
-    })).flatten.flatten.toSet
+    })).toSet
     val ruinedRequestSet = ruined
 
     println(preservedRequestSet.size)
@@ -51,7 +51,7 @@ class RuinSpec extends FlatSpec with Matchers {
   }
 
   "Recreate" should "preserve all requests" in {
-    val recreatedRequestSet = recreated.map(r => r.activities.map({
+    val recreatedRequestSet = recreated._1.map(r => r.activities.map({
       case Pickup(req, loc) => Some(req)
       case Dropoff(req, loc) => Some(req)
       case _ => None

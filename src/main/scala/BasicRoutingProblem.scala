@@ -15,8 +15,8 @@ class BasicRoutingProblem(val busStops: Seq[BusStop], val suggestions: Seq[Sugge
 
   val requests = suggestions.map(sugg =>
     new Request(this, sugg.start, sugg.end, sugg.time))
-    .filter(!_.startStops.isEmpty)
-    .filter(!_.endStops.isEmpty)
+    .filter(_.startStops.nonEmpty)
+    .filter(_.endStops.nonEmpty)
 
   println(s"Only ${requests.size} suggestions used")
 
@@ -42,9 +42,9 @@ class BasicRoutingProblem(val busStops: Seq[BusStop], val suggestions: Seq[Sugge
   // Start with a solution where everyone is ferried directly from the nearest
   // point
   def initialize = {
-    val routes = Recreate.recreate(this, List(), requests)
+    val (routes, badRequests) = Recreate.recreate(this, List(), requests)
 
-    (routes, requests)
+    (routes, requests, badRequests)
   }
 
   def solution = Array[String]()

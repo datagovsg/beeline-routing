@@ -26,10 +26,6 @@ object Hi {
       val m = Array.ofDim[Double](busStops.size, busStops.size)
       val busStopsArr = busStops.toArray
 
-      for (i <- 0 until busStopsArr.size) {
-        busStopsArr(i).index = i
-      }
-
       for (i <- 0 until busStopsArr.size;
            j <- 0 until busStopsArr.size) {
 
@@ -67,24 +63,24 @@ object Hi {
   def route() {
     val problem = new BasicRoutingProblem(Import.getBusStops, Import.getRequests)
 
-    def iterSolution(routes : List[Route], requests : List[Request])
+    def iterSolution(routes : List[Route], badRequests : List[Request])
       : (List[Route], Seq[Request]) = {
         // Ruin
-        val (preservedRoutes, unservedRequests) = Ruin.ruin(problem, routes, requests)
+        val (preservedRoutes, unservedRequests) = Ruin.ruin(problem, routes, badRequests)
 
         // Recreate
-        val newRoutes = Recreate.recreate(problem, preservedRoutes, unservedRequests)
+        val (newRoutes, newBadRequests) = Recreate.recreate(problem, preservedRoutes, unservedRequests)
 
-        (newRoutes, requests)
+        (newRoutes, newBadRequests)
       }
 
-    val (routes, requests) = problem.initialize
-    val (newRoutes, newRequests, score) = (0 until 10)
+    val (routes, requests, badRequests) = problem.initialize
+    val (newRoutes, newBadRequests, score) = (0 until 10)
       .foldLeft(
-          (routes.toList, requests.toList, Double.NegativeInfinity)
+          (routes.toList, badRequests, Double.NegativeInfinity)
         )((acc, iterCount) => {
         val (routeList, requestList, previousScore) = acc
-        val (nextRouteList, nextRequests) = iterSolution(routeList, requestList)
+        val (nextRouteList, nextRequests) = iterSolution(routeList, badRequests)
         val nextScore = Score.score(nextRouteList)
 
         // FIXME: Use Threshold Annealing
@@ -105,5 +101,7 @@ object Hi {
     SolutionPrinter.writeProblem(requests)
     SolutionPrinter.writeLocations(problem.busStops)
     SolutionPrinter.writeSolution(newRoutes)
+
+    println(newBadRequests)
   }
 }

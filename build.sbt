@@ -7,11 +7,15 @@ val scalatic = "org.scalactic" %% "scalactic" % "3.0.0"
 val scalatest = "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 
 def scalaSources(base: File): PathFinder = (base / "src") ** "*.scala"
+//
+val akkaV = "2.3.9"
+val sprayV = "1.3.3"
 
 lazy val root = (project in file(".")).
     settings(
         name := "intelligent-routing",
         version := "1.0",
+        // scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
         libraryDependencies ++= Seq(
           json4sNative,
           proj4j,

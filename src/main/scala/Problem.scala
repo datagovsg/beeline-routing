@@ -8,10 +8,8 @@ trait RoutingProblem {
   def nearBusStops(p: Point) : Seq[BusStop]
 }
 
-class BusStop(val coordinates: Util.Point, val description: String, roadName: String) {
+class BusStop(val coordinates: Util.Point, val description: String, roadName: String, val index: Int) {
   // Save the index for caching!
-  var index =0
-
   val xy = Util.toSVY(coordinates)
 
   override def toString =
