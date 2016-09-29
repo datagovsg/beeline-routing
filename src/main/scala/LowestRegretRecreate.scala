@@ -60,7 +60,7 @@ object LowestRegretRecreate {
     def next(unservedRequests: Set[Request], routes: Set[Route], badRequests: List[Request])
     : (Set[Route], List[Request]) = {
       if (count % 100 == 0) {
-        println((routes.size, unservedRequests.size, badRequests.size))
+//        println((routes.size, unservedRequests.size, badRequests.size))
         println(count)
       }
 
