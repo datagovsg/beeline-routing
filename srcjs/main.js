@@ -26,7 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   Vue.component('route-suggestion', {
     template: `
-<google-polyline v-if="selected" :path="route.path" :options="pathOptions">
+<google-polyline :path="route.path" :options="pathOptions"
+  @g-mouseover="showPopup($event, stop)"
+  @g-mouseout="mouseout($event, stop)"
+>
 </google-polyline>
 
 <template v-if="selected" v-for="request in route.requests">
@@ -35,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </template>
 
 <google-circle v-for="stop in route.stops"
-  v-if="stop.numBoard"
+  v-if="selected && stop.numBoard"
   :center="stop"
   :radius="computeRadius(stop.numBoard)"
   :options="boardCircleOptions"
@@ -45,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
 >
 </google-circle>
 <google-circle v-for="stop in route.stops"
-  v-if="stop.numAlight"
+  v-if="selected && stop.numAlight"
   :center="stop"
   :radius="computeRadius(stop.numAlight)"
   :options="alightCircleOptions"
