@@ -29,10 +29,15 @@ document.addEventListener('DOMContentLoaded', () => {
 <google-polyline v-if="selected" :path="route.path" :options="pathOptions">
 </google-polyline>
 
+<template v-if="selected" v-for="request in route.requests">
+  <google-marker v-if="selected" v-for="request in route.requests" :position="request.start" :icon="requestOptions.icon"></google-marker>
+  <google-marker v-if="selected" v-for="request in route.requests" :position="request.end" :icon="requestOptions.icon"></google-marker>
+</template>
+
 <google-circle v-for="stop in route.stops"
   v-if="stop.numBoard"
   :center="stop"
-  :radius="stop.numBoard * radiusScale"
+  :radius="computeRadius(stop.numBoard)"
   :options="boardCircleOptions"
   @g-mouseover="showPopup($event, stop)"
   @g-mouseout="mouseout($event, stop)"
@@ -42,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <google-circle v-for="stop in route.stops"
   v-if="stop.numAlight"
   :center="stop"
-  :radius="stop.numAlight * radiusScale"
+  :radius="computeRadius(stop.numAlight)"
   :options="alightCircleOptions"
   @g-mouseover="showPopup($event, stop)"
   @g-mouseout="mouseout($event, stop)"
@@ -87,7 +92,16 @@ document.addEventListener('DOMContentLoaded', () => {
           fillOpacity: this.selected ? 1 : 0.3,
           fillColor: '#009900',
         }
-      }
+      },
+      requestOptions() {
+        return {
+          icon: {
+            url: '/static/spot.png',
+            anchor: new google.maps.Point(5,5),
+          },
+          zIndex: google.maps.MAX_ZINDEX + 1
+        }
+      },
     },
     methods: {
       showPopup($event, stop) {
@@ -101,6 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
       mouseout($event, stop) {
         this.$emit('mouseout', stop)
       },
+      computeRadius(radius) {
+        return Math.sqrt(radius) * this.radiusScale
+      }
     },
     created() {
     }

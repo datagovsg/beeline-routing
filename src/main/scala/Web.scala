@@ -55,16 +55,23 @@ object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
                 Stop(loc1, a1, b1) :: Stop(loc2, a2, b2) :: tail
           }
 
+        def latLng(d : (Double, Double)) =
+          ("lat" -> d._2) ~ ("lng" -> d._1)
+
         val positionsJson = positions.map({case Stop(bs, board, alight) =>
-          ("lat" -> bs.coordinates._2) ~
-            ("lng" -> bs.coordinates._1) ~
+          latLng(bs.coordinates) ~
             ("description" -> bs.description) ~
             ("numBoard" -> board) ~
             ("numAlight" -> alight)
         })
 
         ("stops" -> positionsJson) ~
-        ("path" -> routePath.map({case (x,y) => ("lat" -> y) ~ ("lng" -> x)}).toList)
+          ("path" -> routePath.map({case (x,y) => ("lat" -> y) ~ ("lng" -> x)}).toList) ~
+          ("requests" -> route.activities.flatMap({ case Pickup(request, loc) => Some(request) case _ => None})
+                .map(request => (
+                  ("start" -> latLng(Util.toWGS(request.start))) ~
+                  ("end" -> latLng(Util.toWGS(request.end))))))
+
       }
     }
   )
