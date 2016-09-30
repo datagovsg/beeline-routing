@@ -38,4 +38,5 @@ object Score {
 // restrict by region
 // compute the actual routing time (and cache the results)
 // Web interface: Provide the route path between points
+// Web interface: show the original requests when a route is selected
 // Add more constraints -- limit the maximum detour of the routes

@@ -55,8 +55,9 @@ google-map {
   <div class="right-panel">
     <google-map :center="{lat:1.38, lng:103.8}" :zoom="12">
       <route-suggestion v-for="route in routes"
-                        :selected="(hoveredRoute && hoveredRoute == route) || selectedRoute == route"
+                        :selected="hoveredRoute ? hoveredRoute == route : selectedRoute == route"
                         :route="route"
+                        @mouseout="hoverRoute($event, null)"
                         @mouseover="hoverRoute($event, route)"
                         @click="selectRoute(route)"
       ></route-suggestion>

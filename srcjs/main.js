@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   Vue.component('route-suggestion', {
     template: `
-<google-polyline :path="path" :options="pathOptions">
+<google-polyline v-if="selected" :path="route.path" :options="pathOptions">
 </google-polyline>
 
 <google-circle v-for="stop in route.stops"
@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   :radius="stop.numBoard * radiusScale"
   :options="boardCircleOptions"
   @g-mouseover="showPopup($event, stop)"
+  @g-mouseout="mouseout($event, stop)"
   @g-click="click($event, stop)"
 >
 </google-circle>
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
   :radius="stop.numAlight * radiusScale"
   :options="alightCircleOptions"
   @g-mouseover="showPopup($event, stop)"
+  @g-mouseout="mouseout($event, stop)"
   @g-click="click($event, stop)"
 >
 </google-circle>
@@ -95,7 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       click($event, stop) {
         this.$emit('click', stop)
-      }
+      },
+      mouseout($event, stop) {
+        this.$emit('mouseout', stop)
+      },
     },
     created() {
     }
@@ -140,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       hoverRoute($event, route) {
         this.hoveredStop = $event
+        this.popupShown = true;
         this.hoveredRoute = route
       }
     }

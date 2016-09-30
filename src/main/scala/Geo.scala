@@ -22,12 +22,12 @@ object Geo {
     }
   }
 
-  def travelTime(a: (Double, Double), b: (Double, Double)) : Double = {
+  def routeWithJitter(a: (Double, Double), b: (Double, Double)) = {
     initialize()
     // pick two points
     val request = new GHRequest()
-        .addPoint(new GHPoint(a._2, a._1))
-        .addPoint(new GHPoint(b._2, b._1));
+      .addPoint(new GHPoint(a._2, a._1))
+      .addPoint(new GHPoint(b._2, b._1));
 
     // route
     // val response = graphHopper.route(request);
@@ -35,7 +35,7 @@ object Geo {
     // Because sometimes routing fails, we perturb the locations
     // by some increasing amount until the routing succeeds
     val fuzzAmounts = 0.0 +: (for (i <- List(0.0005, 0.001, 0.002, 0.004);
-                                  j <- 0 until 50) yield i)
+                                   j <- 0 until 50) yield i)
 
     def routeWithJitter(range : Double) = {
       val p1 = new GHPoint(
@@ -49,9 +49,13 @@ object Geo {
       graphHopper.route(new GHRequest(p1, p2))
     }
 
-    val bestRoute = fuzzAmounts.iterator
+    fuzzAmounts.iterator
       .map(routeWithJitter)
       .find(!_.hasErrors)
+  }
+
+  def travelTime(a: (Double, Double), b: (Double, Double)) : Double = {
+    val bestRoute = routeWithJitter(a,b)
 
     bestRoute match {
       case None => Double.PositiveInfinity
