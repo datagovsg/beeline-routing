@@ -7,6 +7,8 @@ import com.graphhopper.PathWrapper
 import com.graphhopper.util.shapes.GHPoint
 import com.graphhopper.util.CmdArgs
 
+import scala.collection.mutable.ArrayBuffer
+
 object Geo {
   import Util.Point
 
@@ -62,6 +64,23 @@ object Geo {
       case Some(ghResponse) =>
         // It is also possible for us to get the routed distance
         ghResponse.getBest.getTime
+    }
+  }
+
+  def travelPath(a: (Double, Double), b: (Double, Double)) = {
+    val bestRoute = routeWithJitter(a,b)
+
+    bestRoute match {
+      case None => List()
+      case Some(ghResponse) =>
+        var path = ghResponse.getBest.getPoints
+        val arr = new ArrayBuffer[(Double, Double)]
+
+        for (i <- 0 until path.size) {
+          arr += ((path.getLon(i), path.getLat(i)))
+        }
+
+        arr.toSeq
     }
   }
 }

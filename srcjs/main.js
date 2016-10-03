@@ -126,7 +126,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })
 
+  Vue.component('region-selection', {
+    props: ['regions', 'selected'],
+
+    template: `
+      <google-circle v-for="region in regions" track-by="$index" :center.sync="region.center" :radius.sync="region.radius"
+                     :editable="true" :draggable="true" :options="circleOptions(region)" @g-click="selectRegion(region)"></google-circle>
+    `,
+
+    data() {
+      return {}
+    },
+
+    methods: {
+      selectRegion(region) {
+        this.selectedRegion = region
+      },
+
+      circleOptions(region) {
+        return {
+          strokeColor: "#000000",
+          strokeWeight: 1,
+          fillColor: (region == this.selectedRegion) ? "#FF0000" : "#000000",
+          fillOpacity: 0.1
+        }
+      }
+    },
+  })
+
   var styles = new Vue()
+
+  Vue.filter('formatTime', (time) => {
+    var d = new Date;
+    d.setUTCHours(0,0,0,0)
+    d.setTime(d.getTime() + parseInt(time))
+
+    return d.toISOString().substr(11,5)
+  })
 
   new Vue({
     el: document.body,
@@ -139,17 +175,23 @@ document.addEventListener('DOMContentLoaded', () => {
       hoveredRoute: null,
 
       popupShown: false,
-      hoveredStop: null
+      hoveredStop: null,
+
+      regions: [],
+      selectedRegion: null,
+
+      routingStarted: false,
+
+      time: 16
     },
     computed: {
       routeStyle: {}
     },
     created() {
-      this.refresh();
     },
     methods: {
       refresh() {
-        this.$http.get('/currentRoutes')
+        this.$http.get('/routing/current')
           .then(response => response.json())
           .then(routes => {
             // Decorate with additional data
@@ -157,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
               route.totalCount = _.sumBy(route.stops, r => r.numBoard)
             }
 
-            this.routes = routes
+            this.routes = _.sortBy(routes, r => -r.totalCount)
           })
       },
       selectRoute(route) {
@@ -167,6 +209,47 @@ document.addEventListener('DOMContentLoaded', () => {
         this.hoveredStop = $event
         this.popupShown = true;
         this.hoveredRoute = route
+      },
+      startRouting() {
+        this.$http.post('/routing/start', {
+            time: this.time,
+            regions: this.regions.map(r => ({
+              lat: r.center.lat,
+              lng: r.center.lng,
+              radius: r.radius,
+            }))
+          })
+          .then((result) => {
+            console.log('Start routing returned ', result)
+//            this.refresh().then(() => this.startPolling());
+          })
+          .catch((result) => {
+            this.routingStarted = false;
+          })
+
+        this.routingStarted = true;
+      },
+      stopRouting() {
+        this.$http.post('/routing/stop')
+          .then((result) => {
+            console.log('Stop routing returned ', result)
+            this.routingStarted = false;
+          })
+      },
+      addRegion() {
+        this.regions.push({
+          center: {
+            lat: 1.38 + Math.random() * 0.1 - 0.05,
+            lng: 103.8 + Math.random() * 0.1 - 0.05,
+          },
+          radius: 5000
+        })
+      },
+      selectRegion(region) {
+        this.selectedRegion = region;
+      },
+      removeRegion(region) {
+        this.regions.splice(this.regions.indexOf(region))
       }
     }
   })

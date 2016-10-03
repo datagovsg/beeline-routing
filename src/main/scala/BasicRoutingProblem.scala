@@ -52,6 +52,10 @@ class BasicRoutingProblem(val busStops: Seq[BusStop], val suggestions: Seq[Sugge
     })
 
     (routes, requests, badRequests)
+
+//    val (routes, badRequests) = LowestRegretRecreate.recreate(this, List(), requests)
+//
+//    (routes, requests, badRequests)
   }
 
   def solution = Array[String]()

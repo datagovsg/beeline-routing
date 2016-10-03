@@ -2,7 +2,12 @@ package sg.beeline
 
 import scala.util.Random
 
-object Recreate {
+trait Recreate {
+  def recreate(problem : RoutingProblem, preservedRoutes : Traversable[Route], unservedRequests : Traversable[Request])
+   : (Traversable[Route], Traversable[Request])
+}
+
+object Recreate extends Recreate {
   var count : Int = 0
 
   def iterRequest(problem : RoutingProblem)(acc : (List[Route], List[Request]), request: Request)
@@ -49,7 +54,7 @@ object Recreate {
     }
   }
 
-  def recreate(problem : RoutingProblem, preservedRoutes : Seq[Route], unservedRequests : Traversable[Request]) =
+  def recreate(problem : RoutingProblem, preservedRoutes : Traversable[Route], unservedRequests : Traversable[Request]) =
     // ||-ize
     Random.shuffle(unservedRequests).foldLeft(
       (preservedRoutes.toList, List[Request]())

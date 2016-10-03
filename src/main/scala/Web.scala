@@ -1,34 +1,21 @@
 package sg.beeline
 
-import akka.actor.Actor
+import akka.actor.{Props, ActorRef, Actor}
+import akka.pattern.ask
 import org.json4s.{FieldSerializer, CustomSerializer, DefaultFormats}
 import org.json4s.JsonAST._
+import sg.beeline.ui._
 import spray.httpx.{Json4sSupport, SprayJsonSupport}
 import spray.routing._
 import spray.http._
 import MediaTypes._
 import org.json4s.JsonDSL._
 
-import scala.collection.mutable.ArrayBuffer
-
-// we don't implement our route structure directly in the service actor because
-// we want to be able to test it independently, without having to spin up an actor
-class IntelligentRoutingService extends Actor with MyService {
-
-  // the HttpService trait defines only one abstract member, which
-  // connects the services environment to the enclosing actor or test
-  def actorRefFactory = context
-
-  // this actor only runs our route, but you could add
-  // other things here, like request stream processing
-  // or timeout handling
-  def receive = runRoute(myRoute)
-}
+import scala.concurrent.ExecutionContext
 
 class Lol(val x: Int, val y: Double) {}
 
 case class Stop(busStop : BusStop, numBoard : Int, numAlight: Int) {}
-
 case class RouteWithPath(route: Route, routePath: Seq[(Double, Double)])
 
 object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
@@ -77,41 +64,21 @@ object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
   )
 })
 
-/** FIXME: use actors */
-object CurrentSolution {
-  var routes : Seq[Route] = List()
-  var routePaths : Seq[Seq[(Double, Double)]] = List()
-
-  def updateRoutes(routes: Seq[Route]) {
-    this.routes = routes.sortBy(r => -r.activities.size)
-    this.routePaths = this.routes.map(route =>
-      route.activities.sliding(2).flatMap({
-        case IndexedSeq(a, b) => {
-          (a.location, b.location) match {
-            case (Some(aloc), Some(bloc)) =>
-              Geo.routeWithJitter(aloc.coordinates, bloc.coordinates) match {
-                case Some(path) => {
-                  val points = path.getBest.getPoints
-                  val arrayBuffer = new ArrayBuffer[(Double, Double)]
-
-                  for (i <- 0 until points.size) {
-                    arrayBuffer += ((points.getLon(i), points.getLat(i)))
-                  }
-                  arrayBuffer.toIndexedSeq
-                }
-                case None => Seq()
-              }
-            case _ => Seq()
-          }
-        }
-      }).toIndexedSeq
-    )
-  }
-}
+class CircularRegionRequest(val lat : Double, val lng : Double, val radius : Double) {}
+class RoutingRequest(val time: Double, val regions : List[CircularRegionRequest]) {}
 
 // this trait defines our service behavior independently from the service actor
-trait MyService extends HttpService with Json4sSupport {
-  implicit val json4sFormats = DefaultFormats + RouteSerializer //new MyCustomSerializer()
+class IntelligentRoutingService extends HttpService with Actor with Json4sSupport {
+  import ExecutionContext.Implicits.global
+
+  implicit val json4sFormats = DefaultFormats + new FieldSerializer() + RouteSerializer
+
+  lazy val routingActor = context.actorOf(Props[RouteActor], "routing-actor")
+
+  // the HttpService trait defines only one abstract member, which
+  // connects the services environment to the enclosing actor or test
+  def actorRefFactory = context
+  def receive = runRoute(myRoute)
 
   val myRoute =
     path("") {
@@ -119,14 +86,49 @@ trait MyService extends HttpService with Json4sSupport {
         redirect("/static/index.html", StatusCodes.TemporaryRedirect)
       }
     } ~
-    path("currentRoutes") {
-      get {
-        complete((CurrentSolution.routes, CurrentSolution.routePaths).zipped.map({
-          case (x,y) => RouteWithPath(x, y)
-        }))
-      }
-    } ~
     pathPrefix("static") {
       getFromDirectory("./static")
+    } ~
+    path("routing" / "start") {
+      post {
+        entity(as[RoutingRequest]) { request =>
+          println(request.time, request.regions)
+          routingActor ! new StartRouting(
+            request.time,
+            request.regions.map(req => new CircularRegion((req.lng, req.lat), req.radius)))
+
+          complete("")
+        }
+      }
+    } ~
+    path("routing" / "stop") {
+      post {
+        implicit val timeout = new akka.util.Timeout(60000, java.util.concurrent.TimeUnit.MILLISECONDS)
+
+        // Wait for stopped...
+        onSuccess(routingActor ? StopRouting) { stopped =>
+          complete("")
+        }
+      }
+    } ~
+    path("routing" / "current") {
+      get {
+        implicit val timeout = new akka.util.Timeout(60000, java.util.concurrent.TimeUnit.MILLISECONDS)
+
+        onSuccess(routingActor ? CurrentSolution) {
+          case routes : Traversable[Route] =>
+            complete(routes.toList.map(r => {
+              val path = r.activities.sliding(2).map({
+                case Seq(a1, a2) => (a1.location, a2.location)
+              }).flatMap({
+                case (Some(loc1), Some(loc2)) =>
+                  Geo.travelPath(loc1.coordinates, loc2.coordinates)
+                case _ => List()
+              }).toList
+
+              new RouteWithPath(r, path)
+            }))
+        }
+      }
     }
 }

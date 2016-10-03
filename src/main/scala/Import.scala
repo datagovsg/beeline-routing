@@ -31,8 +31,8 @@ object Import {
 
   // Return the number of seconds since midnight
   def convertTime(timeString: String) =
-    timeString.substring(0,2).toInt * 3600000 +
-    timeString.substring(2,4).toInt * 60000
+    timeString.substring(0,2).toLong * 3600000 +
+    timeString.substring(2,4).toLong * 60000
 
   def getRequests = {
     implicit val formats = DefaultFormats
@@ -46,6 +46,5 @@ object Import {
         end = Util.toSVY((v(3).extract[Double], v(2).extract[Double])),
         time = convertTime(v(5).extract[String])
       ))
-      .filter(_.time == 34200000)
   }
 }

@@ -38,9 +38,43 @@ google-map {
 <body>
 
   <div class="left-panel">
+
+    <button @click="startRouting">
+      Start Routing
+    </button>
+
+    <button @click="addRegion">
+      Add Region
+    </button>
+
+    |
+
+    <button @click="stopRouting">
+      Stop Routing
+    </button>
+
+
     <button @click="refresh">
       Refresh
     </button>
+
+    <select v-model="time">
+      <option v-for="n in 48" :value="n * 0.5 * 3600 * 1000">
+        {{n * 0.5 * 3600 * 1000 | formatTime}}
+      </option>
+    </select>
+
+    <hr/>
+
+    <ul>
+      <li v-for="region in regions" @click="removeRegion"
+      :class="{selected: selectedRegion == region}">
+        {{region.center.lat}}, {{region.center.lng}}; {{region.radius}}
+      </li>
+    </ul>
+
+    <hr/>
+
     <ul>
       <li v-for="route in routes" @click="selectRoute(route)"
         :class="{selected: selectedRoute == route}">
@@ -53,15 +87,17 @@ google-map {
   </div>
 
   <div class="right-panel">
+
     <google-map :center="{lat:1.38, lng:103.8}" :zoom="12">
       <route-suggestion v-for="route in routes"
                         :selected="hoveredRoute ? hoveredRoute == route : selectedRoute == route"
                         :route="route"
-                        @mouseout="hoverRoute($event, null)"
-                        @mouseover="hoverRoute($event, route)"
                         @click="selectRoute(route)"
       ></route-suggestion>
 
+      <!--@mouseout="hoverRoute($event, null)"-->
+      <!--@mouseover="hoverRoute($event, route)"-->
+      <region-selection :regions.sync="regions" :selected.sync="selectedRegion"></region-selection>
 
     <google-info-window v-if="hoveredStop" :position="hoveredStop"
                         :opened.sync="popupShown">

@@ -2,12 +2,16 @@ package sg.beeline
 import scala.annotation.tailrec
 import scala.collection.immutable.HashSet
 
-object Ruin {
+trait Ruin {
+  def ruin(problem :RoutingProblem, routes: Traversable[Route], badRequests: Traversable[Request])
+    : (Traversable[Route], Traversable[Request])
+}
+
+object Ruin extends Ruin {
   val RUIN_PROBABILITY = 0.5
 
   // Random ruin
-  def ruin(problem: RoutingProblem, routes: List[Route], badRequests: Seq[Request]) = {
-
+  def ruin(problem: RoutingProblem, routes: Traversable[Route], badRequests: Traversable[Request]) = {
     // Collect the set of all stops
     val allStops = routes.flatMap(r => r.activities.flatMap(_.location))
       .toSet
