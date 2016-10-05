@@ -5,7 +5,7 @@ Actions
 
 Setting up GraphHopper files
 ----------------------------
-
+   
     $ tar xfz SG-gh.ghz
 
 Or, from the graphhopper package, call
@@ -14,16 +14,12 @@ Or, from the graphhopper package, call
 
 Refreshing the cache
 --------------------
-
     $ sbt "run cache"
 
 Running the routing
 -------------------
 
-    $ sbt "run route"
-
-OR
-
+    webpack
     $ sbt run
 
 
