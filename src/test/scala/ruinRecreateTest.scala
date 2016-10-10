@@ -51,11 +51,11 @@ class RuinSpec extends FlatSpec with Matchers {
   }
 
   "Recreate" should "preserve all requests" in {
-    val recreatedRequestSet = recreated._1.map(r => r.activities.map({
+    val recreatedRequestSet = recreated._1.flatMap(r => r.activities.flatMap({
       case Pickup(req, loc) => Some(req)
       case Dropoff(req, loc) => Some(req)
       case _ => None
-    })).flatten.flatten.toSet
+    })).toSet
 
     recreatedRequestSet should be (r2.toSet)
   }
@@ -63,11 +63,24 @@ class RuinSpec extends FlatSpec with Matchers {
   "LowestRegretRecreate" should "preserve all requests" in {
     val recreated = LowestRegretRecreate.recreate(problem, preserved, ruined)
 
-    val recreatedRequestSet = recreated._1.map(r => r.activities.map({
+    val recreatedRequestSet = recreated._1.flatMap(r => r.activities.flatMap({
       case Pickup(req, loc) => Some(req)
       case Dropoff(req, loc) => Some(req)
       case _ => None
-    })).flatten.flatten.toSet
+    })).toSet
+
+    recreatedRequestSet should be (r2.toSet)
+  }
+
+  "BeelineRecreate" should "preserve all requests" in {
+    val beelineRecreate = new BeelineRecreate(problem, problem.requests)
+    val recreated = beelineRecreate.recreate(problem, preserved, ruined)
+
+    val recreatedRequestSet = recreated._1.flatMap(r => r.activities.flatMap({
+      case Pickup(req, loc) => Some(req)
+      case Dropoff(req, loc) => Some(req)
+      case _ => None
+    })).toSet
 
     recreatedRequestSet should be (r2.toSet)
   }

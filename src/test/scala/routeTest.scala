@@ -15,6 +15,10 @@ class RouteSpec extends FlatSpec with Matchers {
     def distance(a : BusStop, b: BusStop) = 0
 
     def nearBusStops(p : (Double, Double)) = ZeroDistance.busStops
+
+    def initialize = {
+      (List(), List(), List())
+    }
   }
 
   class TestActivity(val routingProblem: RoutingProblem, val busStop: BusStop,

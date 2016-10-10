@@ -41,15 +41,7 @@ class BasicRoutingProblem(val busStops: Seq[BusStop], val suggestions: Seq[Sugge
 
   // Start with a solution where everyone is ferried directly from the nearest
   def initialize = {
-    val (routes, badRequests) = requests.foldLeft(
-      (List[Route](), List[Request]())
-    )({
-      case ((routes, badRequests), request) =>
-        LowestRegretRecreate.tryCreateRoute(this)(request) match {
-          case None => (routes, request::badRequests)
-          case Some(route) => (route::routes, badRequests)
-        }
-    })
+    val (routes, badRequests) = DirectFerryRecreate.recreate(this, List(), requests)
 
     (routes, requests, badRequests)
 
