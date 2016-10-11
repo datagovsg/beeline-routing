@@ -67,9 +67,10 @@ google-map {
     <hr/>
 
     <ul>
-      <li v-for="region in regions" @click="removeRegion"
-      :class="{selected: selectedRegion == region}">
+      <li v-for="region in regions" :class="{selected: selectedRegion == region}"
+        @click="selectRegion(region)">
         {{region.center.lat}}, {{region.center.lng}}; {{region.radius}}
+        <button @click="removeRegion(region)">Del</button>
       </li>
     </ul>
 

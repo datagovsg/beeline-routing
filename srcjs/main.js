@@ -130,8 +130,10 @@ document.addEventListener('DOMContentLoaded', () => {
     props: ['regions', 'selected'],
 
     template: `
-      <google-circle v-for="region in regions" track-by="$index" :center.sync="region.center" :radius.sync="region.radius"
-                     :editable="true" :draggable="true" :options="circleOptions(region)" @g-click="selectRegion(region)"></google-circle>
+      <google-circle v-for="region in regions" track-by="$index"
+      :center.sync="region.center" :radius.sync="region.radius"
+     :editable="selected == region" :draggable="true"
+     :options="circleOptions(region)" @g-mousedown="click(region)"></google-circle>
     `,
 
     data() {
@@ -139,8 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
     },
 
     methods: {
-      selectRegion(region) {
-        this.selectedRegion = region
+      click(region) {
+        this.$dispatch('selectRegion', region)
       },
 
       circleOptions(region) {
@@ -182,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       routingStarted: false,
 
-      time: 16
+      time: (8 * 60 * 60 * 1000)
     },
     computed: {
       routeStyle: {}
@@ -204,6 +206,9 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       selectRoute(route) {
         this.selectedRoute = route;
+      },
+      selectRegion(route) {
+        this.selectedRegion = route;
       },
       hoverRoute($event, route) {
         this.hoveredStop = $event
@@ -264,6 +269,9 @@ document.addEventListener('DOMContentLoaded', () => {
       mouseover(stop) {
         this.popupShown = true;
         this.hoveredStop = stop;
+      },
+      selectRegion(region) {
+        this.selectedRegion = region;
       }
     }
   })
