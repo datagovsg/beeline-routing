@@ -93,6 +93,7 @@ google-map {
                         :selected="hoveredRoute ? hoveredRoute == route : selectedRoute == route"
                         :route="route"
                         @click="selectRoute(route)"
+                        @mouseover="mouseover"
       ></route-suggestion>
 
       <!--@mouseout="hoverRoute($event, null)"-->

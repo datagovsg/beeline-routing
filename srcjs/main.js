@@ -26,8 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   Vue.component('route-suggestion', {
     template: `
-<google-polyline :path="route.path" :options="pathOptions"
-  @g-mouseover="showPopup($event, stop)"
+<google-polyline v-if="selected" :path="route.path" :options="pathOptions"
+  @g-mouseover="mouseover($event, stop)"
   @g-mouseout="mouseout($event, stop)"
 >
 </google-polyline>
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   :center="stop"
   :radius="computeRadius(stop.numBoard)"
   :options="boardCircleOptions"
-  @g-mouseover="showPopup($event, stop)"
+  @g-mouseover="mouseover($event, stop)"
   @g-mouseout="mouseout($event, stop)"
   @g-click="click($event, stop)"
 >
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
   :center="stop"
   :radius="computeRadius(stop.numAlight)"
   :options="alightCircleOptions"
-  @g-mouseover="showPopup($event, stop)"
+  @g-mouseover="mouseover($event, stop)"
   @g-mouseout="mouseout($event, stop)"
   @g-click="click($event, stop)"
 >
@@ -107,16 +107,16 @@ document.addEventListener('DOMContentLoaded', () => {
       },
     },
     methods: {
-      showPopup($event, stop) {
+      mouseover($event, stop) {
         this.stop = stop;
         this.popupShown = true;
-        this.$emit('mouseover', stop)
+        this.$dispatch('mouseover', stop)
       },
       click($event, stop) {
-        this.$emit('click', stop)
+        this.$dispatch('click', stop)
       },
       mouseout($event, stop) {
-        this.$emit('mouseout', stop)
+        this.$dispatch('mouseout', stop)
       },
       computeRadius(radius) {
         return Math.sqrt(radius) * this.radiusScale
@@ -250,6 +250,20 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       removeRegion(region) {
         this.regions.splice(this.regions.indexOf(region))
+      },
+      mouseover(stop) {
+        this.popupShown = true;
+        this.hoveredStop = stop
+      }
+    },
+    events: {
+      stopClicked(stop) {
+        console.log('stop clicked', stop);
+        this.hoveredStop = stop;
+      },
+      mouseover(stop) {
+        this.popupShown = true;
+        this.hoveredStop = stop;
       }
     }
   })
