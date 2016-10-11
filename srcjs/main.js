@@ -250,9 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
           radius: 5000
         })
       },
-      selectRegion(region) {
-        this.selectedRegion = region;
-      },
       removeRegion(region) {
         this.regions.splice(this.regions.indexOf(region))
       },

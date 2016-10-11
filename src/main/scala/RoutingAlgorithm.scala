@@ -42,18 +42,21 @@ extends RoutingAlgorithm
   def currentSolution = this.currentRoutes
 
   def run {
+    val (routes, requests, badRequests) = problem.initialize
+    val beelineRecreate = new BeelineRecreate(problem, requests)
+
     def iterSolution(routes : Traversable[Route], badRequests : Traversable[Request])
     : (Traversable[Route], Traversable[Request]) = {
       // Ruin
       val (preservedRoutes, unservedRequests) = Ruin.ruin(problem, routes, badRequests)
 
       // Recreate
-      val (newRoutes, newBadRequests) = LowestRegretRecreate.recreate(problem, preservedRoutes, unservedRequests)
+      val (newRoutes, newBadRequests) = beelineRecreate.recreate(problem, preservedRoutes, unservedRequests)
+
+      //      val (newRoutes, newBadRequests) = LowestRegretRecreate.recreate(problem, preservedRoutes, unservedRequests)
 
       (newRoutes, newBadRequests)
     }
-
-    val (routes, requests, badRequests) = problem.initialize
 
     currentRoutes = routes
 

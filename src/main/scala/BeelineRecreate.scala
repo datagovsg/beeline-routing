@@ -8,25 +8,26 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   type Insertion = (Double, Activity, Activity, (Activity, Activity), (Activity, Activity))
 
   var count : Int = 0
-  var costCache : Map[Request, Map[Route, Insertion]] = new HashMap
+  var costCache : Map[Route, Map[Request, Insertion]] = new HashMap
   var costCacheMutex = new Object
 
   // Generate all the possible requests
   // Get a map of requests -> compatible requests
   val relatedRequests = {
-    val possibleStops = requests.flatMap(request => odCombis(request))
+    val possibleODs = requests.flatMap(request => odCombis(request))
       .toSet // Make it unique
 
-    possibleStops.map({
+    possibleODs.map({
       case (i,j) =>
-        ((i,j) -> possibleStops.filter({
+        (i,j) -> possibleODs.filter({
           case (k,l) =>
-            detourTime((i,j), (k,l)) < 15 * 60000
-        }))
+            detourTime((i,j), (k,l)) < 5 * 60000
+        })
     })
       .toMap
   }
   println("Computed pairwise compatible requests")
+  println(("Average number of compatible", relatedRequests.size, relatedRequests.values.map(_.size).sum / relatedRequests.size.toDouble))
 
   def odCombis(request : Request) = {
     for (i <- request.startStops; j <- request.endStops) yield (i, j)
@@ -35,8 +36,6 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   def detourTime(ab: (BusStop, BusStop), cd: (BusStop, BusStop)) : Double = {
     val (a,b) = ab
     val (c,d) = cd
-    val abTime = routingProblem.distance(a, b)
-    val cdTime = routingProblem.distance(c, d)
 
     def travelTime(s : Seq[BusStop]) =
       s.sliding(2).map({
@@ -45,8 +44,11 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
             routingProblem.distance(x, y) + 60000.0
           else
             0.0
-      })
-        .sum
+      }).sum
+
+
+    val abTime = travelTime(Seq(a, b))
+    val cdTime = travelTime(Seq(c, d))
 
     // N.B. Here we ignore the possibility that a->b ->c->d
     val minDetourTime = Seq(
@@ -91,9 +93,9 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
 
   private def getRegret(route : Route, request : Request) : Insertion = {
 
-    costCache.get(request) match {
-      case Some(routeCache) =>
-        routeCache.get(route) match {
+    costCache.get(route) match {
+      case Some(requestCache) =>
+        requestCache.get(request) match {
           case Some(regret) => {
             regret
           }
@@ -103,11 +105,46 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     }
   }
 
+  private def routeODs(route: Route) = {
+    val pickups = route.activities.flatMap({
+      case Pickup(request, location) =>
+        Some((request, location))
+      case _ =>
+        None
+    }).toMap
+
+    val dropoffs = route.activities.flatMap({
+      case Dropoff(request, location) =>
+        Some((request, location))
+      case _ => None
+    }).toMap
+
+    pickups.keys
+      .map(request => (pickups.get(request).orNull, dropoffs.get(request).orNull))
+  }
+
   def recreate(problem : RoutingProblem, preservedRoutes : Traversable[Route], unservedRequests : Traversable[Request]) =
   {
     require(problem == routingProblem)
 
     // For all routes -- create a hash map (BusStop, BusStop) -> List(Route)
+    def computeFeasibleSet(route : Route) = {
+      val ods = routeODs(route)
+
+      // Reduce to a small set of feasible ods
+      val feasible = ods.drop(1).foldLeft(
+        relatedRequests.get(ods.head).orNull
+      ) ((acc, current) => {
+        acc.intersect(relatedRequests.get(current).orNull)
+      })
+
+      feasible
+    }
+
+    val routeOdMap = {
+      preservedRoutes.map(route => (route, computeFeasibleSet(route))).toMap
+    }
+
     val odRouteMap = {
       preservedRoutes.flatMap(route => {
         val pickups = route.activities.flatMap({
@@ -134,50 +171,52 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
 
     @tailrec
     def next(unservedRequests: Set[Request], routes: Set[Route], badRequests: List[Request],
-             requestRouteMap: Map[(BusStop, BusStop), List[Route]])
+             routeOdMap: Map[Route, Set[(BusStop, BusStop)]])
     : (Set[Route], List[Request]) = {
 
       if (count % 100 == 0) {
-        //        println((routes.size, unservedRequests.size, badRequests.size))
         println(count)
+        println(("Average number of feasible", routeOdMap.values.map(_.size).sum / routeOdMap.size.toDouble))
       }
       count += 1
 
       if (unservedRequests.isEmpty) (routes, badRequests)
       else {
-        // For all request -> (geo) List(BusStop, BusStop)
-        //  -> (compatible) List(BusStop, BusStop)
-        //  -> (hash map) ListRoutes
-
         // Get the minimum regret
         // Use a lazy to avoid choking on empty route list
         lazy val best = {
           // For all requests, compute the regret
-          val requestCosts = unservedRequests.par.map(req => {
-            val candidateRoutes = odCombis(req).flatMap(od => /* Find possible OD combis */
-                relatedRequests.get(od).orNull.flatMap(od => /* compatible OD combis */
-                  requestRouteMap.get(od) match {
-                    case Some(routes) => routes
-                    case None => List()
-                  })) /* Routes */
+          val requestStops = unservedRequests.par.flatMap(request => odCombis(request).map(od => (request, od)))
+          val insertionCosts = routeOdMap.par.flatMap({
+            case (route, odSet) =>
+              val feasibleRequests = requestStops.filter(rs => odSet.contains(rs._2))
 
-            val routeCosts = candidateRoutes.map(route => (route, getRegret(route, req)))
-            val minRouteCosts = routeCosts.minBy(_._2._1)
+              if (feasibleRequests.isEmpty)
+                None
+              else
+                Some({
+                  val regrets = feasibleRequests.map(req => (route, req._1, getRegret(route, req._1)))
 
-            costCacheMutex.synchronized({
-              costCache = costCache + (req -> routeCosts.toMap)
-            })
+                  /* Update the cache! */
+                  {
+                    val update = regrets.map {case (route, request, regret) => (request, regret)}
 
-            (req, minRouteCosts)
+                    costCacheMutex.synchronized({
+                      costCache = costCache + (route -> (costCache.getOrElse(route, new HashMap) ++ update))
+                    })
+                  }
+
+                  regrets.minBy(_._3._1)
+                })
           })
 
-          if (requestCosts.isEmpty)
+          if (insertionCosts.isEmpty)
             None
           else
-            Some(requestCosts.minBy(_._2._2._1))
+            Some(insertionCosts.minBy(_._3._1))
         }
 
-        if (routes.isEmpty || best.isEmpty || best.orNull._2._2._1 == Double.PositiveInfinity) {
+        if (routes.isEmpty || best.isEmpty || best.orNull._3._1 == Double.PositiveInfinity) {
           val someRequest = unservedRequests.head
           val newRoute = tryCreateRoute(problem)(someRequest)
 
@@ -186,55 +225,47 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
             case None => next(unservedRequests - someRequest,
                               routes,
                               someRequest::badRequests,
-                              requestRouteMap)
+                              routeOdMap)
             case Some(route) =>
-              val pickup = route.activities(1) match {case Pickup(_, loc) => loc}
-              val dropoff = route.activities(2) match {case Dropoff(_, loc) => loc}
-
               next(
                 unservedRequests - someRequest,
                 routes + route,
                 badRequests,
-                requestRouteMap + ((pickup, dropoff) -> List(route))
+                routeOdMap + (route -> computeFeasibleSet(route))
                 )
           }
         }
         else {
-          val (request, (oldRoute, insertion)) = best.orNull
+          val (oldRoute, request, insertion) = best.orNull
           val pickup = insertion._2 match {case Pickup(_, loc) => loc}
           val dropoff = insertion._3 match {case Dropoff(_, loc) => loc}
 
           val newRoute = oldRoute.insert(insertion._2, insertion._3, insertion._4, insertion._5)
 
-          costCache = costCache.mapValues(_ - oldRoute)
+          costCacheMutex.synchronized({
+            costCache = costCache - oldRoute
+          })
 
           val newRouteSet = routes - oldRoute + newRoute
-          val newRequestRouteMap = requestRouteMap.mapValues(routes =>
-            routes.filter(_ != oldRoute))
+          val newRequestRouteMap = routeOdMap - oldRoute + (newRoute -> computeFeasibleSet(newRoute))
 
           next(
             unservedRequests - request,
             newRouteSet,
             badRequests,
-            newRequestRouteMap + ((pickup, dropoff) -> { /* Update the map... */
-              newRequestRouteMap.get((pickup, dropoff)) match {
-                case None => List(newRoute)
-                case Some(routes) => newRoute :: routes
-              }
-            })
+            newRequestRouteMap
           )
         }
       }
     }
 
-
     val requestSet = unservedRequests.toSet
     val routeSet = preservedRoutes.toSet
 
-    // Routes have changed... remove the non-existent routes from the cache
-    costCache = costCache.mapValues(h => h -- h.keys.filterNot(r => routeSet.contains(r)))
+    // Most routes have been destroyed anyway, so just reset the cache
+    costCache = new HashMap
 
-    next(unservedRequests.toSet, preservedRoutes.toSet, List[Request](), odRouteMap) match {
+    next(unservedRequests.toSet, preservedRoutes.toSet, List[Request](), routeOdMap) match {
       case (a,b) => (a.toList, b.toList)
     }
   }
