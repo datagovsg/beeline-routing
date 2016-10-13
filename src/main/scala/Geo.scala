@@ -36,8 +36,8 @@ object Geo {
 
     // Because sometimes routing fails, we perturb the locations
     // by some increasing amount until the routing succeeds
-    val fuzzAmounts = 0.0 +: (for (i <- List(0.0005, 0.001, 0.002, 0.004);
-                                   j <- 0 until 50) yield i)
+    val fuzzAmounts = List(0.0) // +: (for (i <- List(0.0005, 0.001, 0.002, 0.004);
+                                //   j <- 0 until 50) yield i)
 
     def routeWithJitter(range : Double) = {
       val p1 = new GHPoint(

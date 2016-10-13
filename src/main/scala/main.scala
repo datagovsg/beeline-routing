@@ -18,9 +18,10 @@ object Hi {
       val m = Array.ofDim[Double](busStops.size, busStops.size)
       val busStopsArr = busStops.toArray
 
-      for (i <- 0 until busStopsArr.size;
-           j <- 0 until busStopsArr.size) {
-
+      val indices = for (i <- 0 until busStopsArr.size;
+                         j <- 0 until busStopsArr.size) yield (i,j);
+      Geo.initialize();
+      indices.par.foreach({ case (i,j) =>
         if (j == 0)
           println(s"Bus stops for ... ${i}")
 
@@ -28,7 +29,11 @@ object Hi {
           busStopsArr(i).coordinates,
           busStopsArr(j).coordinates
         )
-      }
+
+        if (m(i)(j) == Double.PositiveInfinity) {
+          println(("+INF", busStopsArr(i).coordinates, busStopsArr(j).coordinates))
+        }
+      })
       m
     }
 
