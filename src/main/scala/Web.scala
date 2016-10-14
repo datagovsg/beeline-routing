@@ -122,7 +122,7 @@ class IntelligentRoutingService extends HttpService with Actor with Json4sSuppor
                 case Seq(a1, a2) => (a1.location, a2.location)
               }).flatMap({
                 case (Some(loc1), Some(loc2)) =>
-                  Geo.travelPath(loc1.coordinates, loc2.coordinates)
+                  Geo.travelPath(loc1.coordinates, loc1.heading, loc2.coordinates, loc2.heading)
                 case _ => List()
               }).toList
 

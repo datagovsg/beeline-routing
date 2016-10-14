@@ -5,7 +5,7 @@ import com.graphhopper.GHResponse
 import com.graphhopper.GraphHopper
 import com.graphhopper.PathWrapper
 import com.graphhopper.util.shapes.GHPoint
-import com.graphhopper.util.CmdArgs
+import com.graphhopper.util.{Parameters, CmdArgs}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -24,12 +24,16 @@ object Geo {
     }
   }
 
-  def routeWithJitter(a: (Double, Double), b: (Double, Double)) = {
+  def routeWithJitter(a: (Double, Double), ah: Double, b: (Double, Double), bh: Double) = {
     initialize()
     // pick two points
-    val request = new GHRequest()
-      .addPoint(new GHPoint(a._2, a._1))
-      .addPoint(new GHPoint(b._2, b._1));
+    val request = new GHRequest(
+      a._2, a._1,
+      b._2, b._1,
+      ah,
+      bh
+    )
+      .getHints().put(Parameters.Routing.PASS_THROUGH, true);
 
     // route
     // val response = graphHopper.route(request);
@@ -56,8 +60,8 @@ object Geo {
       .find(!_.hasErrors)
   }
 
-  def travelTime(a: (Double, Double), b: (Double, Double)) : Double = {
-    val bestRoute = routeWithJitter(a,b)
+  def travelTime(a: (Double, Double), ah: Double, b: (Double, Double), bh: Double) : Double = {
+    val bestRoute = routeWithJitter(a, ah, b, bh)
 
     bestRoute match {
       case None => Double.PositiveInfinity
@@ -67,8 +71,8 @@ object Geo {
     }
   }
 
-  def travelPath(a: (Double, Double), b: (Double, Double)) = {
-    val bestRoute = routeWithJitter(a,b)
+  def travelPath(a: (Double, Double), ah: Double, b: (Double, Double), bh: Double) = {
+    val bestRoute = routeWithJitter(a, ah, b, bh)
 
     bestRoute match {
       case None => List()

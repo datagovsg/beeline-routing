@@ -27,7 +27,9 @@ object Hi {
 
         m(i)(j) = Geo.travelTime(
           busStopsArr(i).coordinates,
-          busStopsArr(j).coordinates
+          busStopsArr(i).heading,
+          busStopsArr(j).coordinates,
+          busStopsArr(j).heading
         )
 
         if (m(i)(j) == Double.PositiveInfinity) {

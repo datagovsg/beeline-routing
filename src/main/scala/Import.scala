@@ -6,7 +6,7 @@ import scala.io.Source
 object Import {
   def getBusStops = {
     implicit val formats = DefaultFormats
-    val jsonText = Source.fromFile("bus-stops.json").mkString
+    val jsonText = Source.fromFile("onemap/bus-stops-headings.json").mkString
     val jsonData = parse(jsonText).asInstanceOf[JArray]
 
     val busStops = jsonData.arr
@@ -20,6 +20,7 @@ object Import {
               (v \ "Longitude").extract[Double],
               (v \ "Latitude").extract[Double]
               ),
+            (v \ "Heading").extractOrElse[Double](Double.NaN),
             (v \ "Description").extract[String],
             (v \ "RoadName").extract[String],
             i
