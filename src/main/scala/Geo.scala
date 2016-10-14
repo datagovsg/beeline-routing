@@ -18,7 +18,8 @@ object Geo {
     if (graphHopper == null) {
       graphHopper = new GraphHopper();
       graphHopper.setOSMFile("SG.pbf");
-      graphHopper.init(new CmdArgs());
+      graphHopper.init(CmdArgs.readFromConfig("config.properties", "graphhopper.config"));
+      graphHopper.setCHEnabled(false);
       // graphHopper.setGraphHopperLocation("/home/daniel/intelligent-routing/gh");
       graphHopper.importOrLoad();
     }
@@ -26,33 +27,26 @@ object Geo {
 
   def routeWithJitter(a: (Double, Double), ah: Double, b: (Double, Double), bh: Double) = {
     initialize()
-    // pick two points
-    val request = new GHRequest(
-      a._2, a._1,
-      b._2, b._1,
-      ah,
-      bh
-    )
-      .getHints().put(Parameters.Routing.PASS_THROUGH, true);
-
-    // route
-    // val response = graphHopper.route(request);
-
     // Because sometimes routing fails, we perturb the locations
     // by some increasing amount until the routing succeeds
     val fuzzAmounts = List(0.0) // +: (for (i <- List(0.0005, 0.001, 0.002, 0.004);
                                 //   j <- 0 until 50) yield i)
 
+    require(ah.isNaN() || 0.0 <= ah && ah <= 360)
+    require(bh.isNaN() || 0.0 <= bh && bh <= 360)
+
     def routeWithJitter(range : Double) = {
-      val p1 = new GHPoint(
+      val pa = new GHPoint(
         a._2 - range + 2 * range * Math.random,
         a._1 - range + 2 * range * Math.random
       )
-      val p2 = new GHPoint(
+      val pb = new GHPoint(
         b._2 - range + 2 * range * Math.random,
         b._1 - range + 2 * range * Math.random
       )
-      graphHopper.route(new GHRequest(p1, p2))
+      val request = new GHRequest(pa, pb, ah, bh)
+      request.getHints().put(Parameters.Routing.PASS_THROUGH, true)
+      graphHopper.route(request)
     }
 
     fuzzAmounts.iterator
