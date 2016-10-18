@@ -27,8 +27,8 @@ object Recreate extends Recreate {
 
     if (routeCosts.forall({case None => true case _ => false})) {
       // Construct new route
-      val randomPickup = new Pickup(request, request.startStops({Random.nextInt % request.startStops.size}))
-      val randomDropoff = new Dropoff(request, request.endStops({Random.nextInt % request.endStops.size}))
+      val randomPickup = new Pickup(request, request.startStops(Random.nextInt(request.startStops.size)))
+      val randomDropoff = new Dropoff(request, request.endStops(Random.nextInt(request.endStops.size)))
 
       if (Route.distCost(problem)(randomPickup.location, randomDropoff.location) == Double.PositiveInfinity)
         (routes, request :: badRequests)

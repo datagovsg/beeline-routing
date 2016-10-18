@@ -19,6 +19,8 @@ class BasicRoutingProblem(val busStops: Seq[BusStop], val suggestions: Seq[Sugge
     .filter(_.endStops.nonEmpty)
 
   println(s"Only ${requests.size} suggestions used")
+  println(s"Average # start stops ${requests.map(_.startStops.size).sum / requests.size.toDouble}")
+  println(s"Average # end stops ${requests.map(_.endStops.size).sum / requests.size.toDouble}")
 
   val distanceMatrix = {
     val ois = new java.io.ObjectInputStream(

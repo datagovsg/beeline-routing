@@ -17,7 +17,9 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     val possibleODs = requests.flatMap(request => odCombis(request))
       .toSet // Make it unique
 
-    possibleODs.map({
+    println(s"So many OD pairs ${possibleODs.size}")
+
+    possibleODs.par.map({
       case (i,j) =>
         (i,j) -> possibleODs.filter({
           case (k,l) =>
@@ -65,10 +67,10 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   def tryCreateRoute(problem : RoutingProblem)(request : Request) = {
     // Construct new route
     val randomPickup = new Pickup(request, request.startStops({
-      Random.nextInt % request.startStops.size
+      Random.nextInt(request.startStops.size)
     }))
     val randomDropoff = new Dropoff(request, request.endStops({
-      Random.nextInt % request.endStops.size
+      Random.nextInt(request.endStops.size)
     }))
 
     // Check if it's possible...

@@ -1,6 +1,7 @@
 package sg.beeline
 
 import scala.annotation.tailrec
+import scala.collection.immutable.HashMap
 
 object Route {
   def empty(routingProblem: RoutingProblem, time: Double) =
@@ -37,7 +38,7 @@ class Route(val routingProblem: RoutingProblem,
     minTimes(0) = activities(0).minTime
     maxTimes(len - 1) = activities(len - 1).maxTime
 
-    for (i <- 1 to (len - 1)) {
+    for (i <- 1 until len) {
       val lastMinTime = minTimes(i - 1)
       val lastActivity = activities(i - 1)
       val currentActivity = activities(i)
@@ -70,7 +71,61 @@ class Route(val routingProblem: RoutingProblem,
     (minTimes, maxTimes)
   }
 
-  val activitiesWithTimes = (activities, minPossibleTimes, maxPossibleTimes).zipped
+  val activitiesWithTimes = (activities, minPossibleTimes, maxPossibleTimes).zipped.toIndexedSeq
+
+  // Prepare a mapping from
+  // request -> stops before dropoff
+  // request -> stops after pickup
+  // request -> current pickup stop index
+  // request -> current dropoff stop index
+  // request -> pickup location, dropoff location
+
+  // stop index -> stop
+  class FulfillmentInfo(
+                        val stopsWithIndices: Array[BusStop],
+                        val pickupStopIndex: Int,
+                        val dropoffStopIndex: Int
+                        ) {
+    def stopsBeforeDropoff = stopsWithIndices.view(0, dropoffStopIndex)
+    def stopsAfterPickup = stopsWithIndices.view(pickupStopIndex + 1, stopsWithIndices.length)
+    def stopIndicesBeforeDropoff = 0 until dropoffStopIndex
+    def stopIndicesAfterPickup = pickupStopIndex + 1 until stopsWithIndices.length
+    def pickupLocation = stopsWithIndices(pickupStopIndex)
+    def dropoffLocation = stopsWithIndices(dropoffStopIndex)
+  }
+
+  lazy val (requestsInfo, stopActivities, stopsWithIndices) = {
+    val stopActivities = groupSuccessive(activities.filter(x => x.location.nonEmpty))(_.location.orNull)
+    val byLocation = stopActivities.zipWithIndex
+
+    val stopsWithIndices = byLocation.map({
+      case ((location, activities), stopIndex) => location
+    }).toArray
+
+    val activityWithPickupIndex = byLocation.flatMap({
+      case ((location, activities), stopIndex) => activities.flatMap({
+        case Pickup(request, _) => Some((request, (location, stopIndex)))
+        case _ => None
+      })
+    }).toMap
+    val activityWithDropoffIndex = byLocation.flatMap({
+      case ((location, activities), stopIndex) => activities.flatMap({
+        case Dropoff(request, _) => Some((request, (location, stopIndex)))
+        case _ => None
+      })
+    }).toMap
+
+    val requests = activityWithDropoffIndex.keys
+    val requestsWithFulfillmentInfo = requests.map(r => {
+      (r, new FulfillmentInfo(stopsWithIndices, activityWithPickupIndex(r)._2, activityWithDropoffIndex(r)._2))
+    }).toMap
+
+    (requestsWithFulfillmentInfo, stopActivities, stopsWithIndices)
+  }
+
+
+  //////////////////
+  ///////// METHODS
 
   def insertionCost(activity1 : (Activity, Double, Double),
                     activities: Seq[Activity],
@@ -127,7 +182,7 @@ class Route(val routingProblem: RoutingProblem,
       val dropoffActivities = request.endStops.map(stop => new Dropoff(request, stop))
 
       // The cost of inserting ... -> a -> x -> y -> b -> ...
-      val bestDirectInsertWithCost = activitiesWithTimes.toSeq.sliding(2).map({
+      val bestDirectInsertWithCost = activitiesWithTimes.sliding(2).map({
         case Seq((a1, m1, n1), (a2, m2, n2)) =>
           val pds = for (p <- pickupActivities; d <- dropoffActivities) yield (p,d)
           val pdCosts = pds.map({
@@ -150,14 +205,14 @@ class Route(val routingProblem: RoutingProblem,
         // but this would give us quadratic explosion in cost. Since we know that all
         // requests have the same time window, we take the minimum of both and check their feasibility
 
-        val pickupCosts = activitiesWithTimes.toSeq.sliding(2).map({
+        val pickupCosts = activitiesWithTimes.sliding(2).map({
           case Seq((a1, m1, n1), (a2, m2, n2)) =>
             val pickupCosts = pickupActivities.map(p => insertionCost((a1, m1, n1), Seq(p), (a2, m2, n2)))
             val best = (pickupActivities, pickupCosts).zipped.minBy(_._2)
             (best._2, best._1, (a1, m1, n1), (a2, m2, n2))
         })
 
-        val dropoffCosts = activitiesWithTimes.toSeq.sliding(2).drop(1).map({
+        val dropoffCosts = activitiesWithTimes.sliding(2).drop(1).map({
           case Seq((b1, m1, n1), (b2, m2, n2)) =>
             val dropoffCosts = dropoffActivities.map(p => insertionCost((b1, m1, n1), Seq(p), (b2, m2, n2)))
             val best = (dropoffActivities, dropoffCosts).zipped.minBy(_._2)
@@ -200,28 +255,28 @@ class Route(val routingProblem: RoutingProblem,
           // require(insertable(x))
           x match {
             case (b,c,(d,e),(f,g)) => {
-              try {
-                insert(b, c, (d, e), (f, g))
-              }
-              catch {
-                case ex : Exception => {
-                  val dMinTime = activitiesWithTimes.find(_._1 == d).orNull._2
-                  val gMaxTime = activitiesWithTimes.find(_._1 == g).orNull._3
-
-                  println("EXCEPTION ")
-
-                  println((dMinTime, gMaxTime))
-
-                  println(_insertedSubsequence(b, c, (d,e), (f,g)))
-                  println(_isInsertionFeasible(dMinTime, b,c,(d,e),(f,g), gMaxTime))
-
-                  println((b, c))
-                  println((d, e))
-                  println((f, g))
-
-                  throw ex
-                }
-              }
+//              try {
+//                insert(b, c, (d, e), (f, g))
+//              }
+//              catch {
+//                case ex : Exception => {
+//                  val dMinTime = activitiesWithTimes.find(_._1 == d).orNull._2
+//                  val gMaxTime = activitiesWithTimes.find(_._1 == g).orNull._3
+//
+//                  println("EXCEPTION ")
+//
+//                  println((dMinTime, gMaxTime))
+//
+//                  println(_insertedSubsequence(b, c, (d,e), (f,g)))
+//                  println(_isInsertionFeasible(dMinTime, b,c,(d,e),(f,g), gMaxTime))
+//
+//                  println((b, c))
+//                  println((d, e))
+//                  println((f, g))
+//
+//                  throw ex
+//                }
+//              }
 
               Some(finiteValue, b,c,(d,e),(f,g))
             }
@@ -279,4 +334,166 @@ class Route(val routingProblem: RoutingProblem,
       routingProblem,
       _insert(a1, a2, ip1, ip2),
       time)
+
+
+  // FIXME: fix the tail recursion bit
+  def groupSuccessive[A, B]
+  (t : Traversable[A])(fn : A => B) : List[(B, Traversable[A])] = {
+    if (t.isEmpty)
+      List()
+    else {
+      val first = fn(t.head)
+      val (same, different) = t.span(x => fn(x) == first)
+
+      (first, same) :: groupSuccessive(different)(fn)
+    }
+  }
+
+  /**
+    * Make slight adjustments to each stop, insofar as routing time can be improved.
+    *
+    * @return improved route
+    */
+  @tailrec
+  final def tweak : Route = {
+    improve match {
+      case None => this
+      case Some(betterRoute) => betterRoute.tweak
+    }
+  }
+
+  def improve : Option[Route] = {
+    // activities --> [ (loc, [act1, act2, act3]), ... ]
+    val locActivities = stopActivities
+
+    /* Returns an iterator of Seq(prevStop, stop, nextStop */
+    def locActivitiesWithSurrounding : Iterator[Seq[(Option[BusStop], Traversable[Activity])]] = {
+      val mainIterator = locActivities.iterator.map({case (loc, as) => (Some(loc), as)})
+
+      (Seq((None, List())).iterator ++ mainIterator ++ Seq((None, List())).iterator).sliding(3)
+    }
+
+    lazy val deletableStops = locActivitiesWithSurrounding.zipWithIndex
+      /* Find the requests with alternative stops */
+      /* Map to (do all activities at this location have an alternative?, stop index, cost savings) */
+      .map({
+      case (Seq((previousStop, _), (Some(loc), as), (nextStop, _)), stopIndex) =>
+        // Does every activity have an alternative stop?
+        val allFeasible = as.forall({
+          case Pickup(request, _) =>
+            (requestsInfo(request).stopsBeforeDropoff.toSet - loc intersect
+              request.startStopsSet).nonEmpty
+          case Dropoff(request, _) =>
+            (requestsInfo(request).stopsAfterPickup.toSet - loc intersect
+              request.endStopsSet).nonEmpty
+        })
+
+        // Compute savings...
+        val savings = distCost(previousStop, Some(loc)) + distCost(nextStop, Some(loc)) -
+          distCost(previousStop, nextStop)
+
+        (allFeasible, stopIndex, savings)
+    })
+      .filter(_._1)
+
+    lazy val replaceableStop = locActivitiesWithSurrounding.zipWithIndex
+      /* map to (stopIndex, stop, cost delta) cost delta = change in cost if stop at stopIndex is replaced with stop */
+      .flatMap({
+      case (Seq((previousStop, _), (Some(loc), as), (nextStop, _)), stopIndex) =>
+        val pickupSet : Set[BusStop] = as.map({
+          case Pickup(request, _) => request.startStopsSet
+          case Dropoff(request, _) => request.endStopsSet
+        }).reduce( (s1, s2) => s1 intersect s2 )
+
+        //
+        val currentCost = distCost(previousStop, Some(loc)) + distCost(Some(loc), nextStop)
+
+        // A list of (stopIndex, stop, cost delta). Cost delta < 0
+        val improvers = (pickupSet - loc)
+          .map(stop => (stopIndex, stop, distCost(previousStop, Some(stop)) + distCost(Some(stop), nextStop) - currentCost))
+          .filter(_._3 < 0.0)
+
+        if (improvers.isEmpty)
+          None
+        else
+          Some(improvers.minBy(_._3))
+    })
+
+    if (deletableStops.nonEmpty) {
+      //          println("Stop deleted")
+      Some(withStopDeleted(deletableStops.maxBy(_._3 /* savings */)._2))
+    }
+    else if (replaceableStop.nonEmpty) {
+//      println("Stop replaced")
+      replaceableStop.minBy(_._3 /* cost delta */) match {
+        case (stopIndex, replStop, costDelta) => Some(withStopChanged(stopIndex, replStop))
+      }
+    }
+    else
+      None
+  }
+
+  def withStopDeleted(stopIndex : Int) : Route = {
+    /* List of activities to replace */
+    val replacedActivities = activities.filter({
+      case Pickup(request, _) => requestsInfo(request).pickupStopIndex == stopIndex
+      case Dropoff(request, _) => requestsInfo(request).dropoffStopIndex == stopIndex
+      case _ => false
+    })
+
+    /* Produce a sequence of (stopIndex, activity to update) */
+    val updates = replacedActivities.map({
+      case Pickup(request, location) =>
+        val stopsInRoute = requestsInfo(request).stopIndicesBeforeDropoff.map(i => (stopsWithIndices(i), i)).toMap
+        val suitableStops = request.startStops.filter(stop => stopsInRoute.contains(stop) && stop != location)
+
+        require(suitableStops.nonEmpty)
+
+        val replacement = suitableStops.head
+
+        (stopsInRoute(replacement), Pickup(request, replacement))
+      case Dropoff(request, location) =>
+        val stopsInRoute = requestsInfo(request).stopIndicesAfterPickup.map(i => (stopsWithIndices(i), i)).toMap
+        val suitableStops = request.endStops.filter(stop => stopsInRoute.contains(stop) && stop != location)
+
+        require(suitableStops.nonEmpty)
+
+        val replacement = suitableStops.head
+
+        (stopsInRoute(replacement), Dropoff(request, replacement))
+    })
+      .groupBy(_._1)
+
+    val newActivities = stopActivities.toIndexedSeq.zipWithIndex.flatMap({
+      case ((stop, p_stopActivities), index) =>
+        if (index == stopIndex)
+          Seq()
+        else {
+          if (updates.contains(index))
+            updates(index).iterator.map(_._2) ++ p_stopActivities.toIterator
+          else
+            p_stopActivities
+        }
+    })
+
+    val newRoute = new Route(routingProblem, StartActivity() +: newActivities :+ EndActivity(), time)
+
+    require(newRoute.stopsWithIndices.length < this.stopsWithIndices.length)
+
+    newRoute
+  }
+
+  def withStopChanged(stopIndex : Int, newStop : BusStop) = {
+    val newActivities = stopActivities.toIndexedSeq.zipWithIndex.flatMap({
+      case ((stop, p_stopActivities), index) =>
+        if (index == stopIndex)
+          p_stopActivities.map({
+            case Pickup(request, _) => Pickup(request, newStop)
+            case Dropoff(request, _) => Dropoff(request, newStop)
+          })
+        else
+          p_stopActivities
+    })
+    new Route(routingProblem, StartActivity() +: newActivities :+ EndActivity(), time)
+  }
 }

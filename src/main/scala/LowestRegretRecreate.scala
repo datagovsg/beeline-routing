@@ -13,12 +13,12 @@ object LowestRegretRecreate extends Recreate {
 
   def tryCreateRoute(problem : RoutingProblem)(request : Request) = {
     // Construct new route
-    val randomPickup = new Pickup(request, request.startStops({
-      Random.nextInt % request.startStops.size
-    }))
-    val randomDropoff = new Dropoff(request, request.endStops({
-      Random.nextInt % request.endStops.size
-    }))
+    val randomPickup = new Pickup(request, request.startStops(
+      Random.nextInt(request.startStops.size)
+    ))
+    val randomDropoff = new Dropoff(request, request.endStops(
+      Random.nextInt(request.endStops.size)
+    ))
 
     // Check if it's possible...
     if (Route.distCost(problem)(randomPickup.location, randomDropoff.location) == Double.PositiveInfinity)
@@ -98,10 +98,14 @@ object LowestRegretRecreate extends Recreate {
           val (request, (route, insertion)) = best
           costCache = costCache.mapValues(_ - route)
 
+
+          val newRoute = route.insert(insertion._2, insertion._3, insertion._4, insertion._5)
+              .tweak
+
           next(
             unservedRequests - request,
             routes - route +
-              route.insert(insertion._2, insertion._3, insertion._4, insertion._5),
+              newRoute,
             badRequests
           )
         }
