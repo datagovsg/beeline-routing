@@ -35,6 +35,8 @@ case class CurrentSolution() extends RoutingControl
 case class RoutingStopped() extends RoutingNotification
 
 class RouteActor extends Actor {
+  var lastResults : Traversable[Route] = List()
+
   def receive = {
     case StartRouting(time, regions) =>
       val suggestions = sg.beeline.Import.getRequests.filter(x => x.time == time && regions.exists(_.contains(x.end)))
@@ -42,7 +44,12 @@ class RouteActor extends Actor {
       val algorithm = new BasicRoutingAlgorithm(problem)
 
       context.become(algorithm.solve(context), false)
+      lastResults = algorithm.currentRoutes
+
     case StopRouting =>
       sender ! RoutingStopped
+
+    case CurrentSolution =>
+      sender ! lastResults
   }
 }
