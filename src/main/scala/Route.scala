@@ -26,8 +26,8 @@ class Route(val routingProblem: RoutingProblem,
     (if (a1.location == a2.location) 0 else a1.dwellTime) +
     a1.serviceTime +
     distCost(a1.location, a2.location)
-
   /* Compute the minimum possible service time */
+
   /* Compute the maximum possible service time */
   val (minPossibleTimes, maxPossibleTimes) = {
     val len = activities.size

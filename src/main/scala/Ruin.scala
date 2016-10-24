@@ -1,6 +1,8 @@
 package sg.beeline
 import scala.annotation.tailrec
 import scala.collection.immutable.HashSet
+import scala.collection.immutable.Stream.Empty
+
 
 trait Ruin {
   def ruin(problem :RoutingProblem, routes: Traversable[Route], badRequests: Traversable[Request])
@@ -10,16 +12,48 @@ trait Ruin {
 object Ruin extends Ruin {
   val RUIN_PROBABILITY = 0.5
 
-  // Random ruin
+
   def ruin(problem: RoutingProblem, routes: Traversable[Route], badRequests: Traversable[Request]) = {
-    // Collect the set of all stops
-    val allStops = routes.flatMap(r => r.activities.flatMap(_.location))
-      .toSet
 
-    println(s"${allStops.size} stops")
+    // Random Ruin
+    val stopsToDestroy = if (Math.random() <= 0.2) {
+      // Collect the set of all stops
+      val allStops = routes.flatMap(r => r.activities.flatMap(_.location))
+        .toSet
 
-    val stopsToDestroy = allStops
-      .filter((r) => Math.random() < RUIN_PROBABILITY)
+      println(s"${allStops.size} stops")
+
+      allStops.filter((r) => Math.random() < RUIN_PROBABILITY)
+    }
+
+    //Worst Ruin
+    else {
+      //Calculate the cost for each of the stops
+      val stopCosts = routes.map(r => {
+        val midStopCost = r.activities.sliding(3).map({
+          case Seq(previousActivity, currentActivity, nextActivity) =>
+            r.startTimeDifference(previousActivity, currentActivity) +
+              r.startTimeDifference(currentActivity, nextActivity) -
+              r.startTimeDifference(previousActivity, nextActivity)
+        }).toSeq.view
+
+        List(0.0).view ++ midStopCost.view ++ List(0.0).view
+      }).toList
+
+      //Get the list for activities for each route
+      val allRouteStops = routes.map(r => r.activities).toList
+
+      //Zip the list of activities and costs
+      val routeStopCost = (allRouteStops zip stopCosts).map {
+        case (a, b) => (a zip b)
+      }
+
+      //Worst stop for each route
+      routeStopCost.map(r => {
+        r.maxBy(_._2)._1.location.orNull
+      }).toSet
+    }
+
 
     val (preservedRoutes, unservedRequests) = routes.foldLeft(
       (List[Route](), new HashSet[Request]())
