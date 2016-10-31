@@ -45,7 +45,9 @@ object Geo {
         b._1 - range + 2 * range * Math.random
       )
       val request = new GHRequest(pa, pb, ah, bh)
-      request.getHints().put(Parameters.Routing.PASS_THROUGH, true)
+      request.getHints()
+        .put(Parameters.Routing.PASS_THROUGH, true)
+        .put(Parameters.Routing.HEADING_PENALTY, 3600 * 10) /* 10 hours -- that ought to be enough to force the heading everywhere? */
       graphHopper.route(request)
     }
 
@@ -65,6 +67,59 @@ object Geo {
     }
   }
 
+  /* Compute the heading of latLng2 from latLng1 -- equirectangular approximation */
+  def heading(latLng1 : (Double, Double), latLng2 : (Double, Double)) = {
+    val degreesToRadians = Math.PI / 180
+
+    val x = (latLng2._2 - latLng1._2) * degreesToRadians * Math.cos((latLng2._1 + latLng1._1) * degreesToRadians / 2);
+    val y = (latLng2._1 - latLng1._1) * degreesToRadians;
+
+    (x, y)
+  }
+
+  def penalizedTravelTime(a: (Double, Double), ah: Double, b: (Double, Double), bh: Double) : Double = {
+    val bestRoute = routeWithJitter(a, ah, b, bh)
+
+    val a_heading = (Math.sin(ah / 180 * Math.PI), Math.cos(ah / 180 * Math.PI))
+    val b_heading = (Math.sin(bh / 180 * Math.PI), Math.cos(bh / 180 * Math.PI))
+
+    def dot(a : (Double, Double), b : (Double, Double)) = (a, b) match {
+      case ((x1, y1), (x2, y2)) => (x2 * x1 + y2 * y1) /
+        Math.sqrt( x1*x1 + y1*y1 ) /
+        Math.sqrt( x2*x2 + y2*y2 )
+    }
+
+    bestRoute match {
+      case None => Double.PositiveInfinity
+      case Some(ghResponse) =>
+        val best = ghResponse.getBest
+        val points = best.getPoints
+
+        if (points.size < 2)
+          best.getTime
+        else {
+          /*
+          Penalize the travel time if heading is wrong despite our best efforts.
+          Happens if our origin and destination are on the same road segment.
+          Since we penalize by up to 10 mins (very jialat for just being down the road!),
+          this should be sufficient to discourage
+          erroneous detours
+           */
+          val a_h1 = (points.getLatitude(0), points.getLongitude(0))
+          val a_h2 = (points.getLatitude(1), points.getLongitude(1))
+          val a_routed_heading = heading(a_h1, a_h2)
+
+          val b_h1 = (points.getLatitude(points.size - 2), points.getLongitude(points.size - 2))
+          val b_h2 = (points.getLatitude(points.size - 1), points.getLongitude(points.size - 1))
+          val b_routed_heading = heading(b_h1, b_h2)
+
+          best.getTime +
+            (if (dot(a_routed_heading, a_heading) < 0.5 ||
+                 dot(b_routed_heading, b_heading) < 0.5) 10 * 60000 else 0)
+        }
+    }
+  }
+
   def travelPath(a: (Double, Double), ah: Double, b: (Double, Double), bh: Double) = {
     val bestRoute = routeWithJitter(a, ah, b, bh)
 
@@ -80,5 +135,9 @@ object Geo {
 
         arr.toSeq
     }
+  }
+
+  def travelPathStr(a: (Double, Double), ah: Double, b: (Double, Double), bh: Double) = {
+    "[" + (travelPath(a, ah, b, bh) map {case (a,b) => s"[${b}, ${a}]"} mkString ",") + "]"
   }
 }

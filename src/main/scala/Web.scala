@@ -55,9 +55,8 @@ object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
         ("stops" -> positionsJson) ~
           ("path" -> routePath.map({case (x,y) => ("lat" -> y) ~ ("lng" -> x)}).toList) ~
           ("requests" -> route.activities.flatMap({ case Pickup(request, loc) => Some(request) case _ => None})
-                .map(request => (
-                  ("start" -> latLng(Util.toWGS(request.start))) ~
-                  ("end" -> latLng(Util.toWGS(request.end))))))
+                .map(request => ("start" -> latLng(Util.toWGS(request.start))) ~
+                  ("end" -> latLng(Util.toWGS(request.end)))))
 
       }
     }

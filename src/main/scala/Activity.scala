@@ -25,7 +25,7 @@ case class Dropoff(request : Request, _location: BusStop) extends Activity {
   def location = Some(_location)
 }
 
-case class StartActivity extends Activity {
+case class StartActivity() extends Activity {
   def minTime = 0.0
   def maxTime = Double.PositiveInfinity
   def dwellTime = 0
@@ -33,7 +33,7 @@ case class StartActivity extends Activity {
   def location = None
 }
 
-case class EndActivity extends Activity {
+case class EndActivity() extends Activity {
   def minTime = 0.0
   def maxTime = Double.PositiveInfinity
   def dwellTime = 0

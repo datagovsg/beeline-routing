@@ -11,7 +11,7 @@ class BasicRoutingProblem(val busStops: Seq[BusStop], val suggestions: Seq[Sugge
     busStops map {x => x.xy -> x}
   )
   val maxDetourRatio = 1.5
-  val distance = 400.0
+  val distance = 300.0
 
   val requests = suggestions.map(sugg =>
     new Request(this, sugg.start, sugg.end, sugg.time))

@@ -14,19 +14,24 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   // Generate all the possible requests
   // Get a map of requests -> compatible requests
   val relatedRequests = {
-    val possibleODs = requests.flatMap(request => odCombis(request))
-      .toSet // Make it unique
+    val requestsView = requests.view
 
-    println(s"So many OD pairs ${possibleODs.size}")
+    def isCompatible(r1: Request, r2: Request) : Boolean = {
+//      odCombis(r1).exists(od1 =>
+//        odCombis(r2).exists(od2 => detourTime(od1, od2) < 1.6 * 60000))
+      odCombis(r1).exists({
+        case (o,d) =>
+          (r2.startStops.exists(bs => detourTime((o,d), bs) < 1.6 * 60000) &&
+            r2.endStops.exists(bs => detourTime((o,d), bs) < 1.6 * 60000)) ||
+            (r2.startStops.exists(bs => detourTime((o,bs), d) < 1.6 * 60000) &&
+              r2.endStops.exists(bs => detourTime((o,bs), d) < 1.6 * 60000))
+      })
+    }
 
-    possibleODs.par.map({
-      case (i,j) =>
-        (i,j) -> possibleODs.filter({
-          case (k,l) =>
-            detourTime((i,j), (k,l)) < 5 * 60000
-        })
-    })
-      .toMap
+    requestsView.par.map(request => {
+      (request,
+        requestsView.filter(otherRequest => isCompatible(request, otherRequest)).toSet)
+    }).toMap
   }
   println("Computed pairwise compatible requests")
   println(("Average number of compatible", relatedRequests.size, relatedRequests.values.map(_.size).sum / relatedRequests.size.toDouble))
@@ -35,19 +40,25 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     for (i <- request.startStops; j <- request.endStops) yield (i, j)
   }
 
+
+  def travelTime(s : Seq[BusStop]) =
+    s.sliding(2).map({
+      case Seq(x, y) =>
+        if (x != y)
+          routingProblem.distance(x, y) + 60000.0
+        else
+          0.0
+    }).sum
+
+  def detourTime(ab: (BusStop, BusStop), c: BusStop) : Double = {
+    val (a,b) = ab
+
+    travelTime(Seq(a,c,b)) - travelTime(Seq(a,b))
+  }
+
   def detourTime(ab: (BusStop, BusStop), cd: (BusStop, BusStop)) : Double = {
     val (a,b) = ab
     val (c,d) = cd
-
-    def travelTime(s : Seq[BusStop]) =
-      s.sliding(2).map({
-        case Seq(x, y) =>
-          if (x != y)
-            routingProblem.distance(x, y) + 60000.0
-          else
-            0.0
-      }).sum
-
 
     val abTime = travelTime(Seq(a, b))
     val cdTime = travelTime(Seq(c, d))
@@ -134,11 +145,11 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
       val ods = routeODs(route)
 
       // Reduce to a small set of feasible ods
-      val feasible = ods.drop(1).foldLeft(
-        relatedRequests.get(ods.head).orNull
-      ) ((acc, current) => {
-        acc.intersect(relatedRequests.get(current).orNull)
-      })
+      val feasible = route.requestsInfo.keys.foldLeft(
+        relatedRequests(route.requestsInfo.keys.head)
+      ) ((acc, current) =>
+        acc.intersect(relatedRequests(current))
+      )
 
       feasible
     }
@@ -173,7 +184,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
 
     @tailrec
     def next(unservedRequests: Set[Request], routes: Set[Route], badRequests: List[Request],
-             routeOdMap: Map[Route, Set[(BusStop, BusStop)]])
+             routeOdMap: Map[Route, Set[Request]])
     : (Set[Route], List[Request]) = {
 
       if (count % 100 == 0) {
@@ -188,16 +199,16 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
         // Use a lazy to avoid choking on empty route list
         lazy val best = {
           // For all requests, compute the regret
-          val requestStops = unservedRequests.par.flatMap(request => odCombis(request).map(od => (request, od)))
+          val requestStops = unservedRequests
           val insertionCosts = routeOdMap.par.flatMap({
-            case (route, odSet) =>
-              val feasibleRequests = requestStops.filter(rs => odSet.contains(rs._2))
+            case (route, compatibleSet) =>
+              val feasibleRequests = requestStops.filter(r => compatibleSet.contains(r))
 
               if (feasibleRequests.isEmpty)
                 None
               else
                 Some({
-                  val regrets = feasibleRequests.map(req => (route, req._1, getRegret(route, req._1)))
+                  val regrets = feasibleRequests.map(req => (route, req, getRegret(route, req)))
 
                   /* Update the cache! */
                   {
@@ -242,7 +253,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
           val pickup = insertion._2 match {case Pickup(_, loc) => loc}
           val dropoff = insertion._3 match {case Dropoff(_, loc) => loc}
 
-          val newRoute = oldRoute.insert(insertion._2, insertion._3, insertion._4, insertion._5)
+          val newRoute = oldRoute.insert(insertion._2, insertion._3, insertion._4, insertion._5).tweak
 
           costCacheMutex.synchronized({
             costCache = costCache - oldRoute

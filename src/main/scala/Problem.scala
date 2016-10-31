@@ -16,7 +16,7 @@ class BusStop(val coordinates: Util.Point, val heading: Double, val description:
   val xy = Util.toSVY(coordinates)
 
   override def toString =
-    s"BusStop(${xy._1}, ${xy._2}) ${description}"
+    s"BusStop(${coordinates._2},${coordinates._1}) ${description}"
 }
 
 class Suggestion(val start: Util.Point, val end: Util.Point, val time: Double) {

@@ -5,6 +5,7 @@ val graphhopper = "com.graphhopper" % "graphhopper" % "0.7.0"
 val kdtree = "com.thesamet" %% "kdtree" % "1.0.4"
 val scalatic = "org.scalactic" %% "scalactic" % "3.0.0"
 val scalatest = "org.scalatest" %% "scalatest" % "3.0.0" % "test"
+//val http = "org.scalaj" % "scalaj-http_2.11" % "2.3.0"
 
 def scalaSources(base: File): PathFinder = (base / "src") ** "*.scala"
 //
@@ -13,6 +14,7 @@ val sprayV = "1.3.3"
 
 lazy val root = (project in file(".")).
     settings(
+        scalaVersion := "2.11.8",
         name := "intelligent-routing",
         version := "1.0",
         // scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
@@ -23,6 +25,7 @@ lazy val root = (project in file(".")).
           kdtree,
           scalatic,
           scalatest
+//          http
         ) ++ Seq(
             "io.spray"            %%  "spray-can"     % sprayV,
             "io.spray"            %%  "spray-routing" % sprayV,

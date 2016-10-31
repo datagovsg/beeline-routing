@@ -80,8 +80,6 @@ class RuinSpec extends FlatSpec with Matchers {
       case _ => None
     })).toSet
 
-    println(rejected.head)
-
     (recreatedRequestSet ++ rejected) should be (r2.toSet)
   }
 }

@@ -2,6 +2,7 @@ package sg.beeline
 
 import scala.annotation.tailrec
 import scala.collection.immutable.HashMap
+import Route.groupSuccessive
 
 object Route {
   def empty(routingProblem: RoutingProblem, time: Double) =
@@ -12,6 +13,19 @@ object Route {
       case (Some(l1), Some(l2)) => routingProblem.distance(l1, l2) // Distance is already in seconds
       case _ => 0.0
     }
+
+  // FIXME: fix the tail recursion bit
+  def groupSuccessive[A, B]
+  (t : Traversable[A])(fn : A => B) : List[(B, Traversable[A])] = {
+    if (t.isEmpty)
+      List()
+    else {
+      val first = fn(t.head)
+      val (same, different) = t.span(x => fn(x) == first)
+
+      (first, same) :: groupSuccessive(different)(fn)
+    }
+  }
 }
 
 class Route(val routingProblem: RoutingProblem,
@@ -335,20 +349,6 @@ class Route(val routingProblem: RoutingProblem,
       _insert(a1, a2, ip1, ip2),
       time)
 
-
-  // FIXME: fix the tail recursion bit
-  def groupSuccessive[A, B]
-  (t : Traversable[A])(fn : A => B) : List[(B, Traversable[A])] = {
-    if (t.isEmpty)
-      List()
-    else {
-      val first = fn(t.head)
-      val (same, different) = t.span(x => fn(x) == first)
-
-      (first, same) :: groupSuccessive(different)(fn)
-    }
-  }
-
   /**
     * Make slight adjustments to each stop, insofar as routing time can be improved.
     *
@@ -415,8 +415,9 @@ class Route(val routingProblem: RoutingProblem,
 
         if (improvers.isEmpty)
           None
-        else
+        else {
           Some(improvers.minBy(_._3))
+        }
     })
 
     if (deletableStops.nonEmpty) {
@@ -434,15 +435,8 @@ class Route(val routingProblem: RoutingProblem,
   }
 
   def withStopDeleted(stopIndex : Int) : Route = {
-    /* List of activities to replace */
-    val replacedActivities = activities.filter({
-      case Pickup(request, _) => requestsInfo(request).pickupStopIndex == stopIndex
-      case Dropoff(request, _) => requestsInfo(request).dropoffStopIndex == stopIndex
-      case _ => false
-    })
-
     /* Produce a sequence of (stopIndex, activity to update) */
-    val updates = replacedActivities.map({
+    val updates = stopActivities(stopIndex)._2.map({
       case Pickup(request, location) =>
         val stopsInRoute = requestsInfo(request).stopIndicesBeforeDropoff.map(i => (stopsWithIndices(i), i)).toMap
         val suitableStops = request.startStops.filter(stop => stopsInRoute.contains(stop) && stop != location)
@@ -470,7 +464,7 @@ class Route(val routingProblem: RoutingProblem,
           Seq()
         else {
           if (updates.contains(index))
-            updates(index).iterator.map(_._2) ++ p_stopActivities.toIterator
+            updates(index).toIterator.map(_._2) ++ p_stopActivities.toIterator
           else
             p_stopActivities
         }
@@ -479,6 +473,7 @@ class Route(val routingProblem: RoutingProblem,
     val newRoute = new Route(routingProblem, StartActivity() +: newActivities :+ EndActivity(), time)
 
     require(newRoute.stopsWithIndices.length < this.stopsWithIndices.length)
+    require(newRoute.activities.length == this.activities.length)
 
     newRoute
   }
@@ -486,14 +481,25 @@ class Route(val routingProblem: RoutingProblem,
   def withStopChanged(stopIndex : Int, newStop : BusStop) = {
     val newActivities = stopActivities.toIndexedSeq.zipWithIndex.flatMap({
       case ((stop, p_stopActivities), index) =>
-        if (index == stopIndex)
+        if (index == stopIndex) {
           p_stopActivities.map({
             case Pickup(request, _) => Pickup(request, newStop)
             case Dropoff(request, _) => Dropoff(request, newStop)
           })
+        }
         else
           p_stopActivities
     })
-    new Route(routingProblem, StartActivity() +: newActivities :+ EndActivity(), time)
+
+    val newRoute = new Route(routingProblem, StartActivity() +: newActivities :+ EndActivity(), time)
+
+//      require(newRoute.stopsWithIndices.length == this.stopsWithIndices.length)
+    require(newRoute.activities.length == this.activities.length)
+
+    newRoute
+  }
+
+  override def toString = {
+    activities.mkString("\n> ")
   }
 }

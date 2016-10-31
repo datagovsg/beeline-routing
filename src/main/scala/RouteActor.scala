@@ -33,6 +33,7 @@ case class StopRouting() extends RoutingControl
 case class CurrentSolution() extends RoutingControl
 
 case class RoutingStopped() extends RoutingNotification
+case class RoutingStarted() extends RoutingNotification
 
 class RouteActor extends Actor {
   var lastResults : Traversable[Route] = List()
@@ -41,10 +42,12 @@ class RouteActor extends Actor {
     case StartRouting(time, regions) =>
       val suggestions = sg.beeline.Import.getRequests.filter(x => x.time == time && regions.exists(_.contains(x.end)))
       val problem = new BasicRoutingProblem(Import.getBusStops, suggestions)
+
       val algorithm = new BasicRoutingAlgorithm(problem)
 
-      context.become(algorithm.solve(context), false)
-      lastResults = algorithm.currentRoutes
+      context.become(algorithm.solve(context, (routes) => this.lastResults = routes), discardOld = false)
+
+      sender ! RoutingStarted
 
     case StopRouting =>
       sender ! RoutingStopped

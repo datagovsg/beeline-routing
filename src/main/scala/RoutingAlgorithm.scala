@@ -9,7 +9,11 @@ trait RoutingAlgorithm extends Runnable {
   def currentSolution: Traversable[Route]
   def run : Unit
 
-  def solve(context: ActorContext) : PartialFunction[Any, Unit] = {
+
+  // FIXME: The callback thing is an ugly hack.
+  // However I'm not prepared to learn how to set up another actor
+  // system...
+  def solve(context: ActorContext, callback : Traversable[Route] => Any) : PartialFunction[Any, Unit] = {
     val thread = new Thread(this)
 
     thread.start()
@@ -22,6 +26,7 @@ trait RoutingAlgorithm extends Runnable {
           thread.join(60000)
         }
         context.sender ! RoutingStopped
+        callback(currentSolution)
         context.unbecome()
       }
       case CurrentSolution => context.sender ! currentSolution
@@ -44,7 +49,7 @@ extends RoutingAlgorithm
   def run {
     println("Basic Routing Algorithm:")
     val (routes, requests, badRequests) = problem.initialize
-//    val beelineRecreate = new BeelineRecreate(problem, requests)
+    val beelineRecreate = new BeelineRecreate(problem, requests)
 
     println("Initialized")
 
@@ -56,10 +61,9 @@ extends RoutingAlgorithm
       println("Ruined")
 
       // Recreate
-//      val (newRoutes, newBadRequests) = beelineRecreate.recreate(problem, preservedRoutes, unservedRequests)
+      val (newRoutes, newBadRequests) = beelineRecreate.recreate(problem, preservedRoutes, unservedRequests)
 
-
-      val (newRoutes, newBadRequests) = LowestRegretRecreate.recreate(problem, preservedRoutes, unservedRequests)
+//      val (newRoutes, newBadRequests) = LowestRegretRecreate.recreate(problem, preservedRoutes, unservedRequests)
       println("Recreated")
 
       (newRoutes, newBadRequests)

@@ -4,7 +4,7 @@ import org.json4s.native.JsonMethods._
 import scala.io.Source
 
 object Import {
-  def getBusStops = {
+  lazy val getBusStops = {
     implicit val formats = DefaultFormats
     val jsonText = Source.fromFile("onemap/bus-stops-headings.json").mkString
     val jsonData = parse(jsonText).asInstanceOf[JArray]
@@ -30,12 +30,20 @@ object Import {
     busStops
   }
 
+  lazy val distanceMatrix = {
+    val ois = new java.io.ObjectInputStream(
+      new java.util.zip.GZIPInputStream(
+        new java.io.FileInputStream("./distances_cache.dat.gz")))
+
+    ois.readObject().asInstanceOf[Array[Array[Double]]]
+  }
+
   // Return the number of seconds since midnight
   def convertTime(timeString: String) =
     timeString.substring(0,2).toLong * 3600000 +
     timeString.substring(2,4).toLong * 60000
 
-  def getRequests = {
+  lazy val getRequests = {
     implicit val formats = DefaultFormats
     val jsonText = Source.fromFile("suggestions.json").mkString
     val jsonData = parse(jsonText).asInstanceOf[JArray]
