@@ -2,6 +2,9 @@ package sg.beeline
 
 import akka.actor.{ActorContext, ActorRef}
 import sg.beeline.ui.{RoutingStopped, CurrentSolution, StopRouting}
+import spray.http.SetRequestTimeout
+
+import scala.concurrent.duration.Duration
 
 trait RoutingAlgorithm extends Runnable {
   @volatile var shouldStop = false
@@ -29,7 +32,9 @@ trait RoutingAlgorithm extends Runnable {
         callback(currentSolution)
         context.unbecome()
       }
-      case CurrentSolution => context.sender ! currentSolution
+      case CurrentSolution =>
+        context.sender ! currentSolution
+        println("Current solution sent")
     }
   }
 }

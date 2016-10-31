@@ -8,7 +8,7 @@ object Score extends Score {
   // FIXME: A better scoring function!
   // The higher the better
   def score(routes: Traversable[Route]) : Double = {
-    return +numPassengers(topNRoutes(30)(routes))
+    return +numPassengers(topNRoutes(routes.size / 2)(routes))
   }
 
   private def meanTravelTime(routes: Traversable[Route]) = {

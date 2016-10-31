@@ -1,8 +1,11 @@
 package sg.beeline
 
+import com.thesamet.spatial.{KDTreeMap, KDTree}
+
 import scala.annotation.tailrec
 import scala.util.Random
 import scala.collection.immutable.HashMap
+import kdtreeQuery.KDTreeMapBall
 
 class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Request]) extends Recreate {
   type Insertion = (Double, Activity, Activity, (Activity, Activity), (Activity, Activity))
@@ -16,21 +19,33 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   val relatedRequests = {
     val requestsView = requests.view
 
+
+    val startStopTree = KDTreeMap.fromSeq(
+      requests.map({r => (r.start, r)}).toSeq
+    )
+    val endStopTree = KDTreeMap.fromSeq(
+      requests.map({r => (r.end, r)}).toSeq
+    )
+
     def isCompatible(r1: Request, r2: Request) : Boolean = {
-//      odCombis(r1).exists(od1 =>
-//        odCombis(r2).exists(od2 => detourTime(od1, od2) < 1.6 * 60000))
       odCombis(r1).exists({
         case (o,d) =>
           (r2.startStops.exists(bs => detourTime((o,d), bs) < 1.6 * 60000) &&
             r2.endStops.exists(bs => detourTime((o,d), bs) < 1.6 * 60000)) ||
             (r2.startStops.exists(bs => detourTime((o,bs), d) < 1.6 * 60000) &&
-              r2.endStops.exists(bs => detourTime((o,bs), d) < 1.6 * 60000))
+              r2.endStops.exists(bs => detourTime((o,bs), d) < 1.6 * 60000)) ||
+            (r2.startStops.exists(bs => detourTime((bs, o), d) < 1.6 * 60000) &&
+              r2.endStops.exists(bs => detourTime((bs, o), d) < 1.6 * 60000))
       })
     }
 
     requestsView.par.map(request => {
-      (request,
-        requestsView.filter(otherRequest => isCompatible(request, otherRequest)).toSet)
+      val compatibleRequests = startStopTree.queryBall(request.start, 3000).map(_._2).intersect(
+        endStopTree.queryBall(request.end, 3000).map(_._2)
+      )
+        .filter(other => isCompatible(request, other)).toSet
+
+      (request, compatibleRequests)
     }).toMap
   }
   println("Computed pairwise compatible requests")
@@ -105,7 +120,6 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   }
 
   private def getRegret(route : Route, request : Request) : Insertion = {
-
     costCache.get(route) match {
       case Some(requestCache) =>
         requestCache.get(request) match {
@@ -202,7 +216,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
           val requestStops = unservedRequests
           val insertionCosts = routeOdMap.par.flatMap({
             case (route, compatibleSet) =>
-              val feasibleRequests = requestStops.filter(r => compatibleSet.contains(r))
+              val feasibleRequests = requestStops.intersect(compatibleSet)
 
               if (feasibleRequests.isEmpty)
                 None
@@ -212,7 +226,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
 
                   /* Update the cache! */
                   {
-                    val update = regrets.map {case (route, request, regret) => (request, regret)}
+                    val update = regrets.map {case (_, request, regret) => (request, regret)}
 
                     costCacheMutex.synchronized({
                       costCache = costCache + (route -> (costCache.getOrElse(route, new HashMap) ++ update))

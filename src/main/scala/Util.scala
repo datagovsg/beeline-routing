@@ -50,4 +50,22 @@ object kdtreeQuery {
       (pair) => squaredDistance(pair._1, origin) <= distance * distance
     }
   }
+
+  implicit class KDTreeMapBall[B](treeMap: KDTreeMap[(Double, Double),B]) {
+
+    def queryBall(origin: (Double, Double),
+                      distance: Double)
+    : Seq[((Double, Double),B)] = {
+      val region = new RegionBuilder[(Double, Double)] {
+        from  ((origin._1 - distance, 0), 0)
+        to    ((origin._1 + distance, 0), 0)
+        from  ((0, origin._2 - distance), 1)
+        to    ((0, origin._2 + distance), 1)
+      }.build
+
+      treeMap.regionQuery(region) filter {
+        (pair) => squaredDistance(pair._1, origin) <= distance * distance
+      }
+    }
+  }
 }

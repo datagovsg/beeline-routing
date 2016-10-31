@@ -64,6 +64,8 @@ object Hi {
 
     val service = system.actorOf(Props[IntelligentRoutingService], "intelligent-routing")
 
+    Geo.initialize()
+
     IO(Http) ! Http.Bind(service, interface = "localhost", port = 8080)
   }
 

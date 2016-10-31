@@ -13,8 +13,6 @@ import org.json4s.JsonDSL._
 
 import scala.concurrent.ExecutionContext
 
-class Lol(val x: Int, val y: Double) {}
-
 case class Stop(busStop : BusStop, numBoard : Int, numAlight: Int) {}
 case class RouteWithPath(route: Route, routePath: Seq[(Double, Double)])
 
@@ -116,17 +114,19 @@ class IntelligentRoutingService extends HttpService with Actor with Json4sSuppor
 
         onSuccess(routingActor ? CurrentSolution) {
           case routes : Traversable[Route] =>
-            complete(routes.toList.map(r => {
-              val path = r.activities.sliding(2).map({
-                case Seq(a1, a2) => (a1.location, a2.location)
-              }).flatMap({
-                case (Some(loc1), Some(loc2)) =>
-                  Geo.travelPath(loc1.coordinates, loc1.heading, loc2.coordinates, loc2.heading)
-                case _ => List()
-              }).toList
+            complete(routes.par.zipWithIndex.map({
+              case (r,i) =>
+                val path = r.activities.sliding(2).map({
+                  case Seq(a1, a2) => (a1.location, a2.location)
+                }).flatMap({
+                  case (Some(loc1), Some(loc2)) =>
+//                    Geo.travelPath(loc1.coordinates, loc1.heading, loc2.coordinates, loc2.heading)
+                    List(loc1.coordinates, loc2.coordinates)
+                  case _ => List()
+                }).toList
 
-              new RouteWithPath(r, path)
-            }))
+                new RouteWithPath(r, path)
+            }).toList)
         }
       }
     }
