@@ -30,12 +30,16 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     def isCompatible(r1: Request, r2: Request) : Boolean = {
       odCombis(r1).exists({
         case (o,d) =>
-          (r2.startStops.exists(bs => detourTime((o,d), bs) < 1.6 * 60000) &&
-            r2.endStops.exists(bs => detourTime((o,d), bs) < 1.6 * 60000)) ||
-            (r2.startStops.exists(bs => detourTime((o,bs), d) < 1.6 * 60000) &&
-              r2.endStops.exists(bs => detourTime((o,bs), d) < 1.6 * 60000)) ||
-            (r2.startStops.exists(bs => detourTime((bs, o), d) < 1.6 * 60000) &&
-              r2.endStops.exists(bs => detourTime((bs, o), d) < 1.6 * 60000))
+          r2.startStops.exists(bs =>
+            detourTime((o,d), bs) < 1.6 * 60000 ||
+            detourTime((o,bs), d) < 1.6 * 60000 ||
+            detourTime((bs,o), d) < 1.6 * 60000
+          ) &&
+          r2.endStops.exists(bs =>
+            detourTime((o,d), bs) < 1.6 * 60000 ||
+            detourTime((o,bs), d) < 1.6 * 60000 ||
+            detourTime((bs,o), d) < 1.6 * 60000
+          )
       })
     }
 
@@ -156,8 +160,6 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
 
     // For all routes -- create a hash map (BusStop, BusStop) -> List(Route)
     def computeFeasibleSet(route : Route) = {
-      val ods = routeODs(route)
-
       // Reduce to a small set of feasible ods
       val feasible = route.requestsInfo.keys.foldLeft(
         relatedRequests(route.requestsInfo.keys.head)
@@ -172,36 +174,12 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
       preservedRoutes.map(route => (route, computeFeasibleSet(route))).toMap
     }
 
-    val odRouteMap = {
-      preservedRoutes.flatMap(route => {
-        val pickups = route.activities.flatMap({
-          case Pickup(request, location) =>
-            Some((request, location))
-          case _ =>
-            None
-        }).toMap
-
-        val dropoffs = route.activities.flatMap({
-          case Dropoff(request, location) =>
-            Some((request, location))
-          case _ => None
-        }).toMap
-
-        val ods = pickups.keys
-          .map(request => (pickups.get(request).orNull, dropoffs.get(request).orNull))
-
-        ods.map(od => (od, route))
-      })
-        .groupBy(_._1)
-        .map({case(a, b) => (a, b.toList.map(_._2))})
-    }
-
     @tailrec
     def next(unservedRequests: Set[Request], routes: Set[Route], badRequests: List[Request],
              routeOdMap: Map[Route, Set[Request]])
     : (Set[Route], List[Request]) = {
 
-      if (count % 100 == 0) {
+      if (count % 500 == 0) {
         println(count)
         println(("Average number of feasible", routeOdMap.values.map(_.size).sum / routeOdMap.size.toDouble))
       }
@@ -244,6 +222,8 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
         }
 
         if (routes.isEmpty || best.isEmpty || best.orNull._3._1 == Double.PositiveInfinity) {
+          // Create a new route from any request
+
           val someRequest = unservedRequests.head
           val newRoute = tryCreateRoute(problem)(someRequest)
 
@@ -264,8 +244,6 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
         }
         else {
           val (oldRoute, request, insertion) = best.orNull
-          val pickup = insertion._2 match {case Pickup(_, loc) => loc}
-          val dropoff = insertion._3 match {case Dropoff(_, loc) => loc}
 
           val newRoute = oldRoute.insert(insertion._2, insertion._3, insertion._4, insertion._5).tweak
 

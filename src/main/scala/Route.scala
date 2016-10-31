@@ -75,7 +75,8 @@ class Route(val routingProblem: RoutingProblem,
     def cond = minTimes.zip(maxTimes).forall({case (min, max) => min <= max})
     if (!cond) {
       println(activities.mkString("\n # "))
-      println(activities.sliding(2).map({ case IndexedSeq(a,b) => (a, b, distCost(a.location, b.location), startTimeDifference(a,b)) }).toList)
+      println(activities.sliding(2).map({ case IndexedSeq(a,b) =>
+        (a, b, distCost(a.location, b.location), startTimeDifference(a,b)) }).mkString("\n ? "))
 
       println(minTimes.toList)
       println(maxTimes.toList)
@@ -491,12 +492,24 @@ class Route(val routingProblem: RoutingProblem,
           p_stopActivities
     })
 
-    val newRoute = new Route(routingProblem, StartActivity() +: newActivities :+ EndActivity(), time)
+    try {
+      val newRoute = new Route(routingProblem, StartActivity() +: newActivities :+ EndActivity(), time)
 
-//      require(newRoute.stopsWithIndices.length == this.stopsWithIndices.length)
-    require(newRoute.activities.length == this.activities.length)
+      //      require(newRoute.stopsWithIndices.length == this.stopsWithIndices.length)
+      require(newRoute.activities.length == this.activities.length)
 
-    newRoute
+      newRoute
+    } catch {
+      case err : IllegalArgumentException =>
+        println(minPossibleTimes.toList)
+        println(maxPossibleTimes.toList)
+        println(stopActivities(stopIndex))
+        println(newStop)
+        println(activities.mkString("\n # "))
+
+        throw err
+    }
+
   }
 
   override def toString = {

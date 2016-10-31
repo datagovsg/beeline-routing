@@ -76,7 +76,8 @@ extends RoutingAlgorithm
 
     currentRoutes = routes
 
-    val (newRoutes, newBadRequests, score) = (0 until 100)
+    val numIter = 100
+    val (newRoutes, newBadRequests, score) = (0 until numIter)
       .foldLeft(
         (routes, badRequests, Double.NegativeInfinity)
       )((acc, iterCount) => {
@@ -88,11 +89,26 @@ extends RoutingAlgorithm
           val (nextRouteList, nextRequests) = iterSolution(routeList, badRequests)
           val nextScore = Score.score(nextRouteList)
 
+          val threshold = {
+            val T_0 = 500
+
+            math.exp(- iterCount / numIter.toDouble / 0.1)
+          }
+
           // FIXME: Use Threshold Annealing
           if (nextScore > previousScore) {
             println(s"Score increased to ${nextScore}")
 
             // Make the routes available for web access
+            currentRoutes = nextRouteList
+
+            (nextRouteList, requestList, nextScore)
+          }
+          else if (nextScore > previousScore - threshold) {
+            println(s"Temporarily accepting score at ${nextScore}")
+
+            // Temporarily accept the new routes, but
+            // don't accept it as the best...
             currentRoutes = nextRouteList
 
             (nextRouteList, requestList, nextScore)
