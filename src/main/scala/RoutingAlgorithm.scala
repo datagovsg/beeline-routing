@@ -92,7 +92,7 @@ extends RoutingAlgorithm
           val threshold = {
             val T_0 = 500
 
-            math.exp(- iterCount / numIter.toDouble / 0.1)
+            T_0 * math.exp(- iterCount / numIter.toDouble / 0.1)
           }
 
           // FIXME: Use Threshold Annealing
