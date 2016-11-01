@@ -4,6 +4,7 @@ import java.io.{FileOutputStream, ObjectOutputStream}
 import java.util.zip.GZIPOutputStream
 
 import scala.collection.SeqView
+import scala.util.Try
 
 object Hi {
   def main(args: Array[String]) {
@@ -66,7 +67,9 @@ object Hi {
 
     Geo.initialize()
 
-    IO(Http) ! Http.Bind(service, interface = "localhost", port = 8080)
+    IO(Http) ! Http.Bind(service,
+      interface = "localhost",
+      port = scala.util.Properties.envOrElse("PORT", "8080").toInt)
   }
 
   def estimate(): Unit = {
