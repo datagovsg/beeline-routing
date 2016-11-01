@@ -44,7 +44,7 @@ class RuinSpec extends FlatSpec with Matchers {
     println(preservedRequestSet.size)
     println(ruinedRequestSet.size)
 
-    (preservedRequestSet & ruinedRequestSet).size should be (0)
+    (preservedRequestSet & ruinedRequestSet.toSet).size should be (0)
     (preservedRequestSet ++ ruinedRequestSet) should be (r2.toSet)
   }
 
