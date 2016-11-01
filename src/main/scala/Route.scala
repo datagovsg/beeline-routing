@@ -429,7 +429,9 @@ class Route(val routingProblem: RoutingProblem,
         }
     })
 
-    if (deletableStops.nonEmpty) {
+    if (this.stopActivities.size <= 4) /* Don't tweak unnecessarily, otherwise we won't get random stop choice */
+      None
+    else if (deletableStops.nonEmpty) {
       //          println("Stop deleted")
       Some(withStopDeleted(deletableStops.maxBy(_._3 /* savings */)._2))
     }
