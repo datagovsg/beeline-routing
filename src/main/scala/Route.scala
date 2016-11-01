@@ -357,23 +357,31 @@ class Route(val routingProblem: RoutingProblem,
     */
   @tailrec
   final def tweak : Route = {
-    improve match {
+    val attempt = try {
+      improve
+    } catch {
+      /* Because we are using certain heuristics to tweak the
+        results, there may be cases when the tweaked routes are not
+        "feasible", giving an error
+       */
+      case e : IllegalArgumentException => None
+    }
+
+    attempt match {
       case None => this
       case Some(betterRoute) => betterRoute.tweak
     }
   }
 
+  /* Returns an iterator of Seq(prevStop, stop, nextStop */
+  def locActivitiesWithSurrounding : Iterator[Seq[(Option[BusStop], Traversable[Activity])]] = {
+    val mainIterator = stopActivities.iterator.map({case (loc, as) => (Some(loc), as)})
+
+    (Seq((None, List())).iterator ++ mainIterator ++ Seq((None, List())).iterator).sliding(3)
+  }
+
   def improve : Option[Route] = {
     // activities --> [ (loc, [act1, act2, act3]), ... ]
-    val locActivities = stopActivities
-
-    /* Returns an iterator of Seq(prevStop, stop, nextStop */
-    def locActivitiesWithSurrounding : Iterator[Seq[(Option[BusStop], Traversable[Activity])]] = {
-      val mainIterator = locActivities.iterator.map({case (loc, as) => (Some(loc), as)})
-
-      (Seq((None, List())).iterator ++ mainIterator ++ Seq((None, List())).iterator).sliding(3)
-    }
-
     lazy val deletableStops = locActivitiesWithSurrounding.zipWithIndex
       /* Find the requests with alternative stops */
       /* Map to (do all activities at this location have an alternative?, stop index, cost savings) */
