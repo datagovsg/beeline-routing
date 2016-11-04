@@ -171,8 +171,7 @@ class Route(val routingProblem: RoutingProblem,
     // M_3 <= m1 + t(a, 2) + t(a,3) <= N_3
     // ...
     // M_y <= m1 + t(a, 2) + t(2, 3) + ... + t(?, Y) <= N_y
-    val activityFeasibility = activityList.sliding(2).scanLeft(
-      /* sum so far */
+    val activityFeasibilityMin = activityList.sliding(2).scanLeft(
       (true, startTime) /* first activity's known min time */
     )({
       case ((_, timeSoFar), Seq(a, b)) =>
@@ -180,12 +179,22 @@ class Route(val routingProblem: RoutingProblem,
         val t = Math.max(b.minTime, nextTime)
 
         (b.minTime <= t && t <= b.maxTime, t)
-    }).drop(1).toList
+    })
+
+    val activityFeasibilityMax = activityList.sliding(2).scanRight(
+      (true, endTime) /* first activity's known min time */
+    )({
+      case (Seq(a, b), (_, timeSoFar)) =>
+        val nextTime = timeSoFar - startTimeDifference(a, b)
+        val t = Math.min(a.maxTime, nextTime)
+
+        (a.minTime <= t && t <= a.maxTime, t)
+    })
 
     // All must be feasible
     // m_b2 <= m1 + ... + t(y, b2) <= n_b2
-    activityFeasibility.forall(_._1) &&
-      activityFeasibility.last._2 <= endTime /* last activity's known max time */
+    activityFeasibilityMin.zip(activityFeasibilityMax)
+        .forall({case (x,y) => x._2 <= y._2})
   }
 
   // Returns the cost, (insertion point 1), (insertion point 2) that would have been added

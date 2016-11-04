@@ -28,7 +28,7 @@ object Hi {
       val busStopsArr = busStops.toArray
 
       val indices = for (i <- busStopsArr.indices;
-                         j <- busStopsArr.indices) yield (i,j);
+                          j <- busStopsArr.indices) yield (i,j);
       Geo.initialize();
       indices.par.foreach({ case (i,j) =>
         if (j == 0)
