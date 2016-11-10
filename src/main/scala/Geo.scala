@@ -10,10 +10,23 @@ import com.graphhopper.util.{Parameters, CmdArgs}
 import scala.collection.mutable.ArrayBuffer
 
 object Geo {
-  import Util.Point
+  implicit class InstructionListWrapper(val instructions : com.graphhopper.util.InstructionList) {
+    def list = {
+      (for (i <- 0 until instructions.size) yield instructions.get(i)).toList
+    }
+  }
 
   // set up graphhopper
   var graphHopper : GraphHopper = null;
+
+  def turnCosts(sign: Int) = (sign match {
+    case com.graphhopper.util.Instruction.TURN_LEFT => 5
+    case com.graphhopper.util.Instruction.TURN_SHARP_LEFT => 5
+    case com.graphhopper.util.Instruction.TURN_RIGHT => 30
+    case com.graphhopper.util.Instruction.TURN_SHARP_RIGHT => 20
+    case _ => 0
+  }) * 1000.0
+
   def initialize() = {
     if (graphHopper == null) {
       graphHopper = new GraphHopper();
@@ -96,7 +109,9 @@ object Geo {
         val points = best.getPoints
 
         if (points.size < 2)
-          best.getTime
+          best.getInstructions.list.map({
+            instr => turnCosts(instr.getSign) + instr.getTime
+          }).sum
         else {
           /*
           Penalize the travel time if heading is wrong despite our best efforts.
@@ -113,7 +128,9 @@ object Geo {
           val b_h2 = (points.getLatitude(points.size - 1), points.getLongitude(points.size - 1))
           val b_routed_heading = heading(b_h1, b_h2)
 
-          best.getTime +
+          best.getInstructions.list.map({
+            instr => turnCosts(instr.getSign) + instr.getTime
+          }).sum +
             (if (dot(a_routed_heading, a_heading) < 0.5 ||
                  dot(b_routed_heading, b_heading) < 0.5) 10 * 60000 else 0)
         }
