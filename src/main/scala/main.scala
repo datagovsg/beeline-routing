@@ -68,7 +68,7 @@ object Hi {
     Geo.initialize()
 
     IO(Http) ! Http.Bind(service,
-      interface = "localhost",
+      interface = "0.0.0.0",
       port = scala.util.Properties.envOrElse("PORT", "8080").toInt)
   }
 
