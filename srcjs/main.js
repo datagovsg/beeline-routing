@@ -26,11 +26,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   Vue.component('route-suggestion', {
     template: `
-<google-polyline v-if="selected" :path="route.path" :options="pathOptions"
+<!--<google-polyline v-if="selected" :path="route.path" :options="pathOptions"
   @g-mouseover="mouseover($event, stop)"
   @g-mouseout="mouseout($event, stop)"
 >
-</google-polyline>
+</google-polyline>-->
 
 <template v-if="selected" v-for="request in route.requests">
   <google-marker v-if="selected" v-for="request in route.requests" :position="request.start" :icon="requestOptions.icon"></google-marker>
@@ -183,11 +183,29 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedRegion: null,
 
       routingStarted: false,
+      routePath: [],
 
       time: (8 * 60 * 60 * 1000)
     },
     computed: {
       routeStyle: {}
+    },
+    watch: {
+      selectedRoute(route) {
+        if (route) {
+          var indices = route.stops.map(i => i.index)
+
+          this.$http.post('/path', {
+            indices
+          })
+          .then(result => result.json())
+          .then(result => {
+            this.routePath = _.flatten(result)
+          })
+        } else {
+          this.routePath = []
+        }
+      }
     },
     created() {
     },

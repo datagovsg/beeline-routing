@@ -96,6 +96,8 @@ google-map {
                         @mouseover="mouseover"
       ></route-suggestion>
 
+      <google-polyline v-if="routePath" :path="routePath"></google-polyline>
+
       <!--@mouseout="hoverRoute($event, null)"-->
       <!--@mouseover="hoverRoute($event, route)"-->
       <region-selection :regions.sync="regions" :selected.sync="selectedRegion"></region-selection>

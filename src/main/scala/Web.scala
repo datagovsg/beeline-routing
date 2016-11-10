@@ -47,7 +47,8 @@ object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
           latLng(bs.coordinates) ~
             ("description" -> bs.description) ~
             ("numBoard" -> board) ~
-            ("numAlight" -> alight)
+            ("numAlight" -> alight) ~
+            ("index" -> bs.index)
         })
 
         ("stops" -> positionsJson) ~
@@ -61,8 +62,10 @@ object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
   )
 })
 
-class CircularRegionRequest(val lat : Double, val lng : Double, val radius : Double) {}
-class RoutingRequest(val time: Double, val regions : List[CircularRegionRequest]) {}
+case class CircularRegionRequest(val lat : Double, val lng : Double, val radius : Double) {}
+case class RoutingRequest(val time: Double, val regions : List[CircularRegionRequest]) {}
+case class PathRequest(val indices: List[Int]) {}
+case class LatLng(val lat : Double, val lng : Double)
 
 // this trait defines our service behavior independently from the service actor
 class IntelligentRoutingService extends HttpService with Actor with Json4sSupport {
@@ -127,6 +130,28 @@ class IntelligentRoutingService extends HttpService with Actor with Json4sSuppor
 
                 new RouteWithPath(r, path)
             }).toList)
+        }
+      }
+    } ~
+    path("path") {
+      post {
+        implicit val timeout = new akka.util.Timeout(60000, java.util.concurrent.TimeUnit.MILLISECONDS)
+
+        entity(as[PathRequest]) {
+          case PathRequest(indices) =>
+            val busStops = Import.getBusStops
+
+            val polyline = indices.sliding(2).map({
+              case List(aIndex, bIndex) =>
+                val busStopA = busStops(aIndex)
+                val busStopB = busStops(bIndex)
+                Geo.travelPath(
+                  busStopA.coordinates, busStopA.heading,
+                  busStopB.coordinates, busStopB.heading
+                ).toList
+            }).toList
+
+            complete(polyline.map(_.map({case (x,y) => LatLng(y,x)})))
         }
       }
     }
