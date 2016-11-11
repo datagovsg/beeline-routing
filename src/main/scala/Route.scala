@@ -30,7 +30,8 @@ object Route {
 
 class Route(val routingProblem: RoutingProblem,
             _activities : Seq[Activity],
-            val time: Double) {
+            val time: Double)
+{
 
   val activities = _activities.toIndexedSeq
 

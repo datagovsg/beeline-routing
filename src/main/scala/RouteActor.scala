@@ -28,7 +28,7 @@ case class CircularRegion(val lngLat : (Double, Double), val radiusInMetres : Do
 abstract class RoutingControl
 abstract class RoutingNotification
 
-case class StartRouting(time : Double, regions : Seq[Region])
+case class StartRouting(times : List[Double], regions : Seq[Region])
 case class StopRouting() extends RoutingControl
 case class CurrentSolution() extends RoutingControl
 case class Polyline(indices : List[Int]) extends RoutingControl
@@ -41,8 +41,8 @@ class RouteActor extends Actor {
   val busStops = Import.getBusStops
 
   def receive = {
-    case StartRouting(time, regions) =>
-      val suggestions = sg.beeline.Import.getRequests.filter(x => x.time == time && regions.exists(_.contains(x.end)))
+    case StartRouting(times, regions) =>
+      val suggestions = sg.beeline.Import.getRequests.filter(x => times.contains(x.time) && regions.exists(_.contains(x.end)))
       val problem = new BasicRoutingProblem(busStops, suggestions)
 
       val algorithm = new BasicRoutingAlgorithm(problem)

@@ -58,6 +58,14 @@ google-map {
     .modal-background:not(.popup-shown) {
       display: none;
     }
+    select.time-selector:focus {
+      height: 10em;
+      width: 6em;
+    }
+    select.time-selector:not(:focus) {
+      height: 5em;
+      width: 6em;
+    }
     </style>
 </head>
 <body>
@@ -82,8 +90,8 @@ google-map {
     <button @click="refresh">
       Refresh
     </button>
-
-    <select v-model="time">
+    <br/>
+    <select v-model="times" multiple class="time-selector">
       <option v-for="n in 48" :value="n * 0.5 * 3600 * 1000">
         {{n * 0.5 * 3600 * 1000 | formatTime}}
       </option>

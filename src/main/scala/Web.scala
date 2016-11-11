@@ -63,7 +63,7 @@ object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
 })
 
 case class CircularRegionRequest(val lat : Double, val lng : Double, val radius : Double) {}
-case class RoutingRequest(val time: Double, val regions : List[CircularRegionRequest]) {}
+case class RoutingRequest(val times: List[Double], val regions : List[CircularRegionRequest]) {}
 case class PathRequest(val indices: List[Int]) {}
 case class LatLng(val lat : Double, val lng : Double)
 
@@ -92,9 +92,8 @@ class IntelligentRoutingService extends HttpService with Actor with Json4sSuppor
     path("routing" / "start") {
       post {
         entity(as[RoutingRequest]) { request =>
-          println(request.time, request.regions)
           routingActor ! new StartRouting(
-            request.time,
+            request.times,
             request.regions.map(req => new CircularRegion((req.lng, req.lat), req.radius)))
 
           complete("")

@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
           strokeWeight: 1,
           fillOpacity: this.selected ? 0.3 : 0.3,
           fillColor: '#990000',
+          zIndex: 50
         }
       },
       boardCircleOptions() {
@@ -94,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
           strokeWeight: 1,
           fillOpacity: this.selected ? 0.3 : 0.3,
           fillColor: '#009900',
+          zIndex: 50
         }
       },
       requestOptions() {
@@ -132,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     template: `
       <google-circle v-for="region in regions" track-by="$index"
       :center.sync="region.center" :radius.sync="region.radius"
-     :editable="selected == region" :draggable="true"
+     :editable="selected == region"
      :options="circleOptions(region)" @g-mousedown="click(region)"></google-circle>
     `,
 
@@ -150,7 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
           strokeColor: "#000000",
           strokeWeight: 1,
           fillColor: (region == this.selectedRegion) ? "#FF0000" : "#000000",
-          fillOpacity: 0.1
+          fillOpacity: 0.1,
+          zIndex: 1,
         }
       }
     },
@@ -187,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       textShown: false,
 
-      time: (8 * 60 * 60 * 1000)
+      times: [(8 * 60 * 60 * 1000)]
     },
     computed: {
       stopsText() {
@@ -254,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       startRouting() {
         this.$http.post('/routing/start', {
-            time: this.time,
+            times: this.times,
             regions: this.regions.map(r => ({
               lat: r.center.lat,
               lng: r.center.lng,
