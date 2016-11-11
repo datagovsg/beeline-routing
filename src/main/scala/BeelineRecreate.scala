@@ -14,8 +14,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   var costCache : Map[Route, Map[Request, Insertion]] = new HashMap
   var costCacheMutex = new Object
 
-
-  var DETOUR_RATIO = 2.0
+  var MAX_DETOUR_MINUTES = 2.0
   var CLUSTER_RADIUS = 4000
 
   // Generate all the possible requests
@@ -35,14 +34,14 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
       odCombis(r1).exists({
         case (o,d) =>
           r2.startStops.exists(bs =>
-            detourTime((o,d), bs) < DETOUR_RATIO * 60000 ||
-            detourTime((o,bs), d) < DETOUR_RATIO * 60000 ||
-            detourTime((bs,o), d) < DETOUR_RATIO * 60000
+            detourTime((o,d), bs) < MAX_DETOUR_MINUTES * 60000 ||
+            detourTime((o,bs), d) < MAX_DETOUR_MINUTES * 60000 ||
+            detourTime((bs,o), d) < MAX_DETOUR_MINUTES * 60000
           ) &&
           r2.endStops.exists(bs =>
-            detourTime((o,d), bs) < DETOUR_RATIO * 60000 ||
-            detourTime((o,bs), d) < DETOUR_RATIO * 60000 ||
-            detourTime((bs,o), d) < DETOUR_RATIO * 60000
+            detourTime((o,d), bs) < MAX_DETOUR_MINUTES * 60000 ||
+            detourTime((o,bs), d) < MAX_DETOUR_MINUTES * 60000 ||
+            detourTime((bs,o), d) < MAX_DETOUR_MINUTES * 60000
           )
       })
     }
@@ -119,7 +118,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   }
 
   private def computeRegret(route : Route, request : Request) : Insertion = {
-    route.jobTryInsertion(request) match {
+    route.jobTryInsertion(request)(MAX_DETOUR_MINUTES * 60000) match {
       case None => (Double.PositiveInfinity, null, null, null, null)
       case Some(insertion) => {
         insertion

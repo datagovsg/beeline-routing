@@ -199,6 +199,7 @@ class Route(val routingProblem: RoutingProblem,
 
   // Returns the cost, (insertion point 1), (insertion point 2) that would have been added
   def jobTryInsertion(request: Request)
+                     (implicit maxInsertionDetour : Double = 2 * 60000.0)
         : Option[(Double, Activity, Activity, (Activity, Activity), (Activity, Activity))] = {
     if (request.time != time) None
     else {
@@ -276,35 +277,14 @@ class Route(val routingProblem: RoutingProblem,
         .minBy(_._2) match {
         case (x, Double.PositiveInfinity) => None
         case (x, finiteValue) => {
-          // require(insertable(x))
-          x match {
-            case (b,c,(d,e),(f,g)) => {
-//              try {
-//                insert(b, c, (d, e), (f, g))
-//              }
-//              catch {
-//                case ex : Exception => {
-//                  val dMinTime = activitiesWithTimes.find(_._1 == d).orNull._2
-//                  val gMaxTime = activitiesWithTimes.find(_._1 == g).orNull._3
-//
-//                  println("EXCEPTION ")
-//
-//                  println((dMinTime, gMaxTime))
-//
-//                  println(_insertedSubsequence(b, c, (d,e), (f,g)))
-//                  println(_isInsertionFeasible(dMinTime, b,c,(d,e),(f,g), gMaxTime))
-//
-//                  println((b, c))
-//                  println((d, e))
-//                  println((f, g))
-//
-//                  throw ex
-//                }
-//              }
-
-              Some(finiteValue, b,c,(d,e),(f,g))
+          if (finiteValue > maxInsertionDetour)
+            None
+          else
+            x match {
+              case (b,c,(d,e),(f,g)) => {
+                Some(finiteValue, b,c,(d,e),(f,g))
+              }
             }
-          }
         }
       }
     }
