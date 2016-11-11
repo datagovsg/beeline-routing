@@ -14,6 +14,10 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   var costCache : Map[Route, Map[Request, Insertion]] = new HashMap
   var costCacheMutex = new Object
 
+
+  var DETOUR_RATIO = 2.0
+  var CLUSTER_RADIUS = 4000
+
   // Generate all the possible requests
   // Get a map of requests -> compatible requests
   val relatedRequests = {
@@ -31,21 +35,21 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
       odCombis(r1).exists({
         case (o,d) =>
           r2.startStops.exists(bs =>
-            detourTime((o,d), bs) < 1.6 * 60000 ||
-            detourTime((o,bs), d) < 1.6 * 60000 ||
-            detourTime((bs,o), d) < 1.6 * 60000
+            detourTime((o,d), bs) < DETOUR_RATIO * 60000 ||
+            detourTime((o,bs), d) < DETOUR_RATIO * 60000 ||
+            detourTime((bs,o), d) < DETOUR_RATIO * 60000
           ) &&
           r2.endStops.exists(bs =>
-            detourTime((o,d), bs) < 1.6 * 60000 ||
-            detourTime((o,bs), d) < 1.6 * 60000 ||
-            detourTime((bs,o), d) < 1.6 * 60000
+            detourTime((o,d), bs) < DETOUR_RATIO * 60000 ||
+            detourTime((o,bs), d) < DETOUR_RATIO * 60000 ||
+            detourTime((bs,o), d) < DETOUR_RATIO * 60000
           )
       })
     }
 
     requestsView.par.map(request => {
-      val compatibleRequests = startStopTree.queryBall(request.start, 3000).map(_._2).intersect(
-        endStopTree.queryBall(request.end, 3000).map(_._2)
+      val compatibleRequests = startStopTree.queryBall(request.start, CLUSTER_RADIUS).map(_._2).intersect(
+        endStopTree.queryBall(request.end, CLUSTER_RADIUS).map(_._2)
       )
         .filter(other => isCompatible(request, other)).toSet
 
