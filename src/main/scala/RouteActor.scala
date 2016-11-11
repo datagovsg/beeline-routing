@@ -42,7 +42,9 @@ class RouteActor extends Actor {
 
   def receive = {
     case StartRouting(times, regions) =>
-      val suggestions = sg.beeline.Import.getRequests.filter(x => times.contains(x.time) && regions.exists(_.contains(x.end)))
+      val suggestions = sg.beeline.Import.getRequests
+        .filter(x => times.contains(x.time) && regions.exists(_.contains(x.end)))
+        .map(x => new Suggestion(x.start, x.end, 8 * 3600 * 1000)) // Group them all into the same time slot
       val problem = new BasicRoutingProblem(busStops, suggestions)
 
       val algorithm = new BasicRoutingAlgorithm(problem)
