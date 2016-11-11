@@ -33,6 +33,31 @@ google-map {
     .selected {
       background-color: #CCC;
     }
+
+    .modal-background.popup-shown {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0,0,0,0.5);
+    }
+    .modal-text {
+      top: 20%;
+      right: 20%;
+      bottom: 20%;
+      left: 20%;
+      background-color: white;
+      position: absolute;
+    }
+    .modal-text textarea {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .modal-background:not(.popup-shown) {
+      display: none;
+    }
     </style>
 </head>
 <body>
@@ -111,6 +136,13 @@ google-map {
       Alighting: {{hoveredStop.numAlight}}
     </google-info-window>
     </google-map>
+  </div>
+
+  <div class="modal-background" :class="{ 'popup-shown': textShown }">
+    <div class="modal-text">
+      <button @click="hideRouteStops">Hide</button>
+      <textarea>{{stopsText}}</textarea>
+    </div>
   </div>
 
 </body>

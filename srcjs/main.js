@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       pathOptions() {
         return {
-          strokeOpacity: this.selected ? 1 : 0.1,
+          strokeOpacity: this.selected ? 0.3 : 0.1,
           strokeColor: '#000000',
           strokeWeight: this.selected ? 3 : 0.5,
           zIndex: 1000
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
           strokeColor: '#000000',
           strokeOpacity: 0.3,
           strokeWeight: 1,
-          fillOpacity: this.selected ? 1 : 0.3,
+          fillOpacity: this.selected ? 0.3 : 0.3,
           fillColor: '#990000',
         }
       },
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
           strokeColor: '#000000',
           strokeOpacity: 0.3,
           strokeWeight: 1,
-          fillOpacity: this.selected ? 1 : 0.3,
+          fillOpacity: this.selected ? 0.3 : 0.3,
           fillColor: '#009900',
         }
       },
@@ -185,10 +185,20 @@ document.addEventListener('DOMContentLoaded', () => {
       routingStarted: false,
       routePath: [],
 
+      textShown: false,
+
       time: (8 * 60 * 60 * 1000)
     },
     computed: {
-      routeStyle: {}
+      stopsText() {
+        if (!_.get(this.selectedRoute, 'stops')) {
+          return '';
+        }
+        return 'List(' + this.selectedRoute.stops.map(s => `(${s.lat}, ${s.lng}) /* ${s.description} */`)
+          .join(',\n') + ')' +
+          '\n\nList(' + this.selectedRoute.stops.map(s => `${s.index} /* ${s.description} */`)
+                    .join(',\n') + ')'
+      }
     },
     watch: {
       selectedRoute(route) {
@@ -210,6 +220,12 @@ document.addEventListener('DOMContentLoaded', () => {
     created() {
     },
     methods: {
+      showRouteStops() {
+        this.textShown = true;
+      },
+      hideRouteStops() {
+        this.textShown = false;
+      },
       refresh() {
         this.$http.get('/routing/current')
           .then(response => response.json())
@@ -223,6 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
           })
       },
       selectRoute(route) {
+        if (route === this.selectedRoute) {
+          this.showRouteStops(route);
+        }
         this.selectedRoute = route;
       },
       selectRegion(route) {
