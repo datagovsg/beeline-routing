@@ -40,6 +40,17 @@ class RouteActor extends Actor {
   var lastResults : Traversable[Route] = List()
   val busStops = Import.getBusStops
 
+  val beelineProblem = {
+    val suggestions = sg.beeline.Import.getRequests
+      .map(x => new Suggestion(x.start, x.end, 8 * 3600 * 1000)) // Group them all into the same time slot
+      .filter(x => x.time >= 8 * 3600 * 1000 && x.time <= 9 * 3600 * 1000)
+
+    new BasicRoutingProblem(busStops, suggestions)
+  }
+  val beelineRecreate = {
+    new BeelineRecreate(beelineProblem, beelineProblem.requests)
+  }
+
   def receive = {
     case StartRouting(times, regions) =>
       val suggestions = sg.beeline.Import.getRequests
@@ -59,5 +70,14 @@ class RouteActor extends Actor {
     case CurrentSolution =>
       sender ! lastResults
 
+    case SuggestRequest(sLat, sLng, eLat, eLng, time) =>
+      sender ! beelineRecreate.findRelated(
+        new Request(
+          beelineProblem,
+          Util.toSVY((sLng, sLat)),
+          Util.toSVY((eLng, eLat)),
+          time
+        )
+      ).toList
   }
 }

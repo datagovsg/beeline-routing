@@ -509,8 +509,20 @@ class Route(val routingProblem: RoutingProblem,
 
         throw err
     }
-
   }
+
+  override def equals(other : Any) : Boolean = other match {
+    case otherRoute : Route =>
+      routingProblem == otherRoute.routingProblem &&
+        activities == otherRoute.activities &&
+        time == otherRoute.time
+    case _ => false
+  }
+
+  override def hashCode =
+    routingProblem.hashCode +
+      activities.hashCode +
+      time.hashCode
 
   override def toString = {
     activities.mkString("\n> ")

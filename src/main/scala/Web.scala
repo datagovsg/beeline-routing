@@ -14,7 +14,7 @@ import org.json4s.JsonDSL._
 import scala.concurrent.ExecutionContext
 
 case class Stop(busStop : BusStop, numBoard : Int, numAlight: Int) {}
-case class RouteWithPath(route: Route, routePath: Seq[(Double, Double)])
+case class RouteWithPath(route: Route)
 
 object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
   implicit val json4sFormats = DefaultFormats
@@ -24,7 +24,7 @@ object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
       null
     },
     {
-      case RouteWithPath(route, routePath) => {
+      case route : Route => {
         val positions = route.activities.flatMap({
           case Pickup(r, l) => Some(Stop(l, 1, 0))
           case Dropoff(r, l) => Some(Stop(l, 0, 1))
@@ -52,7 +52,7 @@ object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
         })
 
         ("stops" -> positionsJson) ~
-          ("path" -> routePath.map({case (x,y) => ("lat" -> y) ~ ("lng" -> x)}).toList) ~
+//          ("path" -> routePath.map({case (x,y) => ("lat" -> y) ~ ("lng" -> x)}).toList) ~
           ("requests" -> route.activities.flatMap({ case Pickup(request, loc) => Some(request) case _ => None})
                 .map(request => ("start" -> latLng(Util.toWGS(request.start))) ~
                   ("end" -> latLng(Util.toWGS(request.end)))))
@@ -65,6 +65,11 @@ object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
 case class CircularRegionRequest(val lat : Double, val lng : Double, val radius : Double) {}
 case class RoutingRequest(val times: List[Double], val regions : List[CircularRegionRequest]) {}
 case class PathRequest(val indices: List[Int]) {}
+case class SuggestRequest(startLat: Double,
+                          startLng: Double,
+                          endLat: Double,
+                          endLng: Double,
+                          time: Double)
 case class LatLng(val lat : Double, val lng : Double)
 
 // this trait defines our service behavior independently from the service actor
@@ -117,17 +122,17 @@ class IntelligentRoutingService extends HttpService with Actor with Json4sSuppor
         onSuccess(routingActor ? CurrentSolution) {
           case routes : Traversable[Route] =>
             complete(routes.par.zipWithIndex.map({
-              case (r,i) =>
-                val path = r.activities.sliding(2).map({
-                  case Seq(a1, a2) => (a1.location, a2.location)
-                }).flatMap({
-                  case (Some(loc1), Some(loc2)) =>
-//                    Geo.travelPath(loc1.coordinates, loc1.heading, loc2.coordinates, loc2.heading)
-                    List(loc1.coordinates, loc2.coordinates)
-                  case _ => List()
-                }).toList
+              case (r,i) => r
+//                val path = r.activities.sliding(2).map({
+//                  case Seq(a1, a2) => (a1.location, a2.location)
+//                }).flatMap({
+//                  case (Some(loc1), Some(loc2)) =>
+////                    Geo.travelPath(loc1.coordinates, loc1.heading, loc2.coordinates, loc2.heading)
+//                    List(loc1.coordinates, loc2.coordinates)
+//                  case _ => List()
+//                }).toList
 
-                new RouteWithPath(r, path)
+//                new RouteWithPath(r)
             }).toList)
         }
       }

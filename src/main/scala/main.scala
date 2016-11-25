@@ -17,6 +17,9 @@ object Hi {
     else if (args(0) == "estimate") {
       estimate()
     }
+    else if (args(0) == "zmq") {
+      ZmqRoutingService.begin()
+    }
     else require(false)
   }
 
