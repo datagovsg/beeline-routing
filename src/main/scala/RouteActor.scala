@@ -71,7 +71,7 @@ class RouteActor extends Actor {
       sender ! lastResults
 
     case SuggestRequest(sLat, sLng, eLat, eLng, time) =>
-      sender ! beelineRecreate.findRelated(
+      sender ! beelineRecreate.findRelated2(
         new Request(
           beelineProblem,
           Util.toSVY((sLng, sLat)),

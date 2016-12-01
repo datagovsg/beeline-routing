@@ -100,7 +100,8 @@ class Route(val routingProblem: RoutingProblem,
   class FulfillmentInfo(
                         val stopsWithIndices: Array[BusStop],
                         val pickupStopIndex: Int,
-                        val dropoffStopIndex: Int
+                        val dropoffStopIndex: Int,
+                        val travelTime: Double
                         ) {
     def stopsBeforeDropoff = stopsWithIndices.view(0, dropoffStopIndex)
     def stopsAfterPickup = stopsWithIndices.view(pickupStopIndex + 1, stopsWithIndices.length)
@@ -111,8 +112,9 @@ class Route(val routingProblem: RoutingProblem,
   }
 
   lazy val (requestsInfo, stopActivities, stopsWithIndices) = {
-    val stopActivities = groupSuccessive(activities.filter(x => x.location.nonEmpty))(_.location.orNull)
-    val byLocation = stopActivities.zipWithIndex
+    val stopActivitiesWithTimes = groupSuccessive(activitiesWithTimes.filter(
+      x => x._1.location.nonEmpty))(_._1.location.orNull)
+    val byLocation = stopActivitiesWithTimes.zipWithIndex
 
     val stopsWithIndices = byLocation.map({
       case ((location, activities), stopIndex) => location
@@ -120,23 +122,31 @@ class Route(val routingProblem: RoutingProblem,
 
     val activityWithPickupIndex = byLocation.flatMap({
       case ((location, activities), stopIndex) => activities.flatMap({
-        case Pickup(request, _) => Some((request, (location, stopIndex)))
+        case (Pickup(request, _), minTime, maxTime) => Some((request, (location, stopIndex, minTime, maxTime)))
         case _ => None
       })
     }).toMap
     val activityWithDropoffIndex = byLocation.flatMap({
       case ((location, activities), stopIndex) => activities.flatMap({
-        case Dropoff(request, _) => Some((request, (location, stopIndex)))
+        case (Dropoff(request, _), minTime, maxTime) => Some((request, (location, stopIndex, minTime, maxTime)))
         case _ => None
       })
     }).toMap
 
     val requests = activityWithDropoffIndex.keys
     val requestsWithFulfillmentInfo = requests.map(r => {
-      (r, new FulfillmentInfo(stopsWithIndices, activityWithPickupIndex(r)._2, activityWithDropoffIndex(r)._2))
+      val pickup = activityWithPickupIndex(r)
+      val dropoff = activityWithDropoffIndex(r)
+
+      (r, new FulfillmentInfo(stopsWithIndices,
+        pickup._2,
+        dropoff._2,
+        dropoff._4 - pickup._4))
     }).toMap
 
-    (requestsWithFulfillmentInfo, stopActivities, stopsWithIndices)
+    (requestsWithFulfillmentInfo,
+      stopActivitiesWithTimes.map(satt => (satt._1, satt._2.map(_._1))),
+      stopsWithIndices)
   }
 
 
@@ -210,18 +220,25 @@ class Route(val routingProblem: RoutingProblem,
       // The cost of inserting ... -> a -> x -> y -> b -> ...
       val bestDirectInsertWithCost = activitiesWithTimes.sliding(2).map({
         case Seq((a1, m1, n1), (a2, m2, n2)) =>
-          val pds = for (p <- pickupActivities; d <- dropoffActivities) yield (p,d)
-          val pdCosts = pds.map({
-            case (p,d) =>
-              if (_isInsertionFeasible(m1, p, d, (a1, a2), (a1, a2), n2))
-                insertionCost((a1, m1, n1), Seq(p,d), (a2, m2, n2))
-              else
-                Double.PositiveInfinity
-          })
+          if (a1.location == a2.location)
+          {
+            // Optimization for same activity neighbours
+            ((a1, a2, (a1, a2), (a1,a2)), Double.PositiveInfinity)
+          }
+          else {
+            val pds = for (p <- pickupActivities; d <- dropoffActivities) yield (p, d)
+            val pdCosts = pds.map({
+              case (p, d) =>
+                if (_isInsertionFeasible(m1, p, d, (a1, a2), (a1, a2), n2))
+                  insertionCost((a1, m1, n1), Seq(p, d), (a2, m2, n2))
+                else
+                  Double.PositiveInfinity
+            })
 
-          /* Best over all possible (p,d) */
-          val ((bestP, bestD), bestCost) = (pds, pdCosts).zipped.minBy(_._2)
-          ((bestP, bestD, (a1, a2), (a1, a2)), bestCost)
+            /* Best over all possible (p,d) */
+            val ((bestP, bestD), bestCost) = (pds, pdCosts).zipped.minBy(_._2)
+            ((bestP, bestD, (a1, a2), (a1, a2)), bestCost)
+          }
       })  /* Best over all possible insertion points */
           .minBy(_._2)
 
@@ -233,16 +250,24 @@ class Route(val routingProblem: RoutingProblem,
 
         val pickupCosts = activitiesWithTimes.sliding(2).map({
           case Seq((a1, m1, n1), (a2, m2, n2)) =>
-            val pickupCosts = pickupActivities.map(p => insertionCost((a1, m1, n1), Seq(p), (a2, m2, n2)))
-            val best = (pickupActivities, pickupCosts).zipped.minBy(_._2)
-            (best._2, best._1, (a1, m1, n1), (a2, m2, n2))
+            if (a1.location == a2.location) {
+              (Double.PositiveInfinity, a1, (a1, m1, n1), (a2, m2, n2))
+            } else {
+              val pickupCosts = pickupActivities.map(p => insertionCost((a1, m1, n1), Seq(p), (a2, m2, n2)))
+              val best = (pickupActivities, pickupCosts).zipped.minBy(_._2)
+              (best._2, best._1, (a1, m1, n1), (a2, m2, n2))
+            }
         })
 
         val dropoffCosts = activitiesWithTimes.sliding(2).drop(1).map({
           case Seq((b1, m1, n1), (b2, m2, n2)) =>
-            val dropoffCosts = dropoffActivities.map(p => insertionCost((b1, m1, n1), Seq(p), (b2, m2, n2)))
-            val best = (dropoffActivities, dropoffCosts).zipped.minBy(_._2)
-            (best._2, best._1, (b1, m1, n1), (b2, m2, n2))
+            if (b1.location == b2.location) {
+              (Double.PositiveInfinity, b1, (b1, m1, n1), (b2, m2, n2))
+            } else {
+              val dropoffCosts = dropoffActivities.map(p => insertionCost((b1, m1, n1), Seq(p), (b2, m2, n2)))
+              val best = (dropoffActivities, dropoffCosts).zipped.minBy(_._2)
+              (best._2, best._1, (b1, m1, n1), (b2, m2, n2))
+            }
         })
 
         val minSubsequentDropoffCosts = dropoffCosts.foldRight(
@@ -363,7 +388,7 @@ class Route(val routingProblem: RoutingProblem,
     }
   }
 
-  /* Returns an iterator of Seq(prevStop, stop, nextStop */
+  /* Returns an iterator of Seq(prevStop, stop, nextStop) */
   def locActivitiesWithSurrounding : Iterator[Seq[(Option[BusStop], Traversable[Activity])]] = {
     val mainIterator = stopActivities.iterator.map({case (loc, as) => (Some(loc), as)})
 
@@ -509,6 +534,15 @@ class Route(val routingProblem: RoutingProblem,
 
         throw err
     }
+  }
+
+  def maxDetour = {
+    requestsInfo.map({ case (request, fulfillment) =>
+      fulfillment.travelTime -
+        routingProblem.distance(
+          fulfillment.pickupLocation,
+          fulfillment.dropoffLocation)
+    }).max
   }
 
   override def equals(other : Any) : Boolean = other match {

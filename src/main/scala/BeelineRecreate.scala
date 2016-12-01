@@ -7,39 +7,51 @@ import scala.util.Random
 import scala.collection.immutable.HashMap
 import kdtreeQuery.KDTreeMapBall
 
-class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Request]) extends Recreate {
+class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Request])
+                     (implicit settings : BeelineRecreateSettings = BeelineRecreateSettings.default) extends Recreate {
   type Insertion = (Double, Activity, Activity, (Activity, Activity), (Activity, Activity))
 
-  var count : Int = 0
-  var costCache : Map[Route, Map[Request, Insertion]] = new HashMap
+  var count: Int = 0
+  var costCache: Map[Route, Map[Request, Insertion]] = new HashMap
   var costCacheMutex = new Object
 
-  var MAX_DETOUR_MINUTES = 2.0
-  var CLUSTER_RADIUS = 4000
+  var MAX_DETOUR_MINUTES = settings.maxDetourMinutes
+  var CLUSTER_RADIUS = settings.clusterRadius
 
   // KD trees
   val startStopTree = KDTreeMap.fromSeq(
-    requests.map({r => (r.start, r)}).toSeq
+    requests.map({ r => (r.start, r) }).toSeq
   )
   val endStopTree = KDTreeMap.fromSeq(
-    requests.map({r => (r.end, r)}).toSeq
+    requests.map({ r => (r.end, r) }).toSeq
   )
-  def isCompatible(r1: Request, r2: Request) : Boolean = {
+  val busStopTree = KDTreeMap.fromSeq(
+    Import.getBusStops.map(bs => (bs.xy, bs))
+  )
+
+  def isCompatible(r1: Request, r2: Request): Boolean = {
     odCombis(r1).exists({
-      case (o,d) =>
+      case (o, d) =>
         r2.startStops.exists(bs =>
-          detourTime((o,d), bs) < MAX_DETOUR_MINUTES * 60000 ||
-            detourTime((o,bs), d) < MAX_DETOUR_MINUTES * 60000 ||
-            detourTime((bs,o), d) < MAX_DETOUR_MINUTES * 60000
+          detourTime((o, d), bs) < MAX_DETOUR_MINUTES * 60000 ||
+            detourTime((o, bs), d) < MAX_DETOUR_MINUTES * 60000 ||
+            detourTime((bs, o), d) < MAX_DETOUR_MINUTES * 60000
         ) &&
           r2.endStops.exists(bs =>
-            detourTime((o,d), bs) < MAX_DETOUR_MINUTES * 60000 ||
-              detourTime((o,bs), d) < MAX_DETOUR_MINUTES * 60000 ||
-              detourTime((bs,o), d) < MAX_DETOUR_MINUTES * 60000
+            detourTime((o, d), bs) < MAX_DETOUR_MINUTES * 60000 ||
+              detourTime((o, bs), d) < MAX_DETOUR_MINUTES * 60000 ||
+              detourTime((bs, o), d) < MAX_DETOUR_MINUTES * 60000
           )
     })
   }
 
+  def isCompatible(od: (BusStop, BusStop), bs: BusStop): Boolean = {
+    val (o,d) = od
+
+    detourTime((o, d), bs) < MAX_DETOUR_MINUTES * 60000 ||
+      detourTime((o, bs), d) < MAX_DETOUR_MINUTES * 60000 ||
+      detourTime((bs, o), d) < MAX_DETOUR_MINUTES * 60000
+  }
   // Generate all the possible requests
   // Get a map of requests -> compatible requests
   lazy val relatedRequests = {
@@ -60,12 +72,12 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     map
   }
 
-  def odCombis(request : Request) = {
+  def odCombis(request: Request) = {
     for (i <- request.startStops; j <- request.endStops) yield (i, j)
   }
 
 
-  def travelTime(s : Seq[BusStop]) =
+  def travelTime(s: Seq[BusStop]) =
     s.sliding(2).map({
       case Seq(x, y) =>
         if (x != y)
@@ -74,15 +86,15 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
           0.0
     }).sum
 
-  def detourTime(ab: (BusStop, BusStop), c: BusStop) : Double = {
-    val (a,b) = ab
+  def detourTime(ab: (BusStop, BusStop), c: BusStop): Double = {
+    val (a, b) = ab
 
-    travelTime(Seq(a,c,b)) - travelTime(Seq(a,b))
+    travelTime(Seq(a, c, b)) - travelTime(Seq(a, b))
   }
 
-  def detourTime(ab: (BusStop, BusStop), cd: (BusStop, BusStop)) : Double = {
-    val (a,b) = ab
-    val (c,d) = cd
+  def detourTime(ab: (BusStop, BusStop), cd: (BusStop, BusStop)): Double = {
+    val (a, b) = ab
+    val (c, d) = cd
 
     val abTime = travelTime(Seq(a, b))
     val cdTime = travelTime(Seq(c, d))
@@ -99,7 +111,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   }
 
 
-  def tryCreateRoute(problem : RoutingProblem)(request : Request) = {
+  def tryCreateRoute(problem: RoutingProblem)(request: Request) = {
     // Construct new route
     val randomPickup = new Pickup(request, request.startStops({
       Random.nextInt(request.startStops.size)
@@ -119,7 +131,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
       ))
   }
 
-  private def computeRegret(route : Route, request : Request) : Insertion = {
+  private def computeRegret(route: Route, request: Request): Insertion = {
     route.jobTryInsertion(request)(MAX_DETOUR_MINUTES * 60000) match {
       case None => (Double.PositiveInfinity, null, null, null, null)
       case Some(insertion) => {
@@ -128,7 +140,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     }
   }
 
-  private def getRegret(route : Route, request : Request) : Insertion = {
+  private def getRegret(route: Route, request: Request): Insertion = {
     costCache.get(route) match {
       case Some(requestCache) =>
         requestCache.get(request) match {
@@ -157,18 +169,18 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
 
     pickups.keys
       .map(request => (pickups.get(request).orNull, dropoffs.get(request).orNull))
+      .toSet
   }
 
-  def recreate(problem : RoutingProblem, preservedRoutes : Traversable[Route], unservedRequests : Traversable[Request]) =
-  {
+  def recreate(problem: RoutingProblem, preservedRoutes: Traversable[Route], unservedRequests: Traversable[Request]) = {
     require(problem == routingProblem)
 
     // For all routes -- create a hash map (BusStop, BusStop) -> List(Route)
-    def computeFeasibleSet(route : Route) = {
+    def computeFeasibleSet(route: Route) = {
       // Reduce to a small set of feasible ods
       val feasible = route.requestsInfo.keys.foldLeft(
         relatedRequests(route.requestsInfo.keys.head)
-      ) ((acc, current) =>
+      )((acc, current) =>
         acc.intersect(relatedRequests(current))
       )
 
@@ -209,7 +221,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
 
                   /* Update the cache! */
                   {
-                    val update = regrets.map {case (_, request, regret) => (request, regret)}
+                    val update = regrets.map { case (_, request, regret) => (request, regret) }
 
                     costCacheMutex.synchronized({
                       costCache = costCache + (route -> (costCache.getOrElse(route, new HashMap) ++ update))
@@ -235,16 +247,16 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
           tryCreateRoute(problem)(someRequest) match {
             // Couldn't create
             case None => next(unservedRequests - someRequest,
-                              routes,
-                              someRequest::badRequests,
-                              routeOdMap)
+              routes,
+              someRequest :: badRequests,
+              routeOdMap)
             case Some(route) =>
               next(
                 unservedRequests - someRequest,
                 routes + route,
                 badRequests,
                 routeOdMap + (route -> computeFeasibleSet(route))
-                )
+              )
           }
         }
         else {
@@ -276,21 +288,21 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     costCache = new HashMap
 
     next(unservedRequests.toSet, preservedRoutes.toSet, List[Request](), routeOdMap) match {
-      case (a,b) => (a.toList, b.toList)
+      case (a, b) => (a.toList, b.toList)
     }
   }
 
 
-  def findRelated(request : Request) : Traversable[Route] = {
+  def findRelated(request: Request): Traversable[Route] = {
     val ods = odCombis(request)
 
     // compatible requests... --> reduce your search space
     val compatibleRequests = {
       val startStopTree = KDTreeMap.fromSeq(
-        requests.map({r => (r.start, r)}).toSeq
+        requests.map({ r => (r.start, r) }).toSeq
       )
       val endStopTree = KDTreeMap.fromSeq(
-        requests.map({r => (r.end, r)}).toSeq
+        requests.map({ r => (r.end, r) }).toSeq
       )
 
       startStopTree.queryBall(request.start, CLUSTER_RADIUS).map(_._2).intersect(
@@ -299,11 +311,13 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
         .filter(other => isCompatible(request, other)).toSet
     }
 
+    println(s"There are ${compatibleRequests.size} compatible requests")
+
     // list of (s, e)
     val odsWithRoute = ods.map(od =>
       (new Route(routingProblem,
-          List(StartActivity(), Pickup(request, od._1), Dropoff(request, od._2), EndActivity()),
-          8 * 3600 * 1000), // fake the time
+        List(StartActivity(), Pickup(request, od._1), Dropoff(request, od._2), EndActivity()),
+        8 * 3600 * 1000), // fake the time
         IndexedSeq(request), // matched
         compatibleRequests.toIndexedSeq // unmatched
         )
@@ -313,32 +327,48 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
 
     // list of ((s, e), R([s, e]), [r1])
     // add compatible requests to it...
-    def addMatchingRequests(entry : Entry) =
+    // and discard incompatible requests
+    def addMatchingRequests(entry: Entry) =
       entry match {
         case (route, rs, rest) =>
-          // All compatible requests...
-          val (servedRequests, unservedRequests) = rest.partition(r => {
-            val attempt = route.jobTryInsertion(r)
-            attempt.nonEmpty &&
-              attempt.orNull._1 == 0.0
+          val (served, unserved, incompatible) = rest
+            .foldLeft[(List[Request], List[Request], List[Request])](
+            List(), List(), List()
+          )((acc, r) => acc match {
+            case (served, unserved, incompatible) =>
+              // I am going to cheat a bit...
+              // FIXME: Let each route contain the list of pickup and dropoff stops
+              if (route.stopsWithIndices.exists(x => r.startStopsSet.contains(x)) &&
+                route.stopsWithIndices.exists(x => r.endStopsSet.contains(x)))
+                (r :: served, unserved, incompatible)
+              else {
+                // CHeck if this request is compatible with ALL of the requests in the route
+                // FIXME: Add it to a map for quicker access
+                val isCompatibleWithAll = route.requestsInfo.keys.forall(s => isCompatible(r, s))
+
+                if (isCompatibleWithAll)
+                  (served, r :: unserved, incompatible)
+                else
+                  (served, unserved, r :: incompatible)
+              }
           })
 
-          (route, rs ++ servedRequests, unservedRequests)
+          (route, rs ++ served.toIndexedSeq, unserved.toIndexedSeq)
       }
 
     val withMatchingStops = odsWithRoute map addMatchingRequests
 
     // list of ((s, e), R([s, e]), [r1, r2, r3, r4, ...])
     // Now we need to grow the list of candidate routes
-    def growOne(entry : Entry) : Traversable[Entry] = {
+    def growOne(entry: Entry): Traversable[Entry] = {
       // reduce the list of compatible requests
 
       // from the list of requests (or ODs ?)
       // insert the OD into the job...
       @tailrec
-      def next(entry : Entry,
-               nextRequestCandidates : Set[Request],
-               acc : IndexedSeq[Entry]) : IndexedSeq[Entry] = {
+      def next(entry: Entry,
+               nextRequestCandidates: Set[Request],
+               acc: IndexedSeq[Entry]): IndexedSeq[Entry] = {
         if (nextRequestCandidates.isEmpty)
           acc
         else {
@@ -362,17 +392,18 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
       next(entry, entry._3.toSet, IndexedSeq())
     }
 
-    def growAll(in : Traversable[Entry]) : Traversable[Entry] =
-      in.flatMap(e => {
+    def growAll(in: Traversable[Entry]): Traversable[Entry] =
+      in.par.flatMap(e => {
         val grown = growOne(e)
         if (grown.isEmpty)
-          IndexedSeq(e)
+          IndexedSeq((e._1, e._2, IndexedSeq())) // Don't allow e to grow any more
         else
           grown
       })
-      .map(x => (x._1.stopsWithIndices.toSet, x)) // distinct by route...
-      .toMap
-      .values
+        .toIterator
+        .map(x => (x._1.stopsWithIndices.toSet, x)) // distinct by route...
+        .toMap
+        .values
 
     // grow ten times...
     val grownTenTimes = (0 until 10).foldLeft[Traversable[Entry]](
@@ -382,9 +413,92 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
       println(acc.size)
       growAll(acc)
 
-    }}
+    }
+    }
 
-    grownTenTimes.map {_._1}
+    grownTenTimes.map {
+      _._1
+    }
+  }
+
+  def findRelated2(request: Request): Traversable[Route] = {
+    val ods = odCombis(request)
+
+    val compatibleRequests = {
+      val startStopTree = KDTreeMap.fromSeq(
+        requests.map({ r => (r.start, r) }).toSeq
+      )
+      val endStopTree = KDTreeMap.fromSeq(
+        requests.map({ r => (r.end, r) }).toSeq
+      )
+
+      startStopTree.queryBall(request.start, CLUSTER_RADIUS).map(_._2).intersect(
+        endStopTree.queryBall(request.end, CLUSTER_RADIUS).map(_._2)
+      )
+        .filter(other => isCompatible(request, other)).toSet
+    }
+
+    // You can take the, say, top 5 ODs that has minimum travel
+    // time for **this** request, and then grow routes from these 5 ODs
+    val top5Ods = ods.sortBy(
+      od => routingProblem.distance(od._1, od._2)
+    ).reverse.take(5)
+
+    top5Ods.par.flatMap(od => {
+      (0 until 10)
+        .flatMap(i => try {
+          val r = growRoute(request, od, compatibleRequests.toList)
+          println(s"Route generated from ${compatibleRequests.size} requests")
+          Some(r)
+        } catch {
+          case e : Exception => println(e); None
+        })
+    }).toList
+  }
+
+  def growRoute(request : Request, od : (BusStop, BusStop), requests: List[Request]) = {
+    val shuffled = Random.shuffle(requests)
+
+    // Try to insert until a max of.... 10?
+    @tailrec
+    def grow(route : Route, requests : List[Request]) : Route = {
+      if (requests.isEmpty)
+        route
+      else {
+        val insertAttempt = route.jobTryInsertion(requests.head)
+
+        /* Here we should check how feasible the route is, e.g. if
+        the travel time is too long for any commuter in the route.
+        If so stop the recursion at this point.
+         */
+        insertAttempt match {
+          case None =>
+            grow(route, requests.tail)
+          case Some(insertionJob) =>
+            val (a,b,c,d,e) = insertionJob
+            val newRoute = route.insert(b,c,d,e)
+
+            if (newRoute.maxDetour > 15 * 60000)
+              grow(route, requests.tail)
+            else
+              grow(route.insert(b,c,d,e), requests.tail)
+        }
+      }
+    }
+
+    grow(
+      new Route(
+        routingProblem,
+        IndexedSeq(
+          StartActivity(),
+          Pickup(request, od._1),
+          Dropoff(request, od._2),
+          EndActivity()
+        ),
+        8*3600*1000
+      ),
+      shuffled
+    )
   }
 }
 
