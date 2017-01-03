@@ -545,6 +545,11 @@ class Route(val routingProblem: RoutingProblem,
     }).max
   }
 
+  /* Generate a list of all the stops in this route.
+    Useful for deduplicating routes
+   */
+  lazy val stops = stopActivities.map(_._1)
+
   override def equals(other : Any) : Boolean = other match {
     case otherRoute : Route =>
       routingProblem == otherRoute.routingProblem &&

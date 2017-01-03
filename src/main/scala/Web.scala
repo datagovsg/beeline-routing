@@ -55,7 +55,9 @@ object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
 //          ("path" -> routePath.map({case (x,y) => ("lat" -> y) ~ ("lng" -> x)}).toList) ~
           ("requests" -> route.activities.flatMap({ case Pickup(request, loc) => Some(request) case _ => None})
                 .map(request => ("start" -> latLng(Util.toWGS(request.start))) ~
-                  ("end" -> latLng(Util.toWGS(request.end)))))
+                  ("end" -> latLng(Util.toWGS(request.end))) ~
+                  ("time" -> request.actualTime) ~
+                  ("weight" -> request.weight)))
 
       }
     }
@@ -69,7 +71,8 @@ case class SuggestRequest(startLat: Double,
                           startLng: Double,
                           endLat: Double,
                           endLng: Double,
-                          time: Double)
+                          time: Double,
+                          settings: BeelineRecreateSettings)
 case class LatLng(val lat : Double, val lng : Double)
 
 // this trait defines our service behavior independently from the service actor

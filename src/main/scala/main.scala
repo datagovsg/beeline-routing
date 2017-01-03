@@ -3,25 +3,20 @@ package sg.beeline
 import java.io.{FileOutputStream, ObjectOutputStream}
 import java.util.zip.GZIPOutputStream
 
-import scala.collection.SeqView
-import scala.util.Try
-
-object Hi {
-  def main(args: Array[String]) {
-    if (args.length == 0 || args(0) == "web") {
-      web()
-    }
-    else if (args(0) == "cache") {
-      cache()
-    }
-    else if (args(0) == "estimate") {
-      estimate()
-    }
-    else if (args(0) == "zmq") {
-      ZmqRoutingService.begin()
-    }
-    else require(false)
+object Hi extends App {
+  if (args.length == 0 || args(0) == "web") {
+    web()
   }
+  else if (args(0) == "cache") {
+    cache()
+  }
+  else if (args(0) == "estimate") {
+    estimate()
+  }
+  else if (args(0) == "zmq") {
+    ZmqRoutingService.begin()
+  }
+  else require(false)
 
   def cache() {
     val busStops = Import.getBusStops

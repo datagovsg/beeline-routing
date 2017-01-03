@@ -40,22 +40,16 @@ class RouteActor extends Actor {
   var lastResults : Traversable[Route] = List()
   val busStops = Import.getBusStops
 
-  val beelineProblem = {
-    val suggestions = sg.beeline.Import.getRequests
-      .map(x => new Suggestion(x.start, x.end, 8 * 3600 * 1000)) // Group them all into the same time slot
-      .filter(x => x.time >= 8 * 3600 * 1000 && x.time <= 9 * 3600 * 1000)
-
-    new BasicRoutingProblem(busStops, suggestions)
-  }
-  val beelineRecreate = {
-    new BeelineRecreate(beelineProblem, beelineProblem.requests)
-  }
-
   def receive = {
     case StartRouting(times, regions) =>
       val suggestions = sg.beeline.Import.getRequests
         .filter(x => times.contains(x.time) && regions.exists(_.contains(x.end)))
         .map(x => new Suggestion(x.start, x.end, 8 * 3600 * 1000)) // Group them all into the same time slot
+
+//      val EZLsuggestions = sg.beeline.Import.getEzlinkRequests
+//        .filter(x => times.contains(x.time) && regions.exists(_.contains(x.end)))
+//        .map(x => new Suggestion(x.start, x.end, 8 * 3600 * 1000, x.weight)) // Group them all into the same time slot
+
       val problem = new BasicRoutingProblem(busStops, suggestions)
 
       val algorithm = new BasicRoutingAlgorithm(problem)
@@ -70,7 +64,29 @@ class RouteActor extends Actor {
     case CurrentSolution =>
       sender ! lastResults
 
-    case SuggestRequest(sLat, sLng, eLat, eLng, time) =>
+    case SuggestRequest(sLat, sLng, eLat, eLng, time, settings) =>
+      val beelineProblem = {
+        println(settings.dataSource)
+        val suggestions = (settings.dataSource match {
+          case "ezlink" => Import.getEzlinkRequests
+          case _ => Import.getRequests
+        })
+//          .map(x => new Suggestion(x.start, x.end, x.time, x.weight)) // Group them all into the same time slot
+//          .filter(x => x.time >= 8 * 3600 * 1000 && x.time <= 9 * 3600 * 1000)
+
+        new BasicRoutingProblem(
+          busStops,
+          suggestions,
+          startWalkingDistance = settings.startWalkingDistance,
+          endWalkingDistance = settings.endWalkingDistance
+        )
+      }
+
+      val beelineRecreate = new BeelineRecreate(
+          beelineProblem,
+          beelineProblem.requests
+        )(settings)
+
       sender ! beelineRecreate.findRelated2(
         new Request(
           beelineProblem,

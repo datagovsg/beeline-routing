@@ -14,7 +14,8 @@ class RouteSpec extends FlatSpec with Matchers {
   class ZeroDistance extends RoutingProblem {
     def distance(a : BusStop, b: BusStop) = 0
 
-    def nearBusStops(p : (Double, Double)) = ZeroDistance.busStops
+    def nearBusStopsStart(p : (Double, Double)) = ZeroDistance.busStops
+    def nearBusStopsEnd(p : (Double, Double)) = ZeroDistance.busStops
 
     def initialize = {
       (List(), List(), List())

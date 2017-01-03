@@ -16,7 +16,8 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   var costCacheMutex = new Object
 
   var MAX_DETOUR_MINUTES = settings.maxDetourMinutes
-  var CLUSTER_RADIUS = settings.clusterRadius
+  var START_CLUSTER_RADIUS = settings.startClusterRadius
+  var END_CLUSTER_RADIUS = settings.endClusterRadius
 
   // KD trees
   val startStopTree = KDTreeMap.fromSeq(
@@ -58,8 +59,8 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     val requestsView = requests.view
 
     val map = requestsView.par.map(request => {
-      val compatibleRequests = startStopTree.queryBall(request.start, CLUSTER_RADIUS).map(_._2).intersect(
-        endStopTree.queryBall(request.end, CLUSTER_RADIUS).map(_._2)
+      val compatibleRequests = startStopTree.queryBall(request.start, START_CLUSTER_RADIUS).map(_._2).intersect(
+        endStopTree.queryBall(request.end, END_CLUSTER_RADIUS).map(_._2)
       )
         .filter(other => isCompatible(request, other)).toSet
 
@@ -305,8 +306,8 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
         requests.map({ r => (r.end, r) }).toSeq
       )
 
-      startStopTree.queryBall(request.start, CLUSTER_RADIUS).map(_._2).intersect(
-        endStopTree.queryBall(request.end, CLUSTER_RADIUS).map(_._2)
+      startStopTree.queryBall(request.start, START_CLUSTER_RADIUS).map(_._2).intersect(
+        endStopTree.queryBall(request.end, END_CLUSTER_RADIUS).map(_._2)
       )
         .filter(other => isCompatible(request, other)).toSet
     }
@@ -314,14 +315,24 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     println(s"There are ${compatibleRequests.size} compatible requests")
 
     // list of (s, e)
-    val odsWithRoute = ods.map(od =>
-      (new Route(routingProblem,
+    val odsWithRoute = ods.map(od => {
+      val route = new Route(routingProblem,
         List(StartActivity(), Pickup(request, od._1), Dropoff(request, od._2), EndActivity()),
-        8 * 3600 * 1000), // fake the time
+        8 * 3600 * 1000)
+
+      (route, // fake the time
         IndexedSeq(request), // matched
         compatibleRequests.toIndexedSeq // unmatched
-        )
-    )
+//        route.maxPossibleTimes(2) - route.maxPossibleTimes(1)
+      )
+    })
+//      .sortBy(_._4)
+
+    // Don't allow ODs that obviously end up taking a very long time
+//    val feasibleOdsWithRoute = odsWithRoute
+//      .takeWhile({
+//        case (_,_,_,duration) => duration - odsWithRoute(0)._4 < 60000
+//      })
 
     type Entry = (Route, IndexedSeq[Request], IndexedSeq[Request])
 
@@ -432,8 +443,8 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
         requests.map({ r => (r.end, r) }).toSeq
       )
 
-      startStopTree.queryBall(request.start, CLUSTER_RADIUS).map(_._2).intersect(
-        endStopTree.queryBall(request.end, CLUSTER_RADIUS).map(_._2)
+      startStopTree.queryBall(request.start, START_CLUSTER_RADIUS).map(_._2).intersect(
+        endStopTree.queryBall(request.end, END_CLUSTER_RADIUS).map(_._2)
       )
         .filter(other => isCompatible(request, other)).toSet
     }
@@ -442,22 +453,34 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     // time for **this** request, and then grow routes from these 5 ODs
     val top5Ods = ods.sortBy(
       od => routingProblem.distance(od._1, od._2)
-    ).reverse.take(5)
+    ).take(5)
 
-    top5Ods.par.flatMap(od => {
+    val feasibleTop50Ods = top5Ods.filter(
+      od => {
+        val topOd = top5Ods(0)
+
+        routingProblem.distance(od._1, od._2) - routingProblem.distance(topOd._1, topOd._2) < 60000
+      }
+    )
+
+    feasibleTop50Ods.par.flatMap(od => {
       (0 until 10)
         .flatMap(i => try {
           val r = growRoute(request, od, compatibleRequests.toList)
-          println(s"Route generated from ${compatibleRequests.size} requests")
+          println(s"Route generated from ${  compatibleRequests.size} requests")
           Some(r)
         } catch {
           case e : Exception => println(e); None
         })
-    }).toList
+    })
+      .groupBy(_.stops)
+      .values.map(_.head)
+      .toList
   }
 
   def growRoute(request : Request, od : (BusStop, BusStop), requests: List[Request]) = {
-    val shuffled = Random.shuffle(requests)
+    // val shuffled = Random.shuffle(requests)
+    val shuffled = WeightedRandomShuffle.shuffle(requests, requests.view.map(r => r.weight.toDouble))
 
     // Try to insert until a max of.... 10?
     @tailrec

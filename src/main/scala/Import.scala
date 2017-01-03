@@ -1,4 +1,8 @@
 package sg.beeline
+
+import java.io.FileInputStream
+import java.util.zip.GZIPInputStream
+
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import scala.io.Source
@@ -53,7 +57,24 @@ object Import {
       .map(v => new Suggestion(
         start = Util.toSVY((v(1).extract[Double], v(0).extract[Double])),
         end = Util.toSVY((v(3).extract[Double], v(2).extract[Double])),
-        time = convertTime(v(5).extract[String])
+        actualTime = convertTime(v(5).extract[String])
       ))
+  }
+
+  lazy val getEzlinkRequests = {
+    implicit val formats = DefaultFormats
+    val jsonText = new java.util.Scanner(new GZIPInputStream(new FileInputStream("ezlink.json.gz")))
+        .useDelimiter("\\Z").next()
+    val jsonData = parse(jsonText).asInstanceOf[JArray]
+
+    jsonData.arr
+      .filter(_(5).extract[String] != null)
+      .map(v => new Suggestion(
+        start = Util.toSVY((v(1).extract[Double], v(0).extract[Double])),
+        end = Util.toSVY((v(3).extract[Double], v(2).extract[Double])),
+        actualTime = convertTime(v(5).extract[String]),
+        weight = v(4).extract[Int]
+      ))
+      .filter(_.weight > 25)
   }
 }

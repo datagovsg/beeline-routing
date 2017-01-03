@@ -6,7 +6,8 @@ import sg.beeline.ui.RoutingControl
 
 trait RoutingProblem {
   def distance(a : BusStop, b : BusStop) : Double
-  def nearBusStops(p: Point) : Seq[BusStop]
+  def nearBusStopsStart(p: Point) : Seq[BusStop]
+  def nearBusStopsEnd(p: Point) : Seq[BusStop]
 
   def initialize: (Traversable[Route], Traversable[Request], Traversable[Request])
 }
@@ -19,7 +20,9 @@ class BusStop(val coordinates: Util.Point, val heading: Double, val description:
     s"BusStop(${coordinates._2},${coordinates._1}) ${description}"
 }
 
-class Suggestion(val start: Util.Point, val end: Util.Point, val time: Double) {
+class Suggestion(val start: Util.Point, val end: Util.Point, val actualTime: Double, val weight : Int = 1) {
+  val time = actualTime
+
   override def toString =
     s"Suggestion(${start._1}, ${start._2}) to (${end._1}, ${end._2}) @${time}"
 }

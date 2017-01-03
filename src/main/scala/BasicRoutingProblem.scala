@@ -2,7 +2,10 @@ package sg.beeline
 import com.thesamet.spatial.{KDTreeMap, RegionBuilder}
 import Util.Point
 
-class BasicRoutingProblem(val busStops: Seq[BusStop], val suggestions: Seq[Suggestion]) extends RoutingProblem {
+class BasicRoutingProblem(val busStops: Seq[BusStop],
+                          val suggestions: Seq[Suggestion],
+                          val startWalkingDistance : Double = 300.0,
+                          val endWalkingDistance : Double = 300.0) extends RoutingProblem {
   println(s"Problem with ${suggestions.size} suggestions")
 
   type BusStopsTree = KDTreeMap[(Double, Double), BusStop]
@@ -10,11 +13,9 @@ class BasicRoutingProblem(val busStops: Seq[BusStop], val suggestions: Seq[Sugge
   val busStopsTree : BusStopsTree = KDTreeMap.fromSeq(
     busStops map {x => x.xy -> x}
   )
-  val maxDetourRatio = 1.5
-  val distance = 300.0
 
   val requests = suggestions.map(sugg =>
-    new Request(this, sugg.start, sugg.end, sugg.time))
+    new Request(this, sugg.start, sugg.end, sugg.time, weight=sugg.weight))
     .filter(_.startStops.nonEmpty)
     .filter(_.endStops.nonEmpty)
 
@@ -36,10 +37,15 @@ class BasicRoutingProblem(val busStops: Seq[BusStop], val suggestions: Seq[Sugge
   }
 
   //
-  def nearBusStops(origin : Point) =
-    kdtreeQuery.queryBall(busStopsTree, origin, this.distance)
+  def nearBusStopsStart(origin : Point) =
+    kdtreeQuery.queryBall(busStopsTree, origin, this.startWalkingDistance)
     .sortBy(_._1)
     .map(_._2)
+
+  def nearBusStopsEnd(origin : Point) =
+    kdtreeQuery.queryBall(busStopsTree, origin, this.endWalkingDistance)
+      .sortBy(_._1)
+      .map(_._2)
 
   // Start with a solution where everyone is ferried directly from the nearest
   def initialize = {
