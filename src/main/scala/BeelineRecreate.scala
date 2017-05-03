@@ -463,16 +463,28 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
       }
     )
 
-    feasibleTop50Ods.par.flatMap(od => {
+    val feasibleTop50Routes = feasibleTop50Ods.par.flatMap(od => {
       (0 until 10)
         .flatMap(i => try {
           val r = growRoute(request, od, compatibleRequests.toList)
-          println(s"Route generated from ${  compatibleRequests.size} requests")
+          println(s"Route generated from ${ compatibleRequests.size } requests")
           Some(r)
         } catch {
           case e : Exception => println(e); None
         })
     })
+
+    // Prepend candidateRoute to uniqueRoutes if it is different from all the routes in uniqueRoutes
+    def buildNext(uniqueRoutes : List[Route], candidateRoute : Route) = {
+      val (similarRoutes, dissimilarRoutes) = uniqueRoutes.partition(route => RouteSimilarity.isSimilar(route, candidateRoute))
+      (candidateRoute :: similarRoutes).maxBy(_.requestsInfo.size) :: dissimilarRoutes
+    }
+
+    val uniqueTop50Routes = feasibleTop50Routes.foldLeft(List[Route]())(buildNext)
+
+    println(s"Removed ${feasibleTop50Routes.size - uniqueTop50Routes.size} similar routes")
+
+    uniqueTop50Routes
       .groupBy(_.stops)
       .values.map(_.head)
       .toList
