@@ -20,6 +20,14 @@ class BusStop(val coordinates: Util.Point, val heading: Double, val description:
     s"BusStop(${coordinates._2},${coordinates._1}) ${description}"
 }
 
+class MrtStation(val coordinates: Util.Point, val heading: Double, val description: String, roadName: String, val index: Int) {
+  // Save the index for caching!
+  val xy = Util.toSVY(coordinates)
+
+  override def toString =
+    s"MrtStation(${coordinates._2},${coordinates._1}) ${description}"
+}
+
 class Suggestion(val start: Util.Point, val end: Util.Point, val actualTime: Double, val weight : Int = 1) {
   val time = actualTime
 

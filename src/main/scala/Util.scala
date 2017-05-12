@@ -2,6 +2,11 @@ package sg.beeline
 import io.jeo.proj.Proj
 import com.vividsolutions.jts.geom.{GeometryFactory, PrecisionModel, Coordinate}
 import com.thesamet.spatial.{KDTreeMap, RegionBuilder}
+import scala.math.sqrt
+import scala.math.sin
+import scala.math.cos
+import scala.math.asin
+import scala.math.Pi
 
 object Util {
   type Point = (Double, Double)
@@ -26,6 +31,29 @@ object Util {
     )
     val reprojectedCoordinate = reprojected.getCoordinate
     (reprojectedCoordinate.x, reprojectedCoordinate.y)
+  }
+
+  /*
+    Calculate distance between two points on Earth (in metres)
+   */
+  def computeDistance(point1 : Point, point2 : Point) : Double = {
+    val lon1 = toRadians(point1._1)
+    val lat1 = toRadians(point1._2)
+    val lon2 = toRadians(point2._1)
+    val lat2 = toRadians(point2._2)
+    // println(s"${lon1} ${lat1} ${lon2} ${lat2}")
+
+    val dlon = lon2 - lon1
+    val dlat = lat2 - lat1
+    val sinDlat = sin(dlat/2)
+    val sinDlon = sin(dlon/2)
+    val a = sinDlat * sinDlat + cos(lat1) * cos(lat2) * sinDlon * sinDlon
+    val angle = 2 * asin(sqrt(a))
+    6367 * 1000 * angle
+  }
+
+  def toRadians(degree: Double) : Double = {
+    Pi * degree / 180
   }
 }
 

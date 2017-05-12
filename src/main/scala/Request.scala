@@ -1,5 +1,9 @@
 package sg.beeline
 import Util.Point
+import scala.math.min
+import scala.math.sqrt
+import scala.math.log
+import scala.math.pow
 
 class Request(val routingProblem : RoutingProblem,
               val start: Point, val end: Point, val actualTime: Double,
@@ -11,6 +15,25 @@ class Request(val routingProblem : RoutingProblem,
 
   val startStopsSet = startStops.toSet
   val endStopsSet = endStops.toSet
+
+  lazy val startWGS = Util.toWGS(start)
+  lazy val endWGS = Util.toWGS(end)
+
+  // Everything relating to distance here is in metres, and points here is in (lat, lon)
+  lazy val distanceFromNearestMrt : Double = {
+    val distances = Import.getMrtStations.map(mrtStation => Util.computeDistance(mrtStation.coordinates, startWGS))
+    val minDist = distances.foldLeft(Double.PositiveInfinity)(min(_,_))
+    minDist
+  }
+
+  def getWeightByDistanceToMrt(maxDistanceFromMrt : Double, minProbabilityAtMrt : Double) : Double = {
+    val correspondingWeight = min(weight, minProbabilityAtMrt + (weight - minProbabilityAtMrt) * distanceFromNearestMrt / maxDistanceFromMrt)
+    //val factor = log((weight - minProbabilityAtMrt) / (weight - 0.95)) / distanceFromNearestMrt
+    //val correspondingWeight = min(weight,
+      //weight - (weight - minProbabilityAtMrt) * pow(scala.math.E, -distanceFromNearestMrt * factor))
+    println("corresponding weight is " + correspondingWeight)
+    correspondingWeight
+  }
 
   override def toString = (Util.toWGS(start), Util.toWGS(end), time).toString
 }
