@@ -1,9 +1,6 @@
 package sg.beeline
 import Util.Point
 import scala.math.min
-import scala.math.sqrt
-import scala.math.log
-import scala.math.pow
 
 class Request(val routingProblem : RoutingProblem,
               val start: Point, val end: Point, val actualTime: Double,
