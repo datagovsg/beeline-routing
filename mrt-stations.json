@@ -1,0 +1,856 @@
+[
+  {
+    "Longitude": 103.84634759342,
+    "Latitude": 1.29881040867147,
+    "RoadName": "Orchard Road",
+    "Description": "Dhoby Ghaut Mrt Station",
+    "MrtStationCode": "CC1"
+  },
+  {
+    "Longitude": 103.890391305725,
+    "Latitude": 1.32607760171668,
+    "RoadName": "Paya Lebar Road",
+    "Description": "Macpherson Mrt Station",
+    "MrtStationCode": "CC10"
+  },
+  {
+    "Longitude": 103.88843301279,
+    "Latitude": 1.33510208507523,
+    "RoadName": "Upper Paya Lebar Road",
+    "Description": "Tai Seng Mrt Station",
+    "MrtStationCode": "CC11"
+  },
+  {
+    "Longitude": 103.880177899184,
+    "Latitude": 1.34250117805246,
+    "RoadName": "Bartley Road",
+    "Description": "Bartley Mrt Station",
+    "MrtStationCode": "CC12"
+  },
+  {
+    "Longitude": 103.872771660431,
+    "Latitude": 1.35063361526529,
+    "RoadName": "Serangoon Central",
+    "Description": "Serangoon Mrt Station",
+    "MrtStationCode": "CC13"
+  },
+  {
+    "Longitude": 103.864151938651,
+    "Latitude": 1.35161217074559,
+    "RoadName": "Serangoon Avenue 3",
+    "Description": "Lorong Chuan Mrt Station",
+    "MrtStationCode": "CC14"
+  },
+  {
+    "Longitude": 103.849154418688,
+    "Latitude": 1.35130867993962,
+    "RoadName": "Bishan Place",
+    "Description": "Bishan Mrt Station",
+    "MrtStationCode": "CC15"
+  },
+  {
+    "Longitude": 103.839423132332,
+    "Latitude": 1.34870726345102,
+    "RoadName": "Marymount Road",
+    "Description": "Marymount Mrt Station",
+    "MrtStationCode": "CC16"
+  },
+  {
+    "Longitude": 103.839529820338,
+    "Latitude": 1.3376745081562,
+    "RoadName": "Toa Payoh Rise",
+    "Description": "Caldecott Mrt Station",
+    "MrtStationCode": "CC17"
+  },
+  {
+    "Longitude": 103.830689549849,
+    "Latitude": 1.33372888295977,
+    "RoadName": "Jalan Mashhor",
+    "Description": "Bukit Brown Mrt Station",
+    "MrtStationCode": "CC18"
+  },
+  {
+    "Longitude": 103.850667371637,
+    "Latitude": 1.29686168649658,
+    "RoadName": "Bras Basah Road",
+    "Description": "Bras Basah Mrt Station",
+    "MrtStationCode": "CC2"
+  },
+  {
+    "Longitude": 103.807379214161,
+    "Latitude": 1.31743915158969,
+    "RoadName": "Farrer Road",
+    "Description": "Farrer Road Mrt Station",
+    "MrtStationCode": "CC20"
+  },
+  {
+    "Longitude": 103.796399122407,
+    "Latitude": 1.312240296316,
+    "RoadName": "Holland Avenue",
+    "Description": "Holland Village Mrt Station",
+    "MrtStationCode": "CC21"
+  },
+  {
+    "Longitude": 103.790709404436,
+    "Latitude": 1.30663450405004,
+    "RoadName": "North Buona Vista Road",
+    "Description": "Buona Vista Mrt Station",
+    "MrtStationCode": "CC22"
+  },
+  {
+    "Longitude": 103.78745750797,
+    "Latitude": 1.29975987849417,
+    "RoadName": "Ayer Rajah Avenue",
+    "Description": "One-North Mrt Station",
+    "MrtStationCode": "CC23"
+  },
+  {
+    "Longitude": 103.784572366595,
+    "Latitude": 1.29353698622128,
+    "RoadName": "South Buona Vista Road",
+    "Description": "Kent Ridge Mrt Station",
+    "MrtStationCode": "CC24"
+  },
+  {
+    "Longitude": 103.781752724792,
+    "Latitude": 1.28257135827237,
+    "RoadName": "Pasir Panjang Road",
+    "Description": "Haw Par Villa Mrt Station",
+    "MrtStationCode": "CC25"
+  },
+  {
+    "Longitude": 103.791350313288,
+    "Latitude": 1.27621352233768,
+    "RoadName": "Pasir Panjang Road",
+    "Description": "Pasir Panjang Mrt Station",
+    "MrtStationCode": "CC26"
+  },
+  {
+    "Longitude": 103.802631578766,
+    "Latitude": 1.27225417749657,
+    "RoadName": "Telok Blangah Road",
+    "Description": "Labrador Park Mrt Station",
+    "MrtStationCode": "CC27"
+  },
+  {
+    "Longitude": 103.809761611219,
+    "Latitude": 1.27070647717764,
+    "RoadName": "Telok Blangah Road",
+    "Description": "Telok Blangah Mrt Station",
+    "MrtStationCode": "CC28"
+  },
+  {
+    "Longitude": 103.855081226245,
+    "Latitude": 1.29365772453863,
+    "RoadName": "Bras Basah Road",
+    "Description": "Esplanade Mrt Station",
+    "MrtStationCode": "CC3"
+  },
+  {
+    "Longitude": 103.863637018754,
+    "Latitude": 1.29976683498024,
+    "RoadName": "Republic Avenue",
+    "Description": "Nicoll Highway Mrt Station",
+    "MrtStationCode": "CC5"
+  },
+  {
+    "Longitude": 103.875337711089,
+    "Latitude": 1.30281246847074,
+    "RoadName": "Stadium Walk",
+    "Description": "Stadium Mrt Station",
+    "MrtStationCode": "CC6"
+  },
+  {
+    "Longitude": 103.882528081052,
+    "Latitude": 1.30620190525333,
+    "RoadName": "Mountbatten Road",
+    "Description": "Mountbatten Mrt Station",
+    "MrtStationCode": "CC7"
+  },
+  {
+    "Longitude": 103.889064718377,
+    "Latitude": 1.30854798388123,
+    "RoadName": "Old Airport Road",
+    "Description": "Dakota Mrt Station",
+    "MrtStationCode": "CC8"
+  },
+  {
+    "Longitude": 103.892260753884,
+    "Latitude": 1.31724738540351,
+    "RoadName": "Paya Lebar Road",
+    "Description": "Paya Lebar Mrt Station",
+    "MrtStationCode": "CC9"
+  },
+  {
+    "Longitude": 103.855447156279,
+    "Latitude": 1.27625146423745,
+    "RoadName": "Park Street",
+    "Description": "Marina Bay Mrt Station",
+    "MrtStationCode": "CE2"
+  },
+  {
+    "Longitude": 103.961548211018,
+    "Latitude": 1.33454977824819,
+    "RoadName": "Changi South Avenue 1",
+    "Description": "Expo Mrt Station",
+    "MrtStationCode": "CG1"
+  },
+  {
+    "Longitude": 103.98788356959,
+    "Latitude": 1.35747897447696,
+    "RoadName": "Airport Boulevard",
+    "Description": "Changi Airport Mrt Station",
+    "MrtStationCode": "CG2"
+  },
+  {
+    "Longitude": 103.761535114929,
+    "Latitude": 1.37900211641038,
+    "RoadName": "Upper Bukit Timah Road",
+    "Description": "Bukit Panjang Mrt Station",
+    "MrtStationCode": "DT1"
+  },
+  {
+    "Longitude": 103.826024401924,
+    "Latitude": 1.32006555750627,
+    "RoadName": "Stevens Road",
+    "Description": "Stevens Mrt Station",
+    "MrtStationCode": "DT10"
+  },
+  {
+    "Longitude": 103.837714613091,
+    "Latitude": 1.31399286264572,
+    "RoadName": "Bukit Timah Road",
+    "Description": "Newton Mrt Station",
+    "MrtStationCode": "DT11"
+  },
+  {
+    "Longitude": 103.848660935092,
+    "Latitude": 1.30701826765227,
+    "RoadName": "Bukit Timah Road",
+    "Description": "Little India Mrt Station",
+    "MrtStationCode": "DT12"
+  },
+  {
+    "Longitude": 103.852769428884,
+    "Latitude": 1.30385218527657,
+    "RoadName": "Rochor Canal Road",
+    "Description": "Rochor Mrt Station",
+    "MrtStationCode": "DT13"
+  },
+  {
+    "Longitude": 103.857125958751,
+    "Latitude": 1.2993135039933,
+    "RoadName": "Rochor Road",
+    "Description": "Bugis Mrt Station",
+    "MrtStationCode": "DT14"
+  },
+  {
+    "Longitude": 103.860891800025,
+    "Latitude": 1.29289175383297,
+    "RoadName": "Temasek Avenue",
+    "Description": "Promenade Mrt Station",
+    "MrtStationCode": "DT15"
+  },
+  {
+    "Longitude": 103.859079764874,
+    "Latitude": 1.2818737887921,
+    "RoadName": "Bayfront Avenue",
+    "Description": "Bayfront Mrt Station",
+    "MrtStationCode": "DT16 / CE1"
+  },
+  {
+    "Longitude": 103.852840444471,
+    "Latitude": 1.27944619017902,
+    "RoadName": "Central Boulevard",
+    "Description": "Downtown Mrt Station",
+    "MrtStationCode": "DT17"
+  },
+  {
+    "Longitude": 103.848648781083,
+    "Latitude": 1.28206894769397,
+    "RoadName": "Cross Street",
+    "Description": "Telok Ayer Mrt Station",
+    "MrtStationCode": "DT18"
+  },
+  {
+    "Longitude": 103.76443921414,
+    "Latitude": 1.36981544925554,
+    "RoadName": "Cashew Road",
+    "Description": "Cashew Mrt Station",
+    "MrtStationCode": "DT2"
+  },
+  {
+    "Longitude": 103.844331060302,
+    "Latitude": 1.29248123652549,
+    "RoadName": "River Valley Road",
+    "Description": "Fort Canning Mrt Station",
+    "MrtStationCode": "DT20"
+  },
+  {
+    "Longitude": 103.850353762717,
+    "Latitude": 1.29891843369424,
+    "RoadName": "Bencoolen Street",
+    "Description": "Bencoolen Mrt Station",
+    "MrtStationCode": "DT21"
+  },
+  {
+    "Longitude": 103.855295713435,
+    "Latitude": 1.30517138780691,
+    "RoadName": "Jalan Besar",
+    "Description": "Jalan Besar Mrt Station",
+    "MrtStationCode": "DT22"
+  },
+  {
+    "Longitude": 103.862977620945,
+    "Latitude": 1.31367252847692,
+    "RoadName": "Kallang Bahru",
+    "Description": "Bendemeer Mrt Station",
+    "MrtStationCode": "DT23"
+  },
+  {
+    "Longitude": 103.871900625492,
+    "Latitude": 1.32150583810742,
+    "RoadName": "Kallang Bahru",
+    "Description": "Geylang Bahru Mrt Station",
+    "MrtStationCode": "DT24"
+  },
+  {
+    "Longitude": 103.883247509542,
+    "Latitude": 1.32687671501337,
+    "RoadName": "Merpati Road",
+    "Description": "Mattar Mrt Station",
+    "MrtStationCode": "DT25"
+  },
+  {
+    "Longitude": 103.899226655449,
+    "Latitude": 1.32997462900521,
+    "RoadName": "Ubi Avenue 2",
+    "Description": "Ubi Mrt Station",
+    "MrtStationCode": "DT27"
+  },
+  {
+    "Longitude": 103.908459734312,
+    "Latitude": 1.33496730163706,
+    "RoadName": "Kaki Bukit Avenue 1",
+    "Description": "Kaki Bukit Mrt Station",
+    "MrtStationCode": "DT28"
+  },
+  {
+    "Longitude": 103.91797832995,
+    "Latitude": 1.33474211664093,
+    "RoadName": "Bedok North Road",
+    "Description": "Bedok North Mrt Station",
+    "MrtStationCode": "DT29"
+  },
+  {
+    "Longitude": 103.767418254007,
+    "Latitude": 1.3623448680356,
+    "RoadName": "Upper Bukit Timah Road",
+    "Description": "Hillview Mrt Station",
+    "MrtStationCode": "DT3"
+  },
+  {
+    "Longitude": 103.932234623286,
+    "Latitude": 1.33660782955102,
+    "RoadName": "Bedok North Avenue 3",
+    "Description": "Bedok Reservoir Mrt Station",
+    "MrtStationCode": "DT30"
+  },
+  {
+    "Longitude": 103.938436971222,
+    "Latitude": 1.34551530560122,
+    "RoadName": "Tampines Avenue 4",
+    "Description": "Tampines West Mrt Station",
+    "MrtStationCode": "DT31"
+  },
+  {
+    "Longitude": 103.943033582687,
+    "Latitude": 1.35518122034479,
+    "RoadName": "Tampines Central 1",
+    "Description": "Tampines Mrt Station",
+    "MrtStationCode": "DT32"
+  },
+  {
+    "Longitude": 103.9546344625,
+    "Latitude": 1.35619148271548,
+    "RoadName": "Tampines Avenue 7",
+    "Description": "Tampines East Mrt Station",
+    "MrtStationCode": "DT33"
+  },
+  {
+    "Longitude": 103.961471788461,
+    "Latitude": 1.34173748418526,
+    "RoadName": "Upper Changi Road East",
+    "Description": "Upper Changi Mrt Station",
+    "MrtStationCode": "DT34"
+  },
+  {
+    "Longitude": 103.775794285083,
+    "Latitude": 1.34122317558553,
+    "RoadName": "Upper Bukit Timah Road",
+    "Description": "Beauty World Mrt Station",
+    "MrtStationCode": "DT5"
+  },
+  {
+    "Longitude": 103.783399113418,
+    "Latitude": 1.33566276229995,
+    "RoadName": "Blackmore Drive",
+    "Description": "King Albert Park Mrt Station",
+    "MrtStationCode": "DT6"
+  },
+  {
+    "Longitude": 103.796906838288,
+    "Latitude": 1.33085764536228,
+    "RoadName": "Bukit Timah Road",
+    "Description": "Sixth Avenue Mrt Station",
+    "MrtStationCode": "DT7"
+  },
+  {
+    "Longitude": 103.807760304729,
+    "Latitude": 1.325556235199,
+    "RoadName": "Bukit Timah Road",
+    "Description": "Tan Kah Kee Mrt Station",
+    "MrtStationCode": "DT8"
+  },
+  {
+    "Longitude": 103.816013994259,
+    "Latitude": 1.32248807089546,
+    "RoadName": "Bukit Timah Road",
+    "Description": "Botanic Gardens Mrt Station",
+    "MrtStationCode": "DT9"
+  },
+  {
+    "Longitude": 103.949284605816,
+    "Latitude": 1.37304321206227,
+    "RoadName": "Pasir Ris Central",
+    "Description": "Pasir Ris Mrt Station",
+    "MrtStationCode": "EW1"
+  },
+  {
+    "Longitude": 103.871386541754,
+    "Latitude": 1.31148890998822,
+    "RoadName": "Sims Avenue",
+    "Description": "Kallang Mrt Station",
+    "MrtStationCode": "EW10"
+  },
+  {
+    "Longitude": 103.862767633612,
+    "Latitude": 1.30737750842617,
+    "RoadName": "Kallang Road",
+    "Description": "Lavender Mrt Station",
+    "MrtStationCode": "EW11"
+  },
+  {
+    "Longitude": 103.852585892041,
+    "Latitude": 1.29293624242153,
+    "RoadName": "North Bridge Road",
+    "Description": "City Hall Mrt Station",
+    "MrtStationCode": "EW13 / NS25"
+  },
+  {
+    "Longitude": 103.851461712342,
+    "Latitude": 1.2841256104366,
+    "RoadName": "Raffles Place",
+    "Description": "Raffles Place Mrt Station",
+    "MrtStationCode": "EW14 / NS26"
+  },
+  {
+    "Longitude": 103.845952194571,
+    "Latitude": 1.27660448669847,
+    "RoadName": "Maxwell Road",
+    "Description": "Tanjong Pagar Mrt Station",
+    "MrtStationCode": "EW15"
+  },
+  {
+    "Longitude": 103.839126497191,
+    "Latitude": 1.28140497820415,
+    "RoadName": "Outram Road",
+    "Description": "Outram Park Mrt Station",
+    "MrtStationCode": "EW16"
+  },
+  {
+    "Longitude": 103.827445112419,
+    "Latitude": 1.28610253615777,
+    "RoadName": "Tiong Bahru Road",
+    "Description": "Tiong Bahru Mrt Station",
+    "MrtStationCode": "EW17"
+  },
+  {
+    "Longitude": 103.816740969874,
+    "Latitude": 1.28963453358141,
+    "RoadName": "Tiong Bahru Road",
+    "Description": "Redhill Mrt Station",
+    "MrtStationCode": "EW18"
+  },
+  {
+    "Longitude": 103.806077155982,
+    "Latitude": 1.29455085184934,
+    "RoadName": "Commonwealth Avenue",
+    "Description": "Queenstown Mrt Station",
+    "MrtStationCode": "EW19"
+  },
+  {
+    "Longitude": 103.798226128263,
+    "Latitude": 1.30250853704708,
+    "RoadName": "Commonwealth Avenue",
+    "Description": "Commonwealth Mrt Station",
+    "MrtStationCode": "EW20"
+  },
+  {
+    "Longitude": 103.778637841909,
+    "Latitude": 1.31140529320966,
+    "RoadName": "Commonwealth Avenue West",
+    "Description": "Dover Mrt Station",
+    "MrtStationCode": "EW22"
+  },
+  {
+    "Longitude": 103.765182446647,
+    "Latitude": 1.3152012635208,
+    "RoadName": "Commonwealth Avenue West",
+    "Description": "Clementi Mrt Station",
+    "MrtStationCode": "EW23"
+  },
+  {
+    "Longitude": 103.742286544006,
+    "Latitude": 1.33315261987297,
+    "RoadName": "Jurong East Street 12",
+    "Description": "Jurong East Mrt Station",
+    "MrtStationCode": "EW24 / NS1"
+  },
+  {
+    "Longitude": 103.732596738363,
+    "Latitude": 1.34235282081403,
+    "RoadName": "Boon Lay Way",
+    "Description": "Chinese Garden Mrt Station",
+    "MrtStationCode": "EW25"
+  },
+  {
+    "Longitude": 103.720949268586,
+    "Latitude": 1.34425924989665,
+    "RoadName": "Boon Lay Way",
+    "Description": "Lakeside Mrt Station",
+    "MrtStationCode": "EW26"
+  },
+  {
+    "Longitude": 103.706064622772,
+    "Latitude": 1.33860405469846,
+    "RoadName": "Boon Lay Way",
+    "Description": "Boon Lay Mrt Station",
+    "MrtStationCode": "EW27"
+  },
+  {
+    "Longitude": 103.697321513018,
+    "Latitude": 1.33758688240768,
+    "RoadName": "Jurong West Street 63",
+    "Description": "Pioneer Mrt Station",
+    "MrtStationCode": "EW28"
+  },
+  {
+    "Longitude": 103.678375143838,
+    "Latitude": 1.32771717334029,
+    "RoadName": "Joo Koon Circle",
+    "Description": "Joo Koon Mrt Station",
+    "MrtStationCode": "EW29"
+  },
+  {
+    "Longitude": 103.953371694102,
+    "Latitude": 1.34320289478118,
+    "RoadName": "Simei Street 3",
+    "Description": "Simei Mrt Station",
+    "MrtStationCode": "EW3"
+  },
+  {
+    "Longitude": 103.660530403418,
+    "Latitude": 1.319470868174,
+    "RoadName": "Tuas Road",
+    "Description": "Gul Circle Mrt Station",
+    "MrtStationCode": "EW30"
+  },
+  {
+    "Longitude": 103.649078232635,
+    "Latitude": 1.32102695188066,
+    "RoadName": "Pioneer Road",
+    "Description": "Tuas Crescent Mrt Station",
+    "MrtStationCode": "EW31"
+  },
+  {
+    "Longitude": 103.63961405628,
+    "Latitude": 1.3299890890646,
+    "RoadName": "Pioneer Road",
+    "Description": "Tuas West Road Mrt Station",
+    "MrtStationCode": "EW32"
+  },
+  {
+    "Longitude": 103.636991425128,
+    "Latitude": 1.34088242451108,
+    "RoadName": "Tuas West Drive",
+    "Description": "Tuas Link Mrt Station",
+    "MrtStationCode": "EW33"
+  },
+  {
+    "Longitude": 103.946346460356,
+    "Latitude": 1.32718713427024,
+    "RoadName": "New Upper Changi Road",
+    "Description": "Tanah Merah Mrt Station",
+    "MrtStationCode": "EW4"
+  },
+  {
+    "Longitude": 103.929984495066,
+    "Latitude": 1.32397996868161,
+    "RoadName": "New Upper Changi Road",
+    "Description": "Bedok Mrt Station",
+    "MrtStationCode": "EW5"
+  },
+  {
+    "Longitude": 103.912949388089,
+    "Latitude": 1.32103824851416,
+    "RoadName": "Sims Avenue East",
+    "Description": "Kembangan Mrt Station",
+    "MrtStationCode": "EW6"
+  },
+  {
+    "Longitude": 103.903626852046,
+    "Latitude": 1.31983834674678,
+    "RoadName": "Eunos Crescent",
+    "Description": "Eunos Mrt Station",
+    "MrtStationCode": "EW7"
+  },
+  {
+    "Longitude": 103.882906044385,
+    "Latitude": 1.31643261181573,
+    "RoadName": "Lorong 25 Geylang",
+    "Description": "Aljunied Mrt Station",
+    "MrtStationCode": "EW9"
+  },
+  {
+    "Longitude": 103.821530156823,
+    "Latitude": 1.26538938402277,
+    "RoadName": "Telok Blangah Road",
+    "Description": "Harbourfront Mrt Station",
+    "MrtStationCode": "NE1 / CC29"
+  },
+  {
+    "Longitude": 103.869055665485,
+    "Latitude": 1.33137952497763,
+    "RoadName": "Upper Serangoon Road",
+    "Description": "Potong Pasir Mrt Station",
+    "MrtStationCode": "NE10"
+  },
+  {
+    "Longitude": 103.87081830915,
+    "Latitude": 1.33919004519393,
+    "RoadName": "Upper Serangoon Road",
+    "Description": "Woodleigh Mrt Station",
+    "MrtStationCode": "NE11"
+  },
+  {
+    "Longitude": 103.885064856353,
+    "Latitude": 1.36017917065238,
+    "RoadName": "Upper Serangoon Road",
+    "Description": "Kovan Mrt Station",
+    "MrtStationCode": "NE13"
+  },
+  {
+    "Longitude": 103.892380518741,
+    "Latitude": 1.37129229221246,
+    "RoadName": "Hougang Central",
+    "Description": "Hougang Mrt Station",
+    "MrtStationCode": "NE14"
+  },
+  {
+    "Longitude": 103.893121564391,
+    "Latitude": 1.38287785835055,
+    "RoadName": "Sengkang Central",
+    "Description": "Buangkok Mrt Station",
+    "MrtStationCode": "NE15"
+  },
+  {
+    "Longitude": 103.895484694279,
+    "Latitude": 1.39169462601523,
+    "RoadName": "Sengkang Square",
+    "Description": "Sengkang Mrt Station",
+    "MrtStationCode": "NE16"
+  },
+  {
+    "Longitude": 103.902072638825,
+    "Latitude": 1.40454672748107,
+    "RoadName": "Punggol Central",
+    "Description": "Punggol Mrt Station",
+    "MrtStationCode": "NE17"
+  },
+  {
+    "Longitude": 103.843426775693,
+    "Latitude": 1.2843595780039,
+    "RoadName": "New Bridge Road",
+    "Description": "Chinatown Mrt Station",
+    "MrtStationCode": "NE4"
+  },
+  {
+    "Longitude": 103.846555209694,
+    "Latitude": 1.28838602407589,
+    "RoadName": "Eu Tong Sen Street",
+    "Description": "Clarke Quay Mrt Station",
+    "MrtStationCode": "NE5"
+  },
+  {
+    "Longitude": 103.853477716509,
+    "Latitude": 1.31190557325777,
+    "RoadName": "Race Course Road",
+    "Description": "Farrer Park Mrt Station",
+    "MrtStationCode": "NE8"
+  },
+  {
+    "Longitude": 103.861569454156,
+    "Latitude": 1.31933570922515,
+    "RoadName": "Serangoon Road",
+    "Description": "Boon Keng Mrt Station",
+    "MrtStationCode": "NE9"
+  },
+  {
+    "Longitude": 103.800988000403,
+    "Latitude": 1.44058500086852,
+    "RoadName": "Woodlands Avenue 7",
+    "Description": "Admiralty Mrt Station",
+    "MrtStationCode": "NS10"
+  },
+  {
+    "Longitude": 103.820046140211,
+    "Latitude": 1.44905082158503,
+    "RoadName": "Canberra Road",
+    "Description": "Sembawang Mrt Station",
+    "MrtStationCode": "NS11"
+  },
+  {
+    "Longitude": 103.83500504643,
+    "Latitude": 1.42944308039361,
+    "RoadName": "Yishun Avenue 2",
+    "Description": "Yishun Mrt Station",
+    "MrtStationCode": "NS13"
+  },
+  {
+    "Longitude": 103.832979908243,
+    "Latitude": 1.41738337009568,
+    "RoadName": "Yishun Avenue 2",
+    "Description": "Khatib Mrt Station",
+    "MrtStationCode": "NS14"
+  },
+  {
+    "Longitude": 103.844947289948,
+    "Latitude": 1.38175604645398,
+    "RoadName": "Ang Mo Kio Avenue 8",
+    "Description": "Yio Chu Kang Mrt Station",
+    "MrtStationCode": "NS15"
+  },
+  {
+    "Longitude": 103.849558130943,
+    "Latitude": 1.36993317536445,
+    "RoadName": "Ang Mo Kio Avenue 8",
+    "Description": "Ang Mo Kio Mrt Station",
+    "MrtStationCode": "NS16"
+  },
+  {
+    "Longitude": 103.846799083148,
+    "Latitude": 1.34046900102774,
+    "RoadName": "Lorong 1 Toa Payoh",
+    "Description": "Braddell Mrt Station",
+    "MrtStationCode": "NS18"
+  },
+  {
+    "Longitude": 103.847501764246,
+    "Latitude": 1.33262898752974,
+    "RoadName": "Lorong 6 Toa Payoh",
+    "Description": "Toa Payoh Mrt Station",
+    "MrtStationCode": "NS19"
+  },
+  {
+    "Longitude": 103.749566764129,
+    "Latitude": 1.34903410858812,
+    "RoadName": "Bukit Batok Central",
+    "Description": "Bukit Batok Mrt Station",
+    "MrtStationCode": "NS2"
+  },
+  {
+    "Longitude": 103.843825618748,
+    "Latitude": 1.32044079120159,
+    "RoadName": "Thomson Road",
+    "Description": "Novena Mrt Station",
+    "MrtStationCode": "NS20"
+  },
+  {
+    "Longitude": 103.832241452271,
+    "Latitude": 1.30398101303481,
+    "RoadName": "Orchard Road",
+    "Description": "Orchard Mrt Station",
+    "MrtStationCode": "NS22"
+  },
+  {
+    "Longitude": 103.839075162273,
+    "Latitude": 1.30026005512364,
+    "RoadName": "Somerset Road",
+    "Description": "Somerset Mrt Station",
+    "MrtStationCode": "NS23"
+  },
+  {
+    "Longitude": 103.862447515736,
+    "Latitude": 1.2710270361201,
+    "RoadName": "Marina Coastal Drive",
+    "Description": "Marina South Pier Mrt Station",
+    "MrtStationCode": "NS28"
+  },
+  {
+    "Longitude": 103.751790910733,
+    "Latitude": 1.35861159094194,
+    "RoadName": "Bukit Batok West Avenue 5",
+    "Description": "Bukit Gombak Mrt Station",
+    "MrtStationCode": "NS3"
+  },
+  {
+    "Longitude": 103.744370779756,
+    "Latitude": 1.38536316540226,
+    "RoadName": "Choa Chu Kang Avenue 4",
+    "Description": "Choa Chu Kang Mrt Station",
+    "MrtStationCode": "NS4"
+  },
+  {
+    "Longitude": 103.747405114336,
+    "Latitude": 1.39753501762625,
+    "RoadName": "Choa Chu Kang Drive",
+    "Description": "Yew Tee Mrt Station",
+    "MrtStationCode": "NS5"
+  },
+  {
+    "Longitude": 103.762137459497,
+    "Latitude": 1.42508698073649,
+    "RoadName": "Woodlands Road",
+    "Description": "Kranji Mrt Station",
+    "MrtStationCode": "NS7"
+  },
+  {
+    "Longitude": 103.774074641403,
+    "Latitude": 1.4325211485503,
+    "RoadName": "Woodlands Avenue 3",
+    "Description": "Marsiling Mrt Station",
+    "MrtStationCode": "NS8"
+  },
+  {
+    "Longitude": 103.78646245158,
+    "Latitude": 1.43696824751195,
+    "RoadName": "Woodlands Avenue 2",
+    "Description": "Woodlands Mrt Station",
+    "MrtStationCode": "NS9"
+  },
+  {
+    "Longitude": 103.850405709087,
+    "Latitude": 1.27773021965509,
+    "RoadName": "Park Street",
+    "Description": "Shenton Way Mrt Station",
+    "MrtStationCode": "TE19"
+  },
+  {
+    "Longitude": 103.793244601784,
+    "Latitude": 1.42743341642556,
+    "RoadName": "Woodlands Avenue 1",
+    "Description": "Woodlands South Mrt Station",
+    "MrtStationCode": "TE3"
+  }
+]

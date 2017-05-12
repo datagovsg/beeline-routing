@@ -34,6 +34,27 @@ object Import {
     busStops
   }
 
+  lazy val getMrtStations = {
+    implicit val formats = DefaultFormats
+    val jsonText = Source.fromFile("mrt-stations.json").mkString
+    val jsonData = parse(jsonText).asInstanceOf[JArray]
+
+    jsonData.arr
+      .zipWithIndex
+      .map({
+        case(v, i) => new MrtStation(
+          (
+            (v \ "Longitude").extract[Double],
+            (v \ "Latitude").extract[Double]
+          ),
+          (v \ "Heading").extractOrElse[Double](Double.NaN),
+          (v \ "Description").extract[String],
+          (v \ "RoadName").extract[String],
+          i
+        )
+      })
+  }
+
   lazy val distanceMatrix = {
     val ois = new java.io.ObjectInputStream(
       new java.util.zip.GZIPInputStream(
