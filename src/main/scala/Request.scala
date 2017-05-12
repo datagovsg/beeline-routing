@@ -27,11 +27,12 @@ class Request(val routingProblem : RoutingProblem,
   }
 
   def getWeightByDistanceToMrt(maxDistanceFromMrt : Double, minProbabilityAtMrt : Double) : Double = {
-    val correspondingWeight = min(weight, minProbabilityAtMrt + (weight - minProbabilityAtMrt) * distanceFromNearestMrt / maxDistanceFromMrt)
-    //val factor = log((weight - minProbabilityAtMrt) / (weight - 0.95)) / distanceFromNearestMrt
-    //val correspondingWeight = min(weight,
-      //weight - (weight - minProbabilityAtMrt) * pow(scala.math.E, -distanceFromNearestMrt * factor))
-    println("corresponding weight is " + correspondingWeight)
+    val correspondingWeight = {
+      if (distanceFromNearestMrt <= maxDistanceFromMrt)
+        weight * minProbabilityAtMrt
+      else
+        weight
+    }
     correspondingWeight
   }
 

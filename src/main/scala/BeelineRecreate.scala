@@ -480,7 +480,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
 
   def growRoute(request : Request, od : (BusStop, BusStop), requests: List[Request]) = {
     // val shuffled = Random.shuffle(requests)
-    val shuffled = WeightedRandomShuffle.shuffle(requests, requests.view.map(r => r.getWeightByDistanceToMrt(500, 0)))
+    val shuffled = WeightedRandomShuffle.shuffle(requests, requests.view.map(r => r.getWeightByDistanceToMrt(300, 0.2)))
 
     // Try to insert until a max of.... 10?
     @tailrec
