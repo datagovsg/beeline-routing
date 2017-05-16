@@ -12,7 +12,7 @@ trait RoutingProblem {
   def initialize: (Traversable[Route], Traversable[Request], Traversable[Request])
 }
 
-class BusStop(val coordinates: Util.Point, val heading: Double, val description: String, roadName: String, val index: Int) {
+class BusStop(val coordinates: Util.Point, val heading: Double, val description: String, val roadName: String, val index: Int) {
   // Save the index for caching!
   val xy = Util.toSVY(coordinates)
 

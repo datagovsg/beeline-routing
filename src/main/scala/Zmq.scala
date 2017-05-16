@@ -103,48 +103,55 @@ object ZmqRoutingService {
 
   var lastSuggestResult : Traversable[Route] = null
 
-  def handle(action : String, jValue : JValue) : scala.concurrent.Future[Any] = action match {
-    case "startRouting" =>
-      val request = jValue.extract[RoutingRequest]
+  def handle(action : String, jValue : JValue) : scala.concurrent.Future[Any] = {
+    action match {
+      case "startRouting" =>
+        val request = jValue.extract[RoutingRequest]
 
-      routingActor ? new StartRouting(
-        request.times,
-        request.regions.map(req => new CircularRegion((req.lng, req.lat), req.radius)))
+        routingActor ? new StartRouting(
+          request.times,
+          request.regions.map(req => new CircularRegion((req.lng, req.lat), req.radius)))
 
-    case "stopRouting" =>
+      case "stopRouting" =>
 
-      routingActor ? StopRouting
+        routingActor ? StopRouting
 
-    case "getCurrent" =>
-      (routingActor ? CurrentSolution).map {
-        case routes : Traversable[Route] =>
-          routes.par.zipWithIndex.map(_._1).toList
-      }
-    case "getPath" =>
-      val pathRequest = jValue.extract[PathRequest]
-
-      Future({
-        pathRequest match {
-          case PathRequest(indices) =>
-            val busStops = Import.getBusStops
-
-            val polyline = indices.sliding(2).map({
-              case List(aIndex, bIndex) =>
-                val busStopA = busStops(aIndex)
-                val busStopB = busStops(bIndex)
-                Geo.travelPath(
-                  busStopA.coordinates, busStopA.heading,
-                  busStopB.coordinates, busStopB.heading
-                ).toList
-            }).toList
-
-            polyline.map(_.map({case (x,y) => LatLng(y,x)}))
+      case "getCurrent" =>
+        (routingActor ? CurrentSolution).map {
+          case routes : Traversable[Route] =>
+            routes.par.zipWithIndex.map(_._1).toList
         }
-      })
+      case "getPath" =>
+        val pathRequest = jValue.extract[PathRequest]
 
-    case "suggestRoutes" =>
-      val suggestRequest = jValue.extract[SuggestRequest]
+        Future({
+          pathRequest match {
+            case PathRequest(indices) =>
+              val busStops = Import.getBusStops
 
-      (routingActor ? suggestRequest)
+              val polyline = indices.sliding(2).map({
+                case List(aIndex, bIndex) =>
+                  val busStopA = busStops(aIndex)
+                  val busStopB = busStops(bIndex)
+
+                  Geo.travelPath(
+                    busStopA.coordinates, busStopA.heading,
+                    busStopB.coordinates, busStopB.heading
+                  ).toList
+              }).toList
+              polyline.map(_.map({case (x,y) => LatLng(y,x)}))
+          }
+        })
+
+      case "suggestRoutes" =>
+        val suggestRequest = jValue.extract[SuggestRequest]
+
+        (routingActor ? suggestRequest)
+
+      case "getBusStops" =>
+        Future({
+          AllBusStops.json
+        })
+    }
   }
 }

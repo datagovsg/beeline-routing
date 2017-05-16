@@ -64,6 +64,19 @@ object RouteSerializer extends CustomSerializer[RouteWithPath](format => {
   )
 })
 
+object AllBusStops {
+  implicit val formats = DefaultFormats
+  val busStops = Import.getBusStops
+  val json =
+    ("busStops" ->
+      busStops.map { bs =>
+        ("description" -> bs.description) ~
+          ("road" -> bs.roadName) ~
+          ("index" -> bs.index) ~
+          ("coordinates" -> ("type" -> "Point") ~ ("coordinates" -> List(bs.coordinates._1, bs.coordinates._2)))
+      })
+}
+
 case class CircularRegionRequest(val lat : Double, val lng : Double, val radius : Double) {}
 case class RoutingRequest(val times: List[Double], val regions : List[CircularRegionRequest]) {}
 case class PathRequest(val indices: List[Int]) {}
