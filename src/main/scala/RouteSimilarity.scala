@@ -9,21 +9,6 @@ object RouteSimilarity {
     val servedRequestsSet1 : Set[Request] = route1.requestsInfo.map(_._1).toSet
     val servedRequestsSet2 : Set[Request] = route2.requestsInfo.map(_._1).toSet
     val similarServedRequest : Set[Request] = servedRequestsSet1 intersect servedRequestsSet2
-
-    // This portion is for comparing only
-    /*
-    if ((similarServedRequest.size.toDouble / min(servedRequestsSet1.size, servedRequestsSet2.size)) > similarityThreshold) {
-      println("Similar Route")
-      println(route1.stops.map(_.description))
-      println(servedRequestsSet1.size)
-      println(route2.stops.map(_.description))
-      println(servedRequestsSet2.size)
-      println(s"Common requests served: ${similarServedRequest.size}")
-    } else {
-      println("Different Route")
-    }
-    println("----")
-    */
     (similarServedRequest.size.toDouble / min(servedRequestsSet1.size, servedRequestsSet2.size)) > similarityThreshold
   }
 }
