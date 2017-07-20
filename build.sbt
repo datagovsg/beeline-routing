@@ -12,6 +12,8 @@ def scalaSources(base: File): PathFinder = (base / "src") ** "*.scala"
 val akkaV = "2.3.9"
 val sprayV = "1.3.3"
 
+enablePlugins(JavaServerAppPackaging)
+
 lazy val root = (project in file(".")).
     settings(
         resolvers += DefaultMavenRepository,
@@ -39,5 +41,6 @@ lazy val root = (project in file(".")).
             "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5"
         )
     )
+
 
 fork in run := true
