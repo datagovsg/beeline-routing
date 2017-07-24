@@ -174,5 +174,10 @@ class IntelligentRoutingService extends HttpService with Actor with Json4sSuppor
             complete(polyline.map(_.map({case (x,y) => LatLng(y,x)})))
         }
       }
+    } ~
+    path("bus_stops") {
+      get {
+        complete(AllBusStops.json)
+      }
     }
 }
