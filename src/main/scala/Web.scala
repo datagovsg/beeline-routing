@@ -179,5 +179,26 @@ class IntelligentRoutingService extends HttpService with Actor with Json4sSuppor
       get {
         complete(AllBusStops.json)
       }
+    } ~
+    path("paths" / Rest) { rest =>
+      get {
+        val busStops = Import.getBusStops
+        val indices = rest.split("/").filter(_ == "").map(s => s.toInt)
+
+        val polyline = indices.sliding(2).map({
+          case Array(aIndex, bIndex) =>
+            val busStopA = busStops(aIndex)
+            val busStopB = busStops(bIndex)
+
+            Geo.travelPath(
+              busStopA.coordinates, busStopA.heading,
+              busStopB.coordinates, busStopB.heading
+            ).toList
+        }).toList
+
+        complete(
+          polyline.map(_.map({case (x,y) => LatLng(y,x)}))
+        )
+      }
     }
 }
