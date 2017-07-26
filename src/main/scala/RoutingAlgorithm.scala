@@ -2,7 +2,6 @@ package sg.beeline
 
 import akka.actor.{ActorContext, ActorRef}
 import sg.beeline.ui.{RoutingStopped, CurrentSolution, StopRouting}
-import spray.http.SetRequestTimeout
 
 import scala.concurrent.duration.Duration
 

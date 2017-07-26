@@ -12,7 +12,12 @@ trait RoutingProblem {
   def initialize: (Traversable[Route], Traversable[Request], Traversable[Request])
 }
 
-class BusStop(val coordinates: Util.Point, val heading: Double, val description: String, val roadName: String, val index: Int) {
+case class BusStop(
+  val coordinates: Util.Point,
+  val heading: Double,
+  val description: String,
+  val roadName: String,
+  val index: Int) {
   // Save the index for caching!
   val xy = Util.toSVY(coordinates)
 
@@ -20,7 +25,7 @@ class BusStop(val coordinates: Util.Point, val heading: Double, val description:
     s"BusStop(${coordinates._2},${coordinates._1}) ${description}"
 }
 
-class MrtStation(val coordinates: Util.Point, val heading: Double, val description: String, roadName: String, val index: Int) {
+case class MrtStation(coordinates: Util.Point, heading: Double, description: String, roadName: String, index: Int) {
   // Save the index for caching!
   val xy = Util.toSVY(coordinates)
 
@@ -28,9 +33,9 @@ class MrtStation(val coordinates: Util.Point, val heading: Double, val descripti
     s"MrtStation(${coordinates._2},${coordinates._1}) ${description}"
 }
 
-class Suggestion(val start: Util.Point, val end: Util.Point, val actualTime: Double, val weight : Int = 1) {
+case class Suggestion(start: Util.Point, end: Util.Point, actualTime: Double, weight : Int = 1) {
   val time = actualTime
 
   override def toString =
     s"Suggestion(${start._1}, ${start._2}) to (${end._1}, ${end._2}) @${time}"
-}
+

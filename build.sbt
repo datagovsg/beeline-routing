@@ -9,7 +9,7 @@ val scalatest = "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 
 def scalaSources(base: File): PathFinder = (base / "src") ** "*.scala"
 //
-val akkaV = "2.3.9"
+val akkaV = "2.5.3"
 val sprayV = "1.3.3"
 
 enablePlugins(JavaServerAppPackaging)
@@ -17,8 +17,8 @@ enablePlugins(JavaServerAppPackaging)
 lazy val root = (project in file(".")).
     settings(
         resolvers += DefaultMavenRepository,
-        scalaVersion := "2.11.8",
-        name := "intelligent-routing",
+        scalaVersion := "2.11.11",
+        name := "beeline-routing",
         version := "1.0",
         // scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
         libraryDependencies ++= Seq(
@@ -30,10 +30,12 @@ lazy val root = (project in file(".")).
           scalatest
 //          http
         ) ++ Seq(
-            "io.spray"            %%  "spray-can"     % sprayV,
-            "io.spray"            %%  "spray-routing" % sprayV,
-            "io.spray"            %%  "spray-httpx" % sprayV,
-            "io.spray"            %%  "spray-testkit" % sprayV  % "test",
+            // "io.spray"            %%  "spray-can"     % sprayV,
+            // "io.spray"            %%  "spray-routing" % sprayV,
+            // "io.spray"            %%  "spray-httpx" % sprayV,
+            // "io.spray"            %%  "spray-testkit" % sprayV  % "test",
+            "com.typesafe.akka"   %% "akka-http" % "10.0.9",
+            "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.9",
             "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
             "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
             "org.specs2"          %%  "specs2-core"   % "2.3.11" % "test",

@@ -3,15 +3,14 @@ package sg.beeline
 /**
   * Created by daniel on 25/11/16.
   */
-class BeelineRecreateSettings(
-                               val maxDetourMinutes : Double = 2.0,
-                               val startClusterRadius : Int = 4000,
-                               val startWalkingDistance : Int = 400,
-                               val endClusterRadius : Int = 4000,
-                               val endWalkingDistance : Int = 400,
-                               val dataSource : String = "suggestions"
+case class BeelineRecreateSettings(
+                                   maxDetourMinutes : Double = 2.0,
+                                   startClusterRadius : Int = 4000,
+                                   startWalkingDistance : Int = 400,
+                                   endClusterRadius : Int = 4000,
+                                   endWalkingDistance : Int = 400,
+                                   dataSource : String = "suggestions"
                              ) {
-
 }
 
 object BeelineRecreateSettings {

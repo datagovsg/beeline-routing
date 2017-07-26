@@ -13,9 +13,6 @@ object Hi extends App {
   else if (args(0) == "estimate") {
     estimate()
   }
-  else if (args(0) == "zmq") {
-    ZmqRoutingService.begin()
-  }
   else require(false)
 
   def cache() {
@@ -55,19 +52,21 @@ object Hi extends App {
   }
 
   def web() {
-    import akka.io.IO
     import akka.actor._
-    import spray.can.Http
+    import akka.stream.ActorMaterializer
+    import akka.http.scaladsl.Http
 
     implicit val system = ActorSystem()
-
-    val service = system.actorOf(Props[IntelligentRoutingService], "intelligent-routing")
+    implicit val materializer = ActorMaterializer()
+    implicit val executionContext = system.dispatcher
 
     Geo.initialize()
 
-    IO(Http) ! Http.Bind(service,
-      interface = "0.0.0.0",
-      port = scala.util.Properties.envOrElse("PORT", "8080").toInt)
+    val bindingFuture = Http().bindAndHandle(
+      IntelligentRoutingService.myRoute,
+      "0.0.0.0",
+      scala.util.Properties.envOrElse("PORT", "8080").toInt
+    )
   }
 
   def estimate(): Unit = {
