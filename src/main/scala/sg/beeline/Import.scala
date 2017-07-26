@@ -3,12 +3,14 @@ package sg.beeline
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
 
-import org.json4s._
-import org.json4s.native.JsonMethods._
+import org.json4s.{JArray, DefaultFormats}
+import scala.concurrent.Await
 import scala.io.Source
 
 object Import {
   lazy val getBusStops = {
+    import org.json4s.native.JsonMethods._
+
     implicit val formats = DefaultFormats
     val jsonText = Source.fromFile("onemap/bus-stops-headings.json").mkString
     val jsonData = parse(jsonText).asInstanceOf[JArray]
@@ -69,6 +71,8 @@ object Import {
     timeString.substring(2,4).toLong * 60000
 
   lazy val getRequests = {
+    import org.json4s.native.JsonMethods._
+
     implicit val formats = DefaultFormats
     val jsonText = Source.fromFile("suggestions.json").mkString
     val jsonData = parse(jsonText).asInstanceOf[JArray]
@@ -82,7 +86,47 @@ object Import {
       ))
   }
 
+  lazy val getLiveRequests : Array[Suggestion] = {
+    import slick.jdbc.PostgresProfile.api._
+    import scala.concurrent.ExecutionContext.Implicits.global
+    import scala.concurrent.duration._
+
+    val db = Database.forURL(scala.util.Properties.envOrElse("DATABASE_URL", "(No database URL provided"))
+    val session = db.createSession()
+    val suggestions = sql"""
+       |        SELECT
+       |            DISTINCT ON (board, alight, time, email)
+       |            "travelTime",
+       |            id,
+       |            ST_X(board) AS board_lng,
+       |            ST_Y(board) AS board_lat,
+       |            ST_X(alight) AS alight_lng,
+       |            ST_Y(alight) AS alight_lat,
+       |            email,
+       |            time,
+       |            "createdAt"
+       |        FROM suggestions
+       |        ORDER BY board, alight, time, email
+       |
+       """.stripMargin('|')
+          .as[(Long, Int, Double, Double, Double, Double, String, Long, java.sql.Timestamp)]
+          .map({ results =>
+            results.view.map({
+              case (travelTime, id, boardLng, boardLat, alightLng, alightLat, email, time, createdAt) =>
+                new Suggestion(
+                  start=Util.toSVY((boardLng, boardLat)),
+                  end=Util.toSVY((alightLng, alightLat)),
+                  actualTime=time
+                )
+            }).toArray
+          })
+
+    Await.result(db.run(suggestions), 60 seconds)
+  }
+
   lazy val getEzlinkRequests = {
+    import org.json4s.native.JsonMethods._
+
     implicit val formats = DefaultFormats
     val jsonText = new java.util.Scanner(new GZIPInputStream(new FileInputStream("ezlink.json.gz")))
         .useDelimiter("\\Z").next()

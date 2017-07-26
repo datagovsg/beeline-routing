@@ -1,8 +1,8 @@
 package sg.beeline
 
 import scala.annotation.tailrec
-import scala.util.Random
 import scala.collection.immutable.HashMap
+import scala.util.Random
 
 object LowestRegretRecreate extends Recreate {
   type Insertion = (Double, Activity, Activity, (Activity, Activity), (Activity, Activity))

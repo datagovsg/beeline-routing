@@ -19,7 +19,6 @@ lazy val root = (project in file(".")).
         scalaVersion := "2.11.11",
         name := "beeline-routing",
         version := "1.0",
-        // scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
         libraryDependencies ++= Seq(
           json4sNative,
           proj4j,
@@ -27,17 +26,14 @@ lazy val root = (project in file(".")).
           kdtree,
           scalatic,
           scalatest
-//          http
         ) ++ Seq(
-            // "io.spray"            %%  "spray-can"     % sprayV,
-            // "io.spray"            %%  "spray-routing" % sprayV,
-            // "io.spray"            %%  "spray-httpx" % sprayV,
-            // "io.spray"            %%  "spray-testkit" % sprayV  % "test",
             "com.typesafe.akka"   %% "akka-http" % "10.0.9",
             "com.typesafe.akka"   %% "akka-http-spray-json" % "10.0.9",
             "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
             "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
-            "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5"
+            "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5",
+            "com.typesafe.slick" %% "slick" % "3.2.1",
+            "com.typesafe.slick" %% "slick-hikaricp" % "3.2.1"
         )
     )
 

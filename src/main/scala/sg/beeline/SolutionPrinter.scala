@@ -1,9 +1,8 @@
 package sg.beeline
-import org.json4s._
-import org.json4s.native.JsonMethods._
-import org.json4s.JsonDSL._
 
-import java.io._
+import java.io.{File, PrintWriter}
+import org.json4s.JsonDSL._
+import org.json4s.native.JsonMethods._
 
 object SolutionPrinter {
 

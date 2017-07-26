@@ -1,13 +1,11 @@
 package sg.beeline
-import io.jeo.proj.Proj
-import com.graphhopper.GHRequest
-import com.graphhopper.GHResponse
-import com.graphhopper.GraphHopper
-import com.graphhopper.PathWrapper
-import com.graphhopper.util.shapes.GHPoint
+
+import com.graphhopper.{GHRequest, GraphHopper}
 import com.graphhopper.util.{Parameters, CmdArgs}
+import com.graphhopper.util.shapes.GHPoint
 
 import scala.collection.mutable.ArrayBuffer
+;
 
 object Geo {
   implicit class InstructionListWrapper(val instructions : com.graphhopper.util.InstructionList) {

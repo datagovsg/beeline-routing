@@ -19,7 +19,7 @@ case class BusStop(
   val roadName: String,
   val index: Int) {
   // Save the index for caching!
-  val xy = Util.toSVY(coordinates)
+  lazy val xy = Util.toSVY(coordinates)
 
   override def toString =
     s"BusStop(${coordinates._2},${coordinates._1}) ${description}"

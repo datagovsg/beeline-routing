@@ -3,27 +3,6 @@ package sg.beeline.ui
 import akka.actor.{ActorRef, Actor}
 import sg.beeline._
 
-abstract class Region {
-  def contains(latLng : (Double, Double)) : Boolean
-}
-
-case class CircularRegion(val lngLat : (Double, Double), val radiusInMetres : Double) extends Region {
-  val xy = Util.toSVY(lngLat)
-
-  println(toString)
-  println(xy)
-
-  def contains(xy2 : (Double, Double)) = {
-    // val xy2 = Util.toSVY(latLng)
-
-    val (x1,y1) = xy
-    val (x2,y2) = xy2
-
-    (x2 - x1)*(x2-x1) + (y2-y1)*(y2-y1) <= radiusInMetres * radiusInMetres
-  }
-
-  override def toString = s"${lngLat._2},${lngLat._1} <--> ${radiusInMetres}m"
-}
 
 abstract class RoutingControl
 abstract class RoutingNotification
@@ -67,9 +46,9 @@ class RouteActor extends Actor {
     case SuggestRequest(sLat, sLng, eLat, eLng, time, settings) =>
       val beelineProblem = {
         println(settings.dataSource)
-        val suggestions = (settings.dataSource match {
+        val suggestions : Seq[Suggestion] = (settings.dataSource match {
           case "ezlink" => Import.getEzlinkRequests
-          case _ => Import.getRequests
+          case _ => Import.getLiveRequests
         })
 //          .map(x => new Suggestion(x.start, x.end, x.time, x.weight)) // Group them all into the same time slot
 //          .filter(x => x.time >= 8 * 3600 * 1000 && x.time <= 9 * 3600 * 1000)

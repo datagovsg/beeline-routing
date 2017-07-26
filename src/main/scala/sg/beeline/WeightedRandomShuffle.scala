@@ -1,11 +1,12 @@
-package sg.beeline
+package sg.beeline; /**
+  * Created by daniel on 14/12/16.
+  */
+
 import scala.annotation.tailrec
 import scala.reflect.ClassTag
 import scala.util.Random
+;
 
-/**
-  * Created by daniel on 14/12/16.
-  */
 object WeightedRandomShuffle {
 
   def shuffle[A](items : Traversable[A], weights : Traversable[Double])
