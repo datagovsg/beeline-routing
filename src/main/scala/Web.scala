@@ -71,11 +71,6 @@ object RouteJsonFormat extends RootJsonFormat[Route] {
   def read(value : JsValue) = throw new UnsupportedOperationException()
 }
 
-object AllBusStops {
-  implicit val formats = DefaultFormats
-  val busStops = Import.getBusStops
-}
-
 case class CircularRegionRequest(val lat : Double, val lng : Double, val radius : Double) {}
 case class RoutingRequest(val times: List[Double], val regions : List[CircularRegionRequest]) {}
 case class PathRequest(val indices: List[Int]) {}
@@ -89,7 +84,12 @@ case class LatLng(val lat : Double, val lng : Double)
 
 trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val latLngFormat = jsonFormat2(LatLng)
-  implicit val busStopFormat = jsonFormat5(sg.beeline.BusStop)
+  implicit val busStopFormat : JsonFormat[BusStop] = jsonFormat[
+    (Double, Double), Double, String, String, Int, BusStop
+    ](
+    sg.beeline.BusStop,
+    "coordinates", "heading", "description", "roadName", "index"
+  )
   implicit val routeFormat = RouteJsonFormat
   implicit val beelineRecreateSettingsFormat = jsonFormat6(sg.beeline.BeelineRecreateSettings.apply)
 }
@@ -105,7 +105,7 @@ object IntelligentRoutingService extends Directives with JsonSupport {
   val myRoute =
     path("bus_stops") {
       get {
-        complete(AllBusStops.busStops)
+        complete(Import.getBusStops)
       }
     } ~
     path("paths" / Remaining) { remaining =>
