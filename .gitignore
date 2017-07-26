@@ -1,6 +1,7 @@
 target
 .ipynb_checkpoints
 project/target
+.idea
 node_modules
 SG-gh
 static/bundle.js
