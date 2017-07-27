@@ -1,9 +1,12 @@
 package sg.beeline.ui
 
+import java.util.UUID
+
 import akka.actor.{ActorRef, Actor}
 import sg.beeline._
 
-import scala.util.{Failure, Success}
+import scala.concurrent.Future
+import scala.util.{Try, Failure, Success}
 
 
 abstract class RoutingControl
@@ -20,6 +23,40 @@ case class RoutingStarted() extends RoutingNotification
 class RouteActor extends Actor {
   var lastResults : Traversable[Route] = List()
   val busStops = Import.getBusStops
+
+  def routeFromRequest(suggestRequest: SuggestRequest) = suggestRequest match {
+    case SuggestRequest(sLat, sLng, eLat, eLng, time, settings) =>
+      val beelineProblem = {
+        println(settings.dataSource)
+        val suggestions : Seq[Suggestion] = settings.dataSource match {
+          case "ezlink" => Import.getEzlinkRequests
+          case _ => Import.getLiveRequests
+        }
+        //          .map(x => new Suggestion(x.start, x.end, x.time, x.weight)) // Group them all into the same time slot
+        //          .filter(x => x.time >= 8 * 3600 * 1000 && x.time <= 9 * 3600 * 1000)
+
+        new BasicRoutingProblem(
+          busStops,
+          suggestions,
+          startWalkingDistance = settings.startWalkingDistance,
+          endWalkingDistance = settings.endWalkingDistance
+        )
+      }
+
+      val beelineRecreate = new BeelineRecreate(
+        beelineProblem,
+        beelineProblem.requests
+      )(settings)
+
+      Success(beelineRecreate.findRelated2(
+        new Request(
+          beelineProblem,
+          Util.toSVY((sLng, sLat)),
+          Util.toSVY((eLng, eLat)),
+          time
+        )
+      ).toList)
+  }
 
   def receive = {
     case StartRouting(times, regions) =>
@@ -45,42 +82,8 @@ class RouteActor extends Actor {
     case CurrentSolution =>
       sender ! lastResults
 
-    case SuggestRequest(sLat, sLng, eLat, eLng, time, settings) =>
-      try {
-        val beelineProblem = {
-          println(settings.dataSource)
-          val suggestions : Seq[Suggestion] = settings.dataSource match {
-            case "ezlink" => Import.getEzlinkRequests
-            case _ => Import.getLiveRequests
-          }
-          //          .map(x => new Suggestion(x.start, x.end, x.time, x.weight)) // Group them all into the same time slot
-          //          .filter(x => x.time >= 8 * 3600 * 1000 && x.time <= 9 * 3600 * 1000)
-
-          new BasicRoutingProblem(
-            busStops,
-            suggestions,
-            startWalkingDistance = settings.startWalkingDistance,
-            endWalkingDistance = settings.endWalkingDistance
-          )
-        }
-
-        val beelineRecreate = new BeelineRecreate(
-          beelineProblem,
-          beelineProblem.requests
-        )(settings)
-
-        sender ! Success(beelineRecreate.findRelated2(
-          new Request(
-            beelineProblem,
-            Util.toSVY((sLng, sLat)),
-            Util.toSVY((eLng, eLat)),
-            time
-          )
-        ).toList)
-      } catch {
-        case e: Throwable =>
-          sender ! Failure(e)
-      }
+    case suggestRequest: SuggestRequest =>
+      sender ! Try { routeFromRequest(suggestRequest) }
 
   }
 }

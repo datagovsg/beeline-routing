@@ -1,15 +1,18 @@
 package sg.beeline
 
+import java.util.{NoSuchElementException, UUID}
+
 import akka.actor.{Props, ActorRef, Actor}
 import akka.http.scaladsl.model
 import akka.pattern.ask
 import org.json4s.{FieldSerializer, CustomSerializer, DefaultFormats}
+import sg.beeline.JobQueueActor.{ResultPendingException, PollResult, InitRequest}
 import sg.beeline.ui._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.marshalling.GenericMarshallers._
 import akka.http.scaladsl.marshalling.PredefinedToEntityMarshallers._
 import akka.http.scaladsl.marshalling.PredefinedToResponseMarshallers._
-import akka.http.scaladsl.server.Directives
+import akka.http.scaladsl.server.{ExceptionHandler, Directives}
 import akka.http.scaladsl.model.StatusCodes
 import spray.json._
 import scala.util.{Try, Success, Failure}
@@ -99,9 +102,10 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
 object IntelligentRoutingService extends Directives with JsonSupport {
   import ExecutionContext.Implicits.global
   import akka.actor._
-
+  implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
   implicit val system = ActorSystem()
   val routingActor = system.actorOf(Props[RouteActor], "intelligent-routing")
+  val jobQueueActor = system.actorOf(Props(new JobQueueActor(routingActor)), "job-queue")
 
   val myRoute =
     path("bus_stops") {
@@ -149,6 +153,47 @@ object IntelligentRoutingService extends Directives with JsonSupport {
         } ~
         {
           complete(StatusCodes.BadRequest)
+        }
+      }
+    } ~
+    path("routing" / "begin") {
+      get {
+        implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
+
+        parameters(
+          'startLat.as[Double],
+          'startLng.as[Double],
+          'endLat.as[Double],
+          'endLng.as[Double],
+          'time.as[Double],
+          'settings.as[BeelineRecreateSettings]
+        ).as(SuggestRequest) { suggestRequest =>
+          complete {
+            (jobQueueActor ? InitRequest(suggestRequest))
+              .map({
+                case uuid: String => uuid
+              })
+          }
+        }
+      }
+    } ~
+    path("routing" / "poll") {
+      get {
+        parameters(
+          'uuid.as[String]
+        ) { uuid =>
+          implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
+          handleExceptions(ExceptionHandler {
+            case e: NoSuchElementException =>
+              complete((StatusCodes.BadRequest, "The job was not found"))
+            case e: ResultPendingException =>
+              complete((StatusCodes.Accepted, "The job is still pending"))
+          }) {
+            complete {
+              (jobQueueActor ? PollResult(UUID.fromString(uuid)))
+                .map(_.asInstanceOf[Try[Try[Try[List[Route]]]]])
+            }
+          }
         }
       }
     }
