@@ -3,6 +3,8 @@ package sg.beeline.ui
 import akka.actor.{ActorRef, Actor}
 import sg.beeline._
 
+import scala.util.{Failure, Success}
+
 
 abstract class RoutingControl
 abstract class RoutingNotification
@@ -44,35 +46,41 @@ class RouteActor extends Actor {
       sender ! lastResults
 
     case SuggestRequest(sLat, sLng, eLat, eLng, time, settings) =>
-      val beelineProblem = {
-        println(settings.dataSource)
-        val suggestions : Seq[Suggestion] = (settings.dataSource match {
-          case "ezlink" => Import.getEzlinkRequests
-          case _ => Import.getLiveRequests
-        })
-//          .map(x => new Suggestion(x.start, x.end, x.time, x.weight)) // Group them all into the same time slot
-//          .filter(x => x.time >= 8 * 3600 * 1000 && x.time <= 9 * 3600 * 1000)
+      try {
+        val beelineProblem = {
+          println(settings.dataSource)
+          val suggestions : Seq[Suggestion] = settings.dataSource match {
+            case "ezlink" => Import.getEzlinkRequests
+            case _ => Import.getLiveRequests
+          }
+          //          .map(x => new Suggestion(x.start, x.end, x.time, x.weight)) // Group them all into the same time slot
+          //          .filter(x => x.time >= 8 * 3600 * 1000 && x.time <= 9 * 3600 * 1000)
 
-        new BasicRoutingProblem(
-          busStops,
-          suggestions,
-          startWalkingDistance = settings.startWalkingDistance,
-          endWalkingDistance = settings.endWalkingDistance
-        )
-      }
+          new BasicRoutingProblem(
+            busStops,
+            suggestions,
+            startWalkingDistance = settings.startWalkingDistance,
+            endWalkingDistance = settings.endWalkingDistance
+          )
+        }
 
-      val beelineRecreate = new BeelineRecreate(
+        val beelineRecreate = new BeelineRecreate(
           beelineProblem,
           beelineProblem.requests
         )(settings)
 
-      sender ! beelineRecreate.findRelated2(
-        new Request(
-          beelineProblem,
-          Util.toSVY((sLng, sLat)),
-          Util.toSVY((eLng, eLat)),
-          time
-        )
-      ).toList
+        sender ! Success(beelineRecreate.findRelated2(
+          new Request(
+            beelineProblem,
+            Util.toSVY((sLng, sLat)),
+            Util.toSVY((eLng, eLat)),
+            time
+          )
+        ).toList)
+      } catch {
+        case e: Throwable =>
+          sender ! Failure(e)
+      }
+
   }
 }

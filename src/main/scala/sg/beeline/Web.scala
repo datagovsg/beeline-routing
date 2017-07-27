@@ -1,17 +1,18 @@
 package sg.beeline
 
 import akka.actor.{Props, ActorRef, Actor}
+import akka.http.scaladsl.model
 import akka.pattern.ask
 import org.json4s.{FieldSerializer, CustomSerializer, DefaultFormats}
-import org.json4s.JsonAST._
 import sg.beeline.ui._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.marshalling.GenericMarshallers._
+import akka.http.scaladsl.marshalling.PredefinedToEntityMarshallers._
+import akka.http.scaladsl.marshalling.PredefinedToResponseMarshallers._
 import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.model.StatusCodes
 import spray.json._
-import scala.util.{Success, Failure}
+import scala.util.{Try, Success, Failure}
 import scala.concurrent.Future
 
 import scala.concurrent.ExecutionContext
@@ -111,7 +112,7 @@ object IntelligentRoutingService extends Directives with JsonSupport {
     path("paths" / Remaining) { remaining =>
       get {
         val busStops = Import.getBusStops
-        val indices = remaining.split("/").filter(_ == "").map(s => s.toInt)
+        val indices = remaining.split("/").filter(_ != "").map(s => s.toInt)
 
         val polyline = indices.sliding(2).map({
           case Array(aIndex, bIndex) =>
@@ -140,9 +141,14 @@ object IntelligentRoutingService extends Directives with JsonSupport {
           'settings.as[BeelineRecreateSettings]
         ).as(SuggestRequest) { suggestRequest =>
           complete {
-            implicit val timeout = new akka.util.Timeout(5 * 60 * 1000, java.util.concurrent.TimeUnit.MILLISECONDS)
-            (routingActor ? suggestRequest).asInstanceOf[Future[List[Route]]]
+            implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
+
+            (routingActor ? suggestRequest)
+                .map(_.asInstanceOf[Try[List[Route]]])
           }
+        } ~
+        {
+          complete(StatusCodes.BadRequest)
         }
       }
     }

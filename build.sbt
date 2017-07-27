@@ -27,6 +27,7 @@ lazy val root = (project in file(".")).
           scalatic,
           scalatest
         ) ++ Seq(
+            "org.postgresql" % "postgresql" % "42.1.3",
             "com.typesafe.akka"   %% "akka-http" % "10.0.9",
             "com.typesafe.akka"   %% "akka-http-spray-json" % "10.0.9",
             "com.typesafe.akka"   %%  "akka-actor"    % akkaV,

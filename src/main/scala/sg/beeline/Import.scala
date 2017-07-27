@@ -91,7 +91,25 @@ object Import {
     import scala.concurrent.ExecutionContext.Implicits.global
     import scala.concurrent.duration._
 
-    val db = Database.forURL(scala.util.Properties.envOrElse("DATABASE_URL", "(No database URL provided"))
+    val (scheme, username, password, host, database) = {
+      val URI = new java.net.URI(scala.util.Properties.envOrElse("DATABASE_URL", "(No database URL provided"))
+      val userPass = URI.getUserInfo.split(":")
+
+      (
+        URI.getScheme,
+        userPass(0),
+        userPass(1),
+        URI.getHost,
+        URI.getPath
+      )
+    }
+
+    val db = Database.forURL(
+      s"jdbc:postgresql://${host}${database}?user=${username}&" +
+        s"password=${password}&ssl=true&" +
+        s"sslfactory=org.postgresql.ssl.NonValidatingFactory",
+      driver="org.postgresql.Driver"
+    )
     val session = db.createSession()
     val suggestions = sql"""
        |        SELECT
