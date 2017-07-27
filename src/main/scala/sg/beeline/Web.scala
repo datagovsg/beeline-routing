@@ -133,8 +133,8 @@ object IntelligentRoutingService extends Directives with JsonSupport {
     path("routes" / "propose") {
       get {
         parameters(
-          'startLng.as[Double],
           'startLat.as[Double],
+          'startLng.as[Double],
           'endLat.as[Double],
           'endLng.as[Double],
           'time.as[Double],
