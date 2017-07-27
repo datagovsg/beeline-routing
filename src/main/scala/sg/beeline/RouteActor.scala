@@ -48,14 +48,14 @@ class RouteActor extends Actor {
         beelineProblem.requests
       )(settings)
 
-      Success(beelineRecreate.findRelated2(
+      beelineRecreate.findRelated2(
         new Request(
           beelineProblem,
           Util.toSVY((sLng, sLat)),
           Util.toSVY((eLng, eLat)),
           time
         )
-      ).toList)
+      ).toList
   }
 
   def receive = {

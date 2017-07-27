@@ -191,7 +191,7 @@ object IntelligentRoutingService extends Directives with JsonSupport {
           }) {
             complete {
               (jobQueueActor ? PollResult(UUID.fromString(uuid)))
-                .map(_.asInstanceOf[Try[Try[Try[List[Route]]]]])
+                .map(_.asInstanceOf[Try[Try[List[Route]]]])
             }
           }
         }
