@@ -5,6 +5,7 @@ import java.util.zip.GZIPInputStream
 
 import org.json4s.{JArray, DefaultFormats}
 import scala.concurrent.Await
+import scala.concurrent.duration._
 import scala.io.Source
 
 object Import {
@@ -86,7 +87,7 @@ object Import {
       ))
   }
 
-  lazy val getLiveRequests : Array[Suggestion] = {
+  val getLiveRequests : ExpiringCache[Array[Suggestion]] = ExpiringCache(10.minutes) {
     import slick.jdbc.PostgresProfile.api._
     import scala.concurrent.ExecutionContext.Implicits.global
     import scala.concurrent.duration._

@@ -27,10 +27,9 @@ class RouteActor extends Actor {
   def routeFromRequest(suggestRequest: SuggestRequest) = suggestRequest match {
     case SuggestRequest(sLat, sLng, eLat, eLng, time, settings) =>
       val beelineProblem = {
-        println(settings.dataSource)
         val suggestions : Seq[Suggestion] = settings.dataSource match {
           case "ezlink" => Import.getEzlinkRequests
-          case _ => Import.getLiveRequests
+          case _ => Import.getLiveRequests()
         }
         //          .map(x => new Suggestion(x.start, x.end, x.time, x.weight)) // Group them all into the same time slot
         //          .filter(x => x.time >= 8 * 3600 * 1000 && x.time <= 9 * 3600 * 1000)
