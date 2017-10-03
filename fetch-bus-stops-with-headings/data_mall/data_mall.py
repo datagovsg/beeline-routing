@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 
-from httplib import HTTPConnection
 import json
-
-known_services = [
-'BusStops'
-]
+import requests
 
 credentials = {
     "api_token": None,
@@ -23,18 +19,15 @@ def get(service, start = 0, end=None):
 
     while end == None or start < end:
         print  '/ltaodataservice/%s?$skip=%i' % (service, start)
-        conn.request('GET', '/ltaodataservice/%s?$skip=%i' % (service, start),
+        r = request.get('http://datamall2.mytransport.sg/ltaodataservice/%s?$skip=%i' % (service, start),
             headers = {
                 'AccountKey': credentials['api_token'],
                 'UniqueUserId': credentials['uuid'],
                 'Accept': 'application/json'
             })
+        )
 
-        resp = conn.getresponse()
-        headers = resp.getheaders()
-        body = resp.read()
-
-        data = json.loads(body)
+        data = r.json()
 
         return_value += data['value']
 
