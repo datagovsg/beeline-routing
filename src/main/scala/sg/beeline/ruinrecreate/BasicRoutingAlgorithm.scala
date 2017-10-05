@@ -1,49 +1,14 @@
-package sg.beeline
+package sg.beeline.ruinrecreate
 
-import akka.actor.{ActorContext, ActorRef}
-import sg.beeline.ui.{RoutingStopped, CurrentSolution, StopRouting}
-
-import scala.concurrent.duration.Duration
-
-trait RoutingAlgorithm extends Runnable {
-  @volatile var shouldStop = false
-
-  def currentSolution: Traversable[Route]
-  def run : Unit
-
-
-  // FIXME: The callback thing is an ugly hack.
-  // However I'm not prepared to learn how to set up another actor
-  // system...
-  def solve(context: ActorContext, callback : Traversable[Route] => Any) : PartialFunction[Any, Unit] = {
-    val thread = new Thread(this)
-
-    thread.start()
-
-    {
-      case StopRouting => {
-        this.shouldStop = true
-
-        if (!thread.isAlive) {
-          thread.join(60000)
-        }
-        context.sender ! RoutingStopped
-        callback(currentSolution)
-        context.unbecome()
-      }
-      case CurrentSolution =>
-        context.sender ! currentSolution
-        println("Current solution sent")
-    }
-  }
-}
+import sg.beeline.problem.{Request, RoutingProblem, Route}
+import sg.beeline.ruinrecreate.{BeelineRecreate, Score, Recreate, Ruin}
 
 class BasicRoutingAlgorithm(val problem : RoutingProblem)
                            (implicit val ruin : Ruin = Ruin,
-    implicit val recreate : Recreate = Recreate,
-    implicit val score : Score = Score)
+                            implicit val recreate : Recreate = Recreate,
+                            implicit val score : Score = Score)
 
-extends RoutingAlgorithm
+  extends sg.beeline.ruinrecreate.RoutingAlgorithm
 {
 
   @volatile var currentRoutes : Traversable[Route] = null
@@ -67,7 +32,7 @@ extends RoutingAlgorithm
       // Recreate
       val (newRoutes, newBadRequests) = beelineRecreate.recreate(problem, preservedRoutes, unservedRequests)
 
-//      val (newRoutes, newBadRequests) = LowestRegretRecreate.recreate(problem, preservedRoutes, unservedRequests)
+      //      val (newRoutes, newBadRequests) = LowestRegretRecreate.recreate(problem, preservedRoutes, unservedRequests)
       println("Recreated")
 
       (newRoutes, newBadRequests)

@@ -1,6 +1,7 @@
 package sg.beeline
 
 import org.scalatest._
+import sg.beeline.problem._
 
 class RouteSpec extends FlatSpec with Matchers {
 

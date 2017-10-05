@@ -1,4 +1,6 @@
-package sg.beeline; /**
+package sg.beeline.util
+
+/**
   * Created by daniel on 14/12/16.
   */
 

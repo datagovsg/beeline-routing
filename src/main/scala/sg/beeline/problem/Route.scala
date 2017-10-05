@@ -1,8 +1,8 @@
-package sg.beeline
+package sg.beeline.problem
+
+import sg.beeline.problem.Route.groupSuccessive
 
 import scala.annotation.tailrec
-import scala.collection.immutable.HashMap
-import Route.groupSuccessive
 
 object Route {
   def empty(routingProblem: RoutingProblem, time: Double) =

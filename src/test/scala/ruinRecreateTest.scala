@@ -1,6 +1,9 @@
 package sg.beeline
 
 import org.scalatest._
+import sg.beeline.problem._
+import sg.beeline.ruinrecreate._
+import sg.beeline.util.Util
 import scala.util.Random
 import Util.toSVY
 

@@ -1,9 +1,13 @@
-package sg.beeline
+package sg.beeline.io
 
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
 
-import org.json4s.{JArray, DefaultFormats}
+import org.json4s._
+import org.json4s.native.JsonMethods._
+import sg.beeline.problem.{Suggestion, MrtStation, BusStop}
+import sg.beeline.util.{ExpiringCache, Util}
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.io.Source
@@ -89,6 +93,7 @@ object Import {
 
   val getLiveRequests : ExpiringCache[Array[Suggestion]] = ExpiringCache(10.minutes) {
     import slick.jdbc.PostgresProfile.api._
+
     import scala.concurrent.ExecutionContext.Implicits.global
     import scala.concurrent.duration._
 

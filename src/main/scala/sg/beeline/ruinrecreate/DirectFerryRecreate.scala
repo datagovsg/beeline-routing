@@ -1,4 +1,7 @@
-package sg.beeline
+package sg.beeline.ruinrecreate
+
+import sg.beeline._
+import sg.beeline.problem.{Route, Request, RoutingProblem}
 
 /**
   * A fake recreate algorithm -- it just tries to create a direct trip for every request

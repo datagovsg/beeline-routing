@@ -1,12 +1,13 @@
-package sg.beeline.ui
+package sg.beeline.jobs
 
-import java.util.UUID
+import akka.actor.Actor
+import sg.beeline.io.Import
+import sg.beeline.problem.{BasicRoutingProblem, Request, Route, Suggestion}
+import sg.beeline.ruinrecreate.{BasicRoutingAlgorithm, BeelineRecreate}
+import sg.beeline.util.Util
+import sg.beeline.web.SuggestRequest
 
-import akka.actor.{ActorRef, Actor}
-import sg.beeline._
-
-import scala.concurrent.Future
-import scala.util.{Try, Failure, Success}
+import scala.util.Try
 
 
 abstract class RoutingControl
@@ -59,7 +60,7 @@ class RouteActor extends Actor {
 
   def receive = {
     case StartRouting(times, regions) =>
-      val suggestions = sg.beeline.Import.getRequests
+      val suggestions = Import.getRequests
         .filter(x => times.contains(x.time) && regions.exists(_.contains(x.end)))
         .map(x => new Suggestion(x.start, x.end, 8 * 3600 * 1000)) // Group them all into the same time slot
 

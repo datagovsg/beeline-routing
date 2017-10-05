@@ -1,8 +1,7 @@
-package sg.beeline
+package sg.beeline.problem
 
-import Util.Point
-import akka.actor.ActorRef
-import sg.beeline.ui.RoutingControl
+import sg.beeline.util.Util
+import sg.beeline.util.Util.Point
 
 trait RoutingProblem {
   def distance(a : BusStop, b : BusStop) : Double
@@ -38,4 +37,5 @@ case class Suggestion(start: Util.Point, end: Util.Point, actualTime: Double, we
 
   override def toString =
     s"Suggestion(${start._1}, ${start._2}) to (${end._1}, ${end._2}) @${time}"
+}
 

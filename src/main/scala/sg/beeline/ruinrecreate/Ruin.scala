@@ -1,7 +1,10 @@
-package sg.beeline
+package sg.beeline.ruinrecreate
+
+import sg.beeline._
+import sg.beeline.problem._
+
 import scala.annotation.tailrec
 import scala.collection.immutable.HashSet
-import scala.collection.immutable.Stream.Empty
 
 
 trait Ruin {

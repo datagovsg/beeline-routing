@@ -1,12 +1,10 @@
-package sg.beeline
-import io.jeo.proj.Proj
-import com.vividsolutions.jts.geom.{GeometryFactory, PrecisionModel, Coordinate}
+package sg.beeline.util
+
 import com.thesamet.spatial.{KDTreeMap, RegionBuilder}
-import scala.math.sqrt
-import scala.math.sin
-import scala.math.cos
-import scala.math.asin
-import scala.math.Pi
+import com.vividsolutions.jts.geom.{Coordinate, GeometryFactory}
+import io.jeo.proj.Proj
+
+import scala.math.{Pi, asin, cos, sin, sqrt}
 
 object Util {
   type Point = (Double, Double)

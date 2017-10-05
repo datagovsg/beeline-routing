@@ -1,11 +1,15 @@
-package sg.beeline
+package sg.beeline.ruinrecreate
 
-import com.thesamet.spatial.{KDTreeMap, KDTree}
+import com.thesamet.spatial.KDTreeMap
+import sg.beeline._
+import sg.beeline.io.Import
+import sg.beeline.problem._
+import sg.beeline.util.{WeightedRandomShuffle, kdtreeQuery}
+import kdtreeQuery.KDTreeMapBall
 
 import scala.annotation.tailrec
-import scala.util.Random
 import scala.collection.immutable.HashMap
-import kdtreeQuery.KDTreeMapBall
+import scala.util.Random
 
 class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Request])
                      (implicit settings : BeelineRecreateSettings = BeelineRecreateSettings.default) extends Recreate {

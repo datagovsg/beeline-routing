@@ -1,6 +1,9 @@
-package sg.beeline
-import com.thesamet.spatial.{KDTreeMap, RegionBuilder}
-import Util.Point
+package sg.beeline.problem
+
+import com.thesamet.spatial.KDTreeMap
+import sg.beeline.ruinrecreate.DirectFerryRecreate
+import sg.beeline.util.Util._
+import sg.beeline.util.{Util, kdtreeQuery}
 
 class BasicRoutingProblem(val busStops: Seq[BusStop],
                           val suggestions: Seq[Suggestion],

@@ -1,4 +1,4 @@
-package sg.beeline
+package sg.beeline.problem
 
 object RouteSimilarity {
   def isSimilar(route1 : Route, route2 : Route, similarityThreshold : Double = 0.9): Boolean = {

@@ -1,4 +1,4 @@
-package sg.beeline
+package sg.beeline.problem
 
 abstract class Activity {
   def minTime : Double

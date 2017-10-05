@@ -3,7 +3,12 @@ package sg.beeline
 import java.io.{FileOutputStream, ObjectOutputStream}
 import java.util.zip.GZIPOutputStream
 
-object Hi extends App {
+import sg.beeline.io.Import
+import sg.beeline.problem.BusStop
+import sg.beeline.util.Geo
+import sg.beeline.web.IntelligentRoutingService
+
+object BeelineRoutingApp extends App {
   if (args.length == 0 || args(0) == "web") {
     web()
   }

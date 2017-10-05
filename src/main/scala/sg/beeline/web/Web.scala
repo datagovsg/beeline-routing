@@ -1,24 +1,25 @@
-package sg.beeline
+package sg.beeline.web
 
 import java.util.{NoSuchElementException, UUID}
 
-import akka.actor.{Props, ActorRef, Actor}
-import akka.http.scaladsl.model
-import akka.pattern.ask
-import org.json4s.{FieldSerializer, CustomSerializer, DefaultFormats}
-import sg.beeline.JobQueueActor.{ResultPendingException, PollResult, InitRequest}
-import sg.beeline.ui._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.marshalling.GenericMarshallers._
 import akka.http.scaladsl.marshalling.PredefinedToEntityMarshallers._
 import akka.http.scaladsl.marshalling.PredefinedToResponseMarshallers._
-import akka.http.scaladsl.server.{ExceptionHandler, Directives}
 import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.server.{Directives, ExceptionHandler}
+import akka.pattern.ask
+import sg.beeline.JobQueueActor
+import sg.beeline.JobQueueActor.{InitRequest, PollResult, ResultPendingException}
+import sg.beeline.io.Import
+import sg.beeline.jobs.RouteActor
+import sg.beeline.problem.{Dropoff, Pickup, Route, BusStop}
+import sg.beeline.ruinrecreate.BeelineRecreateSettings
+import sg.beeline.util.{Geo, Util}
 import spray.json._
-import scala.util.{Try, Success, Failure}
-import scala.concurrent.Future
 
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 case class Stop(busStop : BusStop, numBoard : Int, numAlight: Int) {}
 case class RouteWithPath(route: Route)
@@ -91,17 +92,18 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val busStopFormat : JsonFormat[BusStop] = jsonFormat[
     (Double, Double), Double, String, String, Int, BusStop
     ](
-    sg.beeline.BusStop,
+    BusStop,
     "coordinates", "heading", "description", "roadName", "index"
   )
   implicit val routeFormat = RouteJsonFormat
-  implicit val beelineRecreateSettingsFormat = jsonFormat6(sg.beeline.BeelineRecreateSettings.apply)
+  implicit val beelineRecreateSettingsFormat = jsonFormat6(BeelineRecreateSettings.apply)
 }
 
 // this trait defines our service behavior independently from the service actor
 object IntelligentRoutingService extends Directives with JsonSupport {
-  import ExecutionContext.Implicits.global
   import akka.actor._
+
+  import ExecutionContext.Implicits.global
   implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
   implicit val system = ActorSystem()
   val routingActor = system.actorOf(Props[RouteActor], "intelligent-routing")

@@ -1,5 +1,5 @@
 import org.scalatest._
-import sg.beeline.Route
+import sg.beeline.problem.Route
 import scala.util.Random
 
 class UtilSpec extends FlatSpec with Matchers {

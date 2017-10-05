@@ -1,5 +1,9 @@
-package sg.beeline
-import Util.Point
+package sg.beeline.problem
+
+import sg.beeline.io.Import
+import sg.beeline.util.Util
+import sg.beeline.util.Util.Point
+
 import scala.math.min
 
 class Request(val routingProblem : RoutingProblem,

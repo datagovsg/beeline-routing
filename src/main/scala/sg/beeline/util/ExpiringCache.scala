@@ -1,4 +1,4 @@
-package sg.beeline
+package sg.beeline.util
 
 import scala.concurrent.duration._
 

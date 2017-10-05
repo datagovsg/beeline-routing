@@ -1,4 +1,5 @@
-package  sg.beeline
+package sg.beeline.web
+
 /**
   * Created by daniel on 12/12/16.
   */

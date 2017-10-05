@@ -1,4 +1,6 @@
 import sg.beeline._
+import sg.beeline.util.Geo
+
 /** Check whether the heading penalty affects travel time */
 object HPTest {
   def swap(a : Double, b: Double) = (b,a)

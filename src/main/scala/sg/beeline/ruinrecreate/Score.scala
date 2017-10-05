@@ -1,4 +1,6 @@
-package sg.beeline
+package sg.beeline.ruinrecreate
+
+import sg.beeline.problem.{Dropoff, Pickup, Route}
 
 trait Score {
   def score(routes: Traversable[Route]) : Double

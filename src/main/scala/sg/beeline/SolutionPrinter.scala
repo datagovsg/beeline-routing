@@ -3,6 +3,8 @@ package sg.beeline
 import java.io.{File, PrintWriter}
 import org.json4s.JsonDSL._
 import org.json4s.native.JsonMethods._
+import sg.beeline.problem.{Route, Request, BusStop}
+import sg.beeline.util.Util
 
 object SolutionPrinter {
 

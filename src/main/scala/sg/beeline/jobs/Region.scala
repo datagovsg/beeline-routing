@@ -1,6 +1,6 @@
-package sg.beeline.ui
+package sg.beeline.jobs
 
-import sg.beeline.Util
+import sg.beeline.util.Util
 
 /**
   * Created by daniel on 26/7/17.

@@ -1,8 +1,8 @@
-package sg.beeline
+package sg.beeline.util
 
-import com.graphhopper.{GHRequest, GraphHopper}
-import com.graphhopper.util.{Parameters, CmdArgs}
 import com.graphhopper.util.shapes.GHPoint
+import com.graphhopper.util.{CmdArgs, Parameters}
+import com.graphhopper.{GHRequest, GraphHopper}
 
 import scala.collection.mutable.ArrayBuffer
 ;

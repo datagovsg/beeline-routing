@@ -1,4 +1,8 @@
 import sg.beeline._
+import sg.beeline.io.Import
+import sg.beeline.problem.BusStop
+import sg.beeline.util.Geo
+
 object ODC {
   val busStops = Import.getBusStops.view
   val ods = busStops.flatMap(o => busStops.map(d => (o,d)))
