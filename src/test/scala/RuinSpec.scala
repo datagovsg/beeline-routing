@@ -28,12 +28,12 @@ class RuinSpec extends FlatSpec with Matchers {
 
   val problem = new BasicRoutingProblem(busStops, requests)
 
-  val (r1, r2, _) = problem.initialize
+  val (routes, validRequests, _) = problem.initialize
 
-  val (preserved, ruined) = Ruin.ruin(problem, r1.toList, r2)
+  val (preserved, ruined) = Ruin.ruin(problem, routes.toList, validRequests)
 
   "BasicRoutingProblem" should "preserve requests on initialize" in {
-    r2.toSet should be (problem.requests.toSet)
+    validRequests.toSet should be (problem.requests.toSet)
   }
 
   "Ruin" should "preserve all requests" in {
@@ -48,7 +48,14 @@ class RuinSpec extends FlatSpec with Matchers {
     println(ruinedRequestSet.size)
 
     (preservedRequestSet & ruinedRequestSet.toSet).size should be (0)
-    (preservedRequestSet ++ ruinedRequestSet) should be (r2.toSet)
+
+
+
+//    (preservedRequestSet ++ ruinedRequestSet) should be (r2.toSet)
+    val finalSet = preservedRequestSet ++ ruinedRequestSet
+
+    (finalSet -- validRequests.toSet) should be (Set())
+    (validRequests.toSet -- finalSet) should be (Set())
   }
 
   "Recreate" should "preserve all requests" in {
@@ -59,7 +66,7 @@ class RuinSpec extends FlatSpec with Matchers {
       case _ => None
     })).toSet
 
-    (recreatedRequestSet ++ rejected) should be (r2.toSet)
+    (recreatedRequestSet ++ rejected) should be (validRequests.toSet)
   }
 
   "LowestRegretRecreate" should "preserve all requests" in {
@@ -70,7 +77,7 @@ class RuinSpec extends FlatSpec with Matchers {
       case _ => None
     })).toSet
 
-    (recreatedRequestSet ++ rejected) should be (r2.toSet)
+    (recreatedRequestSet ++ rejected) should be (validRequests.toSet)
   }
 
   "BeelineRecreate" should "preserve all requests" in {
@@ -83,6 +90,6 @@ class RuinSpec extends FlatSpec with Matchers {
       case _ => None
     })).toSet
 
-    (recreatedRequestSet ++ rejected) should be (r2.toSet)
+    (recreatedRequestSet ++ rejected) should be (validRequests.toSet)
   }
 }
