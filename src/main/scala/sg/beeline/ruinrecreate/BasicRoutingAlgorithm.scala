@@ -1,7 +1,6 @@
 package sg.beeline.ruinrecreate
 
 import sg.beeline.problem.{Request, RoutingProblem, Route}
-import sg.beeline.ruinrecreate.{BeelineRecreate, Score, Recreate, Ruin}
 
 class BasicRoutingAlgorithm(val problem : RoutingProblem)
                            (implicit val ruin : Ruin = Ruin,

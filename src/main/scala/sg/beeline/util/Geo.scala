@@ -43,8 +43,8 @@ object Geo {
     val fuzzAmounts = List(0.0) // +: (for (i <- List(0.0005, 0.001, 0.002, 0.004);
                                 //   j <- 0 until 50) yield i)
 
-    require(ah.isNaN() || 0.0 <= ah && ah <= 360)
-    require(bh.isNaN() || 0.0 <= bh && bh <= 360)
+    require(ah.isNaN || 0.0 <= ah && ah <= 360)
+    require(bh.isNaN || 0.0 <= bh && bh <= 360)
 
     def routeWithJitter(range : Double) = {
       val pa = new GHPoint(
@@ -56,7 +56,7 @@ object Geo {
         b._1 - range + 2 * range * Math.random
       )
       val request = new GHRequest(pa, pb, ah, bh)
-      request.getHints()
+      request.getHints
         .put(Parameters.Routing.PASS_THROUGH, true)
         .put(Parameters.Routing.HEADING_PENALTY, 3600 * 10) /* 10 hours -- that ought to be enough to force the heading everywhere? */
       graphHopper.route(request)

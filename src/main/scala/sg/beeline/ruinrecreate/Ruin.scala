@@ -15,7 +15,9 @@ trait Ruin {
 object Ruin extends Ruin {
   val RUIN_PROBABILITY = 0.5
 
-  def randomRuin(problem: RoutingProblem, routes: Traversable[Route], badRequests: Traversable[Request],
+  def randomRuin(problem: RoutingProblem,
+                 routes: Traversable[Route],
+                 badRequests: Traversable[Request],
                  ruinProbability: Double) = {
     // Collect the set of all stops
     val stopsToDestroy = {
@@ -35,8 +37,8 @@ object Ruin extends Ruin {
       val allUnservedRequests = unservedRequests ++ badRequests ++
         route.activities
           .flatMap({
-            case Pickup(req, loc) => if (stopsToDestroy contains loc) Some(req) else None
-            case Dropoff(req, loc) => if (stopsToDestroy contains loc) Some(req) else None
+            case Pickup(req, loc) if stopsToDestroy contains loc => Some(req)
+            case Dropoff(req, loc) if stopsToDestroy contains loc => Some(req)
             case _ => None
           })
 

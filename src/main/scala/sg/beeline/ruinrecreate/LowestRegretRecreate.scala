@@ -16,10 +16,10 @@ object LowestRegretRecreate extends Recreate {
 
   def tryCreateRoute(problem : RoutingProblem)(request : Request) = {
     // Construct new route
-    val randomPickup = new Pickup(request, request.startStops(
+    val randomPickup = Pickup(request, request.startStops(
       Random.nextInt(request.startStops.size)
     ))
-    val randomDropoff = new Dropoff(request, request.endStops(
+    val randomDropoff = Dropoff(request, request.endStops(
       Random.nextInt(request.endStops.size)
     ))
 
