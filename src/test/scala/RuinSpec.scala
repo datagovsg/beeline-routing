@@ -3,7 +3,8 @@ package sg.beeline
 import org.scalatest._
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate._
-import sg.beeline.util.Util
+import sg.beeline.util.{Util, kdtreeQuery}
+
 import scala.util.Random
 import Util.toSVY
 
@@ -14,7 +15,7 @@ class RuinSpec extends FlatSpec with Matchers {
   def randomLatLng = {(Math.random() * 0.15 - 0.075 + 103.8, Math.random() * 0.15 - 0.075 + 1.38)}
   val latlngs = for (i <- 0 until 100) yield randomLatLng
   val busStops = latlngs.zipWithIndex.map({
-    case (ll, i) => new BusStop(ll, i, s"BS ${i}", s"R ${i}", i)
+    case (ll, i) => BusStop(ll, i, s"BS ${i}", s"R ${i}", i)
     case _ => throw new Error()
   })
 
@@ -24,15 +25,20 @@ class RuinSpec extends FlatSpec with Matchers {
   val starts = Random.shuffle(latlngs).map(ll => toSVY(perturb(ll)))
   val ends = Random.shuffle(latlngs).map(ll => toSVY(perturb(ll)))
 
-  val requests = (starts zip ends).map({case (s,e) => new Suggestion(s,e,TIME)})
+  val requests = (starts zip ends).map({case (s,e) => Suggestion(s, e, TIME)})
 
-  val problem = new BasicRoutingProblem(busStops, requests)
+  val problem = new BasicRoutingProblem(
+    BusStops(busStops, (b1, b2) => kdtreeQuery.squaredDistance(b1.xy, b2.xy) / 11 / 60),
+    requests
+  )
 
-  val (routes, validRequests, _) = problem.initialize
+  val (routes, validRequests, badRequests) = problem.initialize
 
-  val (preserved, ruined) = Ruin.ruin(problem, routes.toList, validRequests)
+  val (preserved, ruined) = Ruin.ruin(problem, routes.toList, List())
 
   "BasicRoutingProblem" should "preserve requests on initialize" in {
+    assert {badRequests.isEmpty}
+    assert {(validRequests intersect badRequests).isEmpty}
     validRequests.toSet should be (problem.requests.toSet)
   }
 
@@ -44,18 +50,8 @@ class RuinSpec extends FlatSpec with Matchers {
     })).toSet
     val ruinedRequestSet = ruined
 
-    println(preservedRequestSet.size)
-    println(ruinedRequestSet.size)
-
     (preservedRequestSet & ruinedRequestSet.toSet).size should be (0)
-
-
-
-//    (preservedRequestSet ++ ruinedRequestSet) should be (r2.toSet)
-    val finalSet = preservedRequestSet ++ ruinedRequestSet
-
-    (finalSet -- validRequests.toSet) should be (Set())
-    (validRequests.toSet -- finalSet) should be (Set())
+    (preservedRequestSet ++ ruinedRequestSet) should be (validRequests.toSet)
   }
 
   "Recreate" should "preserve all requests" in {

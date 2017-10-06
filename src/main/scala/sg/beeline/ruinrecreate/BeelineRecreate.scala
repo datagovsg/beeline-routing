@@ -30,9 +30,6 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   val endStopTree = KDTreeMap.fromSeq(
     requests.map({ r => (r.end, r) }).toSeq
   )
-  val busStopTree = KDTreeMap.fromSeq(
-    Import.getBusStops.map(bs => (bs.xy, bs))
-  )
 
   def isCompatible(r1: Request, r2: Request): Boolean = {
     odCombis(r1).exists({

@@ -5,40 +5,51 @@ import java.util.zip.GZIPInputStream
 
 import org.json4s._
 import org.json4s.native.JsonMethods._
-import sg.beeline.problem.{Suggestion, MrtStation, BusStop}
+import sg.beeline.problem.{BusStop, BusStops, MrtStation, Suggestion}
 import sg.beeline.util.{ExpiringCache, Util}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.io.Source
 
+
+case class BusStopSchema(Latitude: Double, Longitude: Double, Heading: Double, Description: String, RoadName: String)
+
 object Import {
-  lazy val getBusStops = {
-    import org.json4s.native.JsonMethods._
 
-    implicit val formats = DefaultFormats
+  lazy val getBusStopsOnly = {
+    implicit val formats = DefaultFormats + FieldSerializer[BusStopSchema]()
     val jsonText = Source.fromFile("onemap/bus-stops-headings.json").mkString
-    val jsonData = parse(jsonText).asInstanceOf[JArray]
+    val jsonData = parse(jsonText)
 
-    val busStops = jsonData.arr
-      .filter(v =>
-        (v \ "Latitude").extract[Double] != 0.0
-      )
+    jsonData.extract[Array[BusStopSchema]]
         .zipWithIndex
         .map({
-          case (v, i) => new BusStop(
-            (
-              (v \ "Longitude").extract[Double],
-              (v \ "Latitude").extract[Double]
-              ),
-            (v \ "Heading").extractOrElse[Double](Double.NaN),
-            (v \ "Description").extract[String],
-            (v \ "RoadName").extract[String],
+          case (b, i) => BusStop(
+            (b.Latitude, b.Longitude),
+            b.Heading,
+            b.Description,
+            b.RoadName,
             i
           )
         })
+  }
 
-    busStops
+  lazy val getBusStops = {
+    val busStops = getBusStopsOnly
+
+    val distanceMatrix = {
+      val ois = new java.io.ObjectInputStream(
+        new java.util.zip.GZIPInputStream(
+          new java.io.FileInputStream("./distances_cache.dat.gz")))
+
+      ois.readObject().asInstanceOf[Array[Array[Double]]]
+    }
+
+    BusStops(
+      busStops,
+      (b1: BusStop, b2: BusStop) => distanceMatrix(b1.index)(b2.index)
+    )
   }
 
   lazy val getMrtStations = {

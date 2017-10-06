@@ -5,7 +5,7 @@ import sg.beeline.ruinrecreate.DirectFerryRecreate
 import sg.beeline.util.Util._
 import sg.beeline.util.{Util, kdtreeQuery}
 
-class BasicRoutingProblem(val busStops: Seq[BusStop],
+class BasicRoutingProblem(val busStops: BusStops,
                           val suggestions: Seq[Suggestion],
                           val startWalkingDistance : Double = 300.0,
                           val endWalkingDistance : Double = 300.0) extends RoutingProblem {
@@ -14,7 +14,7 @@ class BasicRoutingProblem(val busStops: Seq[BusStop],
   type BusStopsTree = KDTreeMap[(Double, Double), BusStop]
 
   val busStopsTree : BusStopsTree = KDTreeMap.fromSeq(
-    busStops map {x => x.xy -> x}
+    busStops.busStops map {x => x.xy -> x}
   )
 
   val requests = suggestions.map(sugg =>
@@ -26,18 +26,9 @@ class BasicRoutingProblem(val busStops: Seq[BusStop],
   println(s"Average # start stops ${requests.map(_.startStops.size).sum / requests.size.toDouble}")
   println(s"Average # end stops ${requests.map(_.endStops.size).sum / requests.size.toDouble}")
 
-  val distanceMatrix = {
-    val ois = new java.io.ObjectInputStream(
-                new java.util.zip.GZIPInputStream(
-                  new java.io.FileInputStream("./distances_cache.dat.gz")))
-
-    ois.readObject().asInstanceOf[Array[Array[Double]]]
-  }
 
   // The current set of routes for the current iteration
-  def distance(a : BusStop, b: BusStop) : Double = {
-    distanceMatrix(a.index)(b.index)
-  }
+  def distance(a : BusStop, b: BusStop) : Double = busStops.distanceFunction(a, b)
 
   //
   def nearBusStopsStart(origin : Point) =

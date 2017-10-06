@@ -112,12 +112,12 @@ object IntelligentRoutingService extends Directives with JsonSupport {
   val myRoute =
     path("bus_stops") {
       get {
-        complete(Import.getBusStops)
+        complete(Import.getBusStopsOnly)
       }
     } ~
     path("paths" / Remaining) { remaining =>
       get {
-        val busStops = Import.getBusStops
+        val busStops = Import.getBusStopsOnly
         val indices = remaining.split("/").filter(_ != "").map(s => s.toInt)
 
         val polyline = indices.sliding(2).map({

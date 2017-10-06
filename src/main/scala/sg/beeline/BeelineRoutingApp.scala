@@ -21,7 +21,7 @@ object BeelineRoutingApp extends App {
   else require(false)
 
   def cache() {
-    val busStops = Import.getBusStops
+    val busStops = Import.getBusStopsOnly
 
     val distanceMatrix = {
       val m = Array.ofDim[Double](busStops.size, busStops.size)
@@ -75,7 +75,7 @@ object BeelineRoutingApp extends App {
   }
 
   def estimate(): Unit = {
-    val busStops = Import.getBusStops.toArray
+    val busStops = Import.getBusStopsOnly
     // Distance cache
     val distanceMatrix = Import.distanceMatrix
     //
