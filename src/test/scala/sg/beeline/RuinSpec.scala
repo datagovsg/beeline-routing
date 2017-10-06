@@ -3,10 +3,10 @@ package sg.beeline
 import org.scalatest._
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate._
+import sg.beeline.util.Util.toSVY
 import sg.beeline.util.{Util, kdtreeQuery}
 
 import scala.util.Random
-import Util.toSVY
 
 class RuinSpec extends FlatSpec with Matchers {
   val TIME = 8 * 3600 * 1000
