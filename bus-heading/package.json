@@ -7,8 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Government Technology Agency of Singapore (https://www.tech.gov.sg)",
+  "license": "Apache-2.0",
   "dependencies": {
     "babel-cli": "^6.16.0",
     "babel-core": "^6.17.0",
