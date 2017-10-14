@@ -1,8 +1,6 @@
 package sg.beeline.clustering
 
 import scala.annotation.tailrec
-import scalaz._
-import Scalaz._
 
 class FuzzyDistanceCluster[A](distance: Double, gridSize: Double)
   extends Function1[Seq[((Double, Double), A)],

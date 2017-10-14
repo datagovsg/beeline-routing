@@ -13,9 +13,9 @@ import sg.beeline.JobQueueActor
 import sg.beeline.JobQueueActor.{InitRequest, PollResult, ResultPendingException}
 import sg.beeline.io.Import
 import sg.beeline.jobs.RouteActor
-import sg.beeline.problem.{Dropoff, Pickup, Route, BusStop}
+import sg.beeline.problem.{Dropoff, Pickup, Route, BusStop, Suggestion, Request}
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
-import sg.beeline.util.{Geo, Util}
+import sg.beeline.util.{Geo, Util, kdtreeQuery}
 import spray.json._
 
 import scala.concurrent.ExecutionContext
@@ -24,7 +24,32 @@ import scala.util.Try
 case class Stop(busStop : BusStop, numBoard : Int, numAlight: Int) {}
 case class RouteWithPath(route: Route)
 
+object SuggestionJsonFormat extends RootJsonFormat[Suggestion] {
+  def write(suggestion: Suggestion) =
+    JsObject(
+      "start" -> RouteJsonFormat.latLng(Util.toWGS(suggestion.start)),
+      "end" -> RouteJsonFormat.latLng(Util.toWGS(suggestion.end)),
+      "time" -> JsNumber(suggestion.actualTime)
+    )
+  def read(value : JsValue) = throw new UnsupportedOperationException()
+}
+
+object RequestJsonFormat extends RootJsonFormat[Request] {
+  def write(suggestion: Request) =
+    JsObject(
+      "start" -> RouteJsonFormat.latLng(Util.toWGS(suggestion.start)),
+      "end" -> RouteJsonFormat.latLng(Util.toWGS(suggestion.end)),
+      "time" -> JsNumber(suggestion.time)
+    )
+  def read(value : JsValue) = throw new UnsupportedOperationException()
+}
+
 object RouteJsonFormat extends RootJsonFormat[Route] {
+  def latLng(d: (Double, Double)) = JsObject(
+    "lat" -> JsNumber(d._2),
+    "lng" -> JsNumber(d._1)
+  )
+
   def write(route: Route) = {
     val positions = route.activities.flatMap({
       case Pickup(r, l) => Some(Stop(l, 1, 0))
@@ -41,11 +66,6 @@ object RouteJsonFormat extends RootJsonFormat[Route] {
             Stop(loc1, a1, b1) :: Stop(loc2, a2, b2) :: tail
       }
 
-    def latLng(d: (Double, Double)) = JsObject(
-      "lat" -> JsNumber(d._2),
-      "lng" -> JsNumber(d._1)
-    )
-
     val positionsJson = positions.map({ case Stop(bs, board, alight) =>
       JsObject(
         latLng(bs.coordinates).fields ++
@@ -60,11 +80,7 @@ object RouteJsonFormat extends RootJsonFormat[Route] {
 
     val requestsJson = route.activities
       .flatMap({ case Pickup(request, loc) => Some(request) case _ => None})
-      .map(request => JsObject(
-        "start" -> latLng(Util.toWGS(request.start)),
-        "end" -> latLng(Util.toWGS(request.end)),
-        "time" -> JsNumber(request.actualTime)
-      ))
+      .map(request => RequestJsonFormat.write(request))
       .toList
 
     JsObject(
@@ -85,6 +101,7 @@ case class SuggestRequest(startLat: Double,
                           endLng: Double,
                           time: Double,
                           settings: BeelineRecreateSettings)
+case class PathRequestsRequest(maxDistance: Double)
 case class LatLng(val lat : Double, val lng : Double)
 
 trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
@@ -96,6 +113,8 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
     "coordinates", "heading", "description", "roadName", "index"
   )
   implicit val routeFormat = RouteJsonFormat
+  implicit val suggestionFormat = SuggestionJsonFormat
+  implicit val requestFormat = RequestJsonFormat
   implicit val beelineRecreateSettingsFormat = jsonFormat6(BeelineRecreateSettings.apply)
 }
 
@@ -134,6 +153,48 @@ object IntelligentRoutingService extends Directives with JsonSupport {
         complete(
           polyline.map(_.map({case (x,y) => LatLng(y,x)}))
         )
+      }
+    } ~
+    /**
+      * returns the requests that are served by this route
+      */
+    path("path_requests" / Remaining) { remaining =>
+      get {
+        parameters(
+          'maxDistance.as[Double]
+        ).as(PathRequestsRequest) { r =>
+          def withinReach(p: Util.Point, q: Util.Point) =
+            kdtreeQuery.squaredDistance(p, q) <= r.maxDistance
+
+          /**
+            * A list of stops serve a suggestion if
+            * there is a stop A that serves the pickup point, and a stop B that
+            * serves the dropoff point, and A comes before B in the list of stops
+            *
+            * i.e. minimum index of stops that serve the pickup point is
+            * less than the maximum index that serve the dropoff point
+            */
+          def pathServesSuggestion(busStops : IndexedSeq[BusStop], suggestion: Suggestion) = {
+            val minPickupStop =
+              busStops.indices.filter(i => withinReach(busStops(i).xy, suggestion.start))
+                .min
+            val maxDropoffStop =
+              busStops.indices.filter(i => withinReach(busStops(i).xy, suggestion.end))
+                .max
+
+            minPickupStop < maxDropoffStop
+          }
+
+          complete {
+            val allBusStops = Import.getBusStopsOnly
+            val busStops = remaining.split("/").filter(_ != "")
+              .map(s => allBusStops(s.toInt))
+            val suggestions = Import.getLiveRequests()
+
+            suggestions
+            .filter(suggestion => pathServesSuggestion(busStops, suggestion))
+          }
+        }
       }
     } ~
     path("routes" / "propose") {
