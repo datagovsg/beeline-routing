@@ -26,7 +26,7 @@ object Import {
         .zipWithIndex
         .map({
           case (b, i) => BusStop(
-            (b.Latitude, b.Longitude),
+            (b.Longitude, b.Latitude),
             b.Heading.getOrElse(Double.NaN),
             b.Description,
             b.RoadName,
