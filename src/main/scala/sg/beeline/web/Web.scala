@@ -164,7 +164,7 @@ object IntelligentRoutingService extends Directives with JsonSupport {
           'maxDistance.as[Double]
         ).as(PathRequestsRequest) { r =>
           def withinReach(p: Util.Point, q: Util.Point) =
-            kdtreeQuery.squaredDistance(p, q) <= r.maxDistance
+            kdtreeQuery.squaredDistance(p, q) <= r.maxDistance * r.maxDistance
 
           /**
             * A list of stops serve a suggestion if
