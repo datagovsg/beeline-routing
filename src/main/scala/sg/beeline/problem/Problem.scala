@@ -12,11 +12,11 @@ trait RoutingProblem {
 }
 
 case class BusStop(
-  val coordinates: Util.Point,
-  val heading: Double,
-  val description: String,
-  val roadName: String,
-  val index: Int) {
+  coordinates: Util.Point,
+  heading: Double,
+  description: String,
+  roadName: String,
+  index: Int) {
   // Save the index for caching!
   lazy val xy = Util.toSVY(coordinates)
 

@@ -35,11 +35,11 @@ object SuggestionJsonFormat extends RootJsonFormat[Suggestion] {
 }
 
 object RequestJsonFormat extends RootJsonFormat[Request] {
-  def write(suggestion: Request) =
+  def write(request: Request) =
     JsObject(
-      "start" -> RouteJsonFormat.latLng(Util.toWGS(suggestion.start)),
-      "end" -> RouteJsonFormat.latLng(Util.toWGS(suggestion.end)),
-      "time" -> JsNumber(suggestion.time)
+      "start" -> RouteJsonFormat.latLng(Util.toWGS(request.start)),
+      "end" -> RouteJsonFormat.latLng(Util.toWGS(request.end)),
+      "time" -> JsNumber(request.time)
     )
   def read(value : JsValue) = throw new UnsupportedOperationException()
 }
@@ -50,7 +50,7 @@ object RouteJsonFormat extends RootJsonFormat[Route] {
     "lng" -> JsNumber(d._1)
   )
 
-  def write(route: Route) = {
+  def write(route: Route) : JsValue = {
     val positions = route.activities.flatMap({
       case Pickup(r, l) => Some(Stop(l, 1, 0))
       case Dropoff(r, l) => Some(Stop(l, 0, 1))
@@ -92,9 +92,9 @@ object RouteJsonFormat extends RootJsonFormat[Route] {
   def read(value : JsValue) = throw new UnsupportedOperationException()
 }
 
-case class CircularRegionRequest(val lat : Double, val lng : Double, val radius : Double) {}
-case class RoutingRequest(val times: List[Double], val regions : List[CircularRegionRequest]) {}
-case class PathRequest(val indices: List[Int]) {}
+case class CircularRegionRequest(lat : Double, lng : Double, radius : Double) {}
+case class RoutingRequest(times: List[Double], regions : List[CircularRegionRequest]) {}
+case class PathRequest(indices: List[Int]) {}
 case class SuggestRequest(startLat: Double,
                           startLng: Double,
                           endLat: Double,
@@ -102,7 +102,7 @@ case class SuggestRequest(startLat: Double,
                           time: Double,
                           settings: BeelineRecreateSettings)
 case class PathRequestsRequest(maxDistance: Double)
-case class LatLng(val lat : Double, val lng : Double)
+case class LatLng(lat : Double, lng : Double)
 
 trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val latLngFormat = jsonFormat2(LatLng)
