@@ -13,6 +13,8 @@ val sprayV = "1.3.3"
 
 enablePlugins(JavaServerAppPackaging)
 
+
+
 lazy val root = (project in file(".")).
     settings(
         resolvers += DefaultMavenRepository,
@@ -39,3 +41,4 @@ lazy val root = (project in file(".")).
     )
 
 fork in run := true
+mainClass in assembly := Some("sg.beeline.BeelineRoutingApp")
