@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY ./SG-gh /app/SG-gh
 COPY ./onemap/bus-stops-headings.json /app/onemap/bus-stops-headings.json
+COPY ./onemap/mrt-stations.json /app
 COPY ./config.properties /app
 
 COPY ./target/scala-2.11/beeline-routing-assembly*.jar /app/beeline-routing.jar
