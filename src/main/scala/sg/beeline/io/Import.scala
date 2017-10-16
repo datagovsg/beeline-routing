@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 import scala.io.Source
 
 
-case class BusStopSchema(Latitude: Double, Longitude: Double, Heading: Double, Description: String, RoadName: String)
+case class BusStopSchema(Latitude: Double, Longitude: Double, Heading: Option[Double], Description: String, RoadName: String)
 
 object Import {
 
@@ -27,7 +27,7 @@ object Import {
         .map({
           case (b, i) => BusStop(
             (b.Latitude, b.Longitude),
-            b.Heading,
+            b.Heading.getOrElse(Double.NaN),
             b.Description,
             b.RoadName,
             i
