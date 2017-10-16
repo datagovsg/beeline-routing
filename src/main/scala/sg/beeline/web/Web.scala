@@ -177,10 +177,10 @@ object IntelligentRoutingService extends Directives with JsonSupport {
           def pathServesSuggestion(busStops : IndexedSeq[BusStop], suggestion: Suggestion) = {
             val minPickupStop =
               busStops.indices.filter(i => withinReach(busStops(i).xy, suggestion.start))
-                .min
+                .foldLeft(Int.MaxValue)(_ min _)
             val maxDropoffStop =
               busStops.indices.filter(i => withinReach(busStops(i).xy, suggestion.end))
-                .max
+                .foldLeft(Int.MinValue)(_ max _)
 
             minPickupStop < maxDropoffStop
           }
