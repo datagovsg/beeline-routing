@@ -51,29 +51,32 @@ object RouteJsonFormat extends RootJsonFormat[Route] {
   )
 
   def write(route: Route) : JsValue = {
-    val positions = route.activities.flatMap({
-      case Pickup(r, l) => Some(Stop(l, 1, 0))
-      case Dropoff(r, l) => Some(Stop(l, 0, 1))
+    val positions = route.activitiesWithTimes.flatMap({
+      case (Pickup(r, l), minTime, maxTime) => Some((Stop(l, 1, 0), minTime, maxTime))
+      case (Dropoff(r, l), minTime, maxTime) => Some((Stop(l, 0, 1), minTime, maxTime))
       case _ => None
     }).foldRight(
-        List[Stop]()
+        List[(Stop, Double, Double)]()
       ) { // Remove consecutive runs
-        case (Stop(loc, a, b), Nil) => Stop(loc, a, b) :: Nil
-        case (Stop(loc1, a1, b1), Stop(loc2, a2, b2)::tail) =>
+        case ((Stop(loc, a, b), minTime, maxTime), Nil) =>
+          (Stop(loc, a, b), minTime, maxTime) :: Nil
+        case ((Stop(loc1, a1, b1), minTime1, maxTime1), (Stop(loc2, a2, b2), minTime2, maxTime2)::tail) =>
           if (loc1 == loc2)
-            Stop(loc1, a1 + a2, b1 + b2) ::tail
+            (Stop(loc1, a1 + a2, b1 + b2), minTime1, maxTime1) ::tail
           else
-            Stop(loc1, a1, b1) :: Stop(loc2, a2, b2) :: tail
+            (Stop(loc1, a1, b1), minTime1, maxTime1) :: (Stop(loc2, a2, b2), minTime2, maxTime2) :: tail
       }
 
-    val positionsJson = positions.map({ case Stop(bs, board, alight) =>
+    val positionsJson = positions.map({ case (Stop(bs, board, alight), minTime, maxTime) =>
       JsObject(
         latLng(bs.coordinates).fields ++
         List(
           ("description" -> JsString(bs.description)),
           ("numBoard" -> JsNumber(board)),
           ("numAlight" -> JsNumber(alight)),
-          ("index" -> JsNumber(bs.index))
+          ("index" -> JsNumber(bs.index)),
+          ("minTime" -> JsNumber(minTime)),
+          ("maxTime" -> JsNumber(maxTime))
         )
       )
     }).toList
