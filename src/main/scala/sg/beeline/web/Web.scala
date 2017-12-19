@@ -155,6 +155,19 @@ object IntelligentRoutingService extends Directives with JsonSupport {
         )
       }
     } ~
+    path("travel_times" / Remaining) { remaining =>
+      get {
+        val busStops = Import.getBusStopsOnly
+        val indices = remaining.split("/").filter(_ != "").map(s => s.toInt)
+
+        val travelTimes: Seq[Double] = indices.sliding(2).map({
+          case Array(aIndex, bIndex) =>
+            Import.distanceMatrix(aIndex)(bIndex)
+        }).toArray
+
+        complete(travelTimes)
+      }
+    } ~
     /**
       * returns the requests that are served by this route
       */
