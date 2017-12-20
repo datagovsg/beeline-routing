@@ -137,6 +137,13 @@ object IntelligentRoutingService extends Directives with JsonSupport {
         complete(Import.getBusStopsOnly)
       }
     } ~
+    path("bus_stops" / Remaining) { remaining =>
+      get {
+        val requestedSet = remaining.split("/").filter(_ != "").map(s => s.toInt)
+
+        complete(Import.getBusStopsOnly.filter(requestedSet contains _.index))
+      }
+    } ~
     path("paths" / Remaining) { remaining =>
       get {
         val busStops = Import.getBusStopsOnly
