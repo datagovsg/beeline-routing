@@ -43,7 +43,13 @@ object Import {
         new java.util.zip.GZIPInputStream(
           new java.io.FileInputStream("./distances_cache.dat.gz")))
 
-      ois.readObject().asInstanceOf[Array[Array[Double]]]
+      val arr = ois.readObject().asInstanceOf[Array[Array[Double]]]
+      arr.foreach { row =>
+        row.indices.foreach { i =>
+          row(i) = row(i) * 1.5
+        }
+      }
+      arr
     }
 
     BusStops(
