@@ -62,11 +62,7 @@ class RouteActor extends Actor {
     case StartRouting(times, regions) =>
       val suggestions = Import.getRequests
         .filter(x => times.contains(x.time) && regions.exists(_.contains(x.end)))
-        .map(x => Suggestion(x.start, x.end, 8 * 3600 * 1000)) // Group them all into the same time slot
-
-//      val EZLsuggestions = sg.beeline.Import.getEzlinkRequests
-//        .filter(x => times.contains(x.time) && regions.exists(_.contains(x.end)))
-//        .map(x => new Suggestion(x.start, x.end, 8 * 3600 * 1000, x.weight)) // Group them all into the same time slot
+        .map(x => Suggestion(x.id, x.start, x.end, 8 * 3600 * 1000)) // Group them all into the same time slot
 
       val problem = new BasicRoutingProblem(busStops, suggestions)
 

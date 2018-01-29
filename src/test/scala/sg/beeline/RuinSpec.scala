@@ -25,7 +25,7 @@ class RuinSpec extends FlatSpec with Matchers {
   val starts = Random.shuffle(latlngs).map(ll => toSVY(perturb(ll)))
   val ends = Random.shuffle(latlngs).map(ll => toSVY(perturb(ll)))
 
-  val requests = (starts zip ends).map({case (s,e) => Suggestion(s, e, TIME)})
+  val requests = (starts zip ends).zipWithIndex.map({case ((s,e), i) => Suggestion(i, s, e, TIME)})
 
   val problem = new BasicRoutingProblem(
     BusStops(busStops, (b1, b2) => kdtreeQuery.squaredDistance(b1.xy, b2.xy) / 11 / 60),
