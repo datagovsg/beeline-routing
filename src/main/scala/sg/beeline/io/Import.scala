@@ -38,20 +38,6 @@ object Import {
   lazy val getBusStops = {
     val busStops = getBusStopsOnly
 
-    val distanceMatrix = {
-      val ois = new java.io.ObjectInputStream(
-        new java.util.zip.GZIPInputStream(
-          new java.io.FileInputStream("./distances_cache.dat.gz")))
-
-      val arr = ois.readObject().asInstanceOf[Array[Array[Double]]]
-      arr.foreach { row =>
-        row.indices.foreach { i =>
-          row(i) = row(i) * 1.5
-        }
-      }
-      arr
-    }
-
     BusStops(
       busStops,
       (b1: BusStop, b2: BusStop) => distanceMatrix(b1.index)(b2.index)
@@ -84,7 +70,13 @@ object Import {
       new java.util.zip.GZIPInputStream(
         new java.io.FileInputStream("./distances_cache.dat.gz")))
 
-    ois.readObject().asInstanceOf[Array[Array[Double]]]
+    val arr = ois.readObject().asInstanceOf[Array[Array[Double]]]
+    arr.foreach { row =>
+      row.indices.foreach { i =>
+        row(i) = row(i) * 1.5
+      }
+    }
+    arr
   }
 
   // Return the number of seconds since midnight
