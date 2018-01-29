@@ -93,11 +93,15 @@ object Import {
 
     jsonData.arr
       .filter(_(5).extract[String] != null)
-      .map(v => new Suggestion(
-        start = Util.toSVY((v(1).extract[Double], v(0).extract[Double])),
-        end = Util.toSVY((v(3).extract[Double], v(2).extract[Double])),
-        actualTime = convertTime(v(5).extract[String])
-      ))
+      .zipWithIndex
+      .map({
+        case (v, index) => Suggestion(
+          id = index,
+          start = Util.toSVY((v(1).extract[Double], v(0).extract[Double])),
+          end = Util.toSVY((v(3).extract[Double], v(2).extract[Double])),
+          actualTime = convertTime(v(5).extract[String])
+        )
+      })
   }
 
   val getLiveRequests : ExpiringCache[Array[Suggestion]] = ExpiringCache(10.minutes) {
@@ -146,7 +150,8 @@ object Import {
           .map({ results =>
             results.view.map({
               case (travelTime, id, boardLng, boardLat, alightLng, alightLat, email, time, createdAt) =>
-                new Suggestion(
+                Suggestion(
+                  id=id,
                   start=Util.toSVY((boardLng, boardLat)),
                   end=Util.toSVY((alightLng, alightLat)),
                   actualTime=time
@@ -167,12 +172,16 @@ object Import {
 
     jsonData.arr
       .filter(_(5).extract[String] != null)
-      .map(v => new Suggestion(
-        start = Util.toSVY((v(1).extract[Double], v(0).extract[Double])),
-        end = Util.toSVY((v(3).extract[Double], v(2).extract[Double])),
-        actualTime = convertTime(v(5).extract[String]),
-        weight = v(4).extract[Int]
-      ))
+      .zipWithIndex
+      .map({
+        case (v, index) => Suggestion(
+          id = index,
+          start = Util.toSVY((v(1).extract[Double], v(0).extract[Double])),
+          end = Util.toSVY((v(3).extract[Double], v(2).extract[Double])),
+          actualTime = convertTime(v(5).extract[String]),
+          weight = v(4).extract[Int]
+        )
+      })
       .filter(_.weight > 25)
   }
 }

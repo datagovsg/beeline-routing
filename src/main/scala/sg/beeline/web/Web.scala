@@ -27,6 +27,7 @@ case class RouteWithPath(route: Route)
 object SuggestionJsonFormat extends RootJsonFormat[Suggestion] {
   def write(suggestion: Suggestion) =
     JsObject(
+      "id" -> JsNumber(suggestion.id),
       "start" -> RouteJsonFormat.latLng(Util.toWGS(suggestion.start)),
       "end" -> RouteJsonFormat.latLng(Util.toWGS(suggestion.end)),
       "time" -> JsNumber(suggestion.actualTime)
