@@ -40,7 +40,7 @@ object RequestJsonFormat extends RootJsonFormat[Request] {
     JsObject(
       "start" -> RouteJsonFormat.latLng(Util.toWGS(request.start)),
       "end" -> RouteJsonFormat.latLng(Util.toWGS(request.end)),
-      "time" -> JsNumber(request.time)
+      "time" -> JsNumber(request.actualTime)
     )
   def read(value : JsValue) = throw new UnsupportedOperationException()
 }

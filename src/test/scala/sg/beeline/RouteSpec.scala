@@ -7,8 +7,8 @@ class RouteSpec extends FlatSpec with Matchers {
 
   object ZeroDistance {
     val busStops = Array(
-      new BusStop((103.8, 1.38), 0, "BS1", "BS Road", 0),
-      new BusStop((103.8, 1.38), 1, "BS1", "BS Road", 1)
+      BusStop((103.8, 1.38), 0, "BS1", "BS Road", 0),
+      BusStop((103.8, 1.38), 1, "BS1", "BS Road", 1)
     )
   }
 
@@ -24,7 +24,7 @@ class RouteSpec extends FlatSpec with Matchers {
   }
 
   class TestActivity(val routingProblem: RoutingProblem, val busStop: BusStop,
-      val st : Double, val et : Double, val dt: Double, val svct: Double) extends Pickup(new Request(routingProblem, (0,0), (0,0), 0), busStop) {
+      val st : Double, val et : Double, val dt: Double, val svct: Double) extends Pickup(new BasicRequest(routingProblem, (0,0), (0,0), 0), busStop) {
 
     override def minTime = st
     override def maxTime = et

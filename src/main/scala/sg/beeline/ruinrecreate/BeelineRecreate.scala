@@ -433,7 +433,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     }
   }
 
-  def findRelated2(request: Request): Traversable[Route] = {
+  def generatePotentialRoutesFromRequest(request: Request): Traversable[Route] = {
     val ods = odCombis(request)
 
     val compatibleRequests = {
@@ -493,7 +493,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
 
   def growRoute(request : Request, od : (BusStop, BusStop), requests: List[Request]) = {
     // val shuffled = Random.shuffle(requests)
-    val shuffled = WeightedRandomShuffle.shuffle(requests, requests.view.map(r => r.getWeightByDistanceToMrt(300, 0.2)))
+    val shuffled = WeightedRandomShuffle.shuffle(requests, requests.view.map(r => r.weight.toDouble))
 
     // Try to insert until a max of.... 10?
     @tailrec

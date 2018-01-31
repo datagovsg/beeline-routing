@@ -8,7 +8,8 @@ import sg.beeline.util.{Util, kdtreeQuery}
 class BasicRoutingProblem(val busStops: BusStops,
                           val suggestions: Seq[Suggestion],
                           val startWalkingDistance : Double = 300.0,
-                          val endWalkingDistance : Double = 300.0) extends RoutingProblem {
+                          val endWalkingDistance : Double = 300.0,
+                          val overrideRouteTime: Option[Double] = None) extends RoutingProblem {
   println(s"Problem with ${suggestions.size} suggestions")
 
   type BusStopsTree = KDTreeMap[(Double, Double), BusStop]
@@ -17,8 +18,8 @@ class BasicRoutingProblem(val busStops: BusStops,
     busStops.busStops map {x => x.xy -> x}
   )
 
-  val requests = suggestions.map(sugg =>
-    new Request(this, sugg.start, sugg.end, sugg.time, weight=sugg.weight))
+  val requests : Seq[Request] = suggestions.map(sugg =>
+    new Request.RequestFromSuggestion(this, sugg, overrideRouteTime.getOrElse(sugg.time)))
     .filter(_.startStops.nonEmpty)
     .filter(_.endStops.nonEmpty)
 
