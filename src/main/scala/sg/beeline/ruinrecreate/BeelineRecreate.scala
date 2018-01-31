@@ -433,7 +433,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     }
   }
 
-  def findRelated2(request: Request): Traversable[Route] = {
+  def generatePotentialRoutesFromRequest(request: Request): Traversable[Route] = {
     val ods = odCombis(request)
 
     val compatibleRequests = {
