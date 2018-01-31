@@ -17,8 +17,8 @@ class BasicRoutingProblem(val busStops: BusStops,
     busStops.busStops map {x => x.xy -> x}
   )
 
-  val requests = suggestions.map(sugg =>
-    new Request(this, sugg.start, sugg.end, sugg.time, weight=sugg.weight))
+  val requests : Seq[Request] = suggestions.map(sugg =>
+    new Request.RequestFromSuggestion(this, sugg))
     .filter(_.startStops.nonEmpty)
     .filter(_.endStops.nonEmpty)
 

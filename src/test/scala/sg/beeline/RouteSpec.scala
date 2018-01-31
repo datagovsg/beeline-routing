@@ -24,7 +24,7 @@ class RouteSpec extends FlatSpec with Matchers {
   }
 
   class TestActivity(val routingProblem: RoutingProblem, val busStop: BusStop,
-      val st : Double, val et : Double, val dt: Double, val svct: Double) extends Pickup(new Request(routingProblem, (0,0), (0,0), 0), busStop) {
+      val st : Double, val et : Double, val dt: Double, val svct: Double) extends Pickup(new BasicRequest(routingProblem, (0,0), (0,0), 0), busStop) {
 
     override def minTime = st
     override def maxTime = et

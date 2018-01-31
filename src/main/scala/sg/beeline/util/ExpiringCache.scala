@@ -18,7 +18,7 @@ class ExpiringCache[T](duration: Duration, v : => T)
     value.get
   }
 
-  def apply(): T = synchronized {
+  override def apply: T = synchronized {
     value match {
       case None => refreshed
       case Some(w) =>

@@ -84,26 +84,6 @@ object Import {
     timeString.substring(0,2).toLong * 3600000 +
     timeString.substring(2,4).toLong * 60000
 
-  lazy val getRequests = {
-    import org.json4s.native.JsonMethods._
-
-    implicit val formats = DefaultFormats
-    val jsonText = Source.fromFile("suggestions.json").mkString
-    val jsonData = parse(jsonText).asInstanceOf[JArray]
-
-    jsonData.arr
-      .filter(_(5).extract[String] != null)
-      .zipWithIndex
-      .map({
-        case (v, index) => Suggestion(
-          id = index,
-          start = Util.toSVY((v(1).extract[Double], v(0).extract[Double])),
-          end = Util.toSVY((v(3).extract[Double], v(2).extract[Double])),
-          actualTime = convertTime(v(5).extract[String])
-        )
-      })
-  }
-
   val getLiveRequests : ExpiringCache[Array[Suggestion]] = ExpiringCache(10.minutes) {
     import slick.jdbc.PostgresProfile.api._
 

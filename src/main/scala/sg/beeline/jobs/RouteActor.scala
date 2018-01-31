@@ -2,7 +2,8 @@ package sg.beeline.jobs
 
 import akka.actor.Actor
 import sg.beeline.io.Import
-import sg.beeline.problem.{BasicRoutingProblem, Request, Route, Suggestion}
+import sg.beeline.problem
+import sg.beeline.problem._
 import sg.beeline.ruinrecreate.{BasicRoutingAlgorithm, BeelineRecreate}
 import sg.beeline.util.Util
 import sg.beeline.web.SuggestRequest
@@ -49,7 +50,7 @@ class RouteActor extends Actor {
       )(settings)
 
       beelineRecreate.findRelated2(
-        new Request(
+        new BasicRequest(
           beelineProblem,
           Util.toSVY((sLng, sLat)),
           Util.toSVY((eLng, eLat)),
@@ -60,15 +61,54 @@ class RouteActor extends Actor {
 
   def receive = {
     case StartRouting(times, regions) =>
-      val suggestions = Import.getRequests
+      val suggestions = Import.getLiveRequests.apply
+        .view
         .filter(x => times.contains(x.time) && regions.exists(_.contains(x.end)))
-        .map(x => Suggestion(x.id, x.start, x.end, 8 * 3600 * 1000)) // Group them all into the same time slot
+      val modifiedSuggestions = suggestions
+        .zipWithIndex
+        .map({ case (x, i) => Suggestion(i, x.start, x.end, 8 * 3600 * 1000) }) // Group them all into the same time slot
+      val suggestionsById = suggestions.map(s => (s.id, s)).toMap
 
       val problem = new BasicRoutingProblem(busStops, suggestions)
-
       val algorithm = new BasicRoutingAlgorithm(problem)
 
-      context.become(algorithm.solve(context, (routes) => this.lastResults = routes), discardOld = false)
+      def mapBackSuggestions(route: Route): Route =
+        // Translate the activities into their original time
+        new Route(
+          route.routingProblem,
+          route.activities.map({
+            case Pickup(r, s) =>
+              val modifiedSuggestion = r
+                .asInstanceOf[Request.RequestFromSuggestion]
+                .suggestion
+
+              Pickup(
+                new Request.RequestFromSuggestion(
+                  r.routingProblem,
+                  suggestionsById(modifiedSuggestion.id)
+                ),
+                s)
+            case Dropoff(r, s) =>
+              val modifiedSuggestion = r
+                .asInstanceOf[Request.RequestFromSuggestion]
+                .suggestion
+
+              Dropoff(
+                new Request.RequestFromSuggestion(
+                  r.routingProblem,
+                  suggestionsById(modifiedSuggestion.id)
+                ),
+                s)
+            case a @ _ => a
+          }),
+          route.time
+        )
+
+      context.become(
+        algorithm.solve(
+          context,
+          (routes) => this.lastResults = routes.map(mapBackSuggestions)),
+        discardOld = false)
 
       sender ! RoutingStarted
 

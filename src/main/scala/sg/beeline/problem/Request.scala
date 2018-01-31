@@ -6,9 +6,12 @@ import sg.beeline.util.Util.Point
 
 import scala.math.min
 
-class Request(val routingProblem : RoutingProblem,
-              val start: Point, val end: Point, val actualTime: Double,
-              val weight : Int = 1) {
+trait Request {
+  def routingProblem : RoutingProblem
+  def start: Point
+  def end: Point
+  def actualTime: Double
+  def weight : Int
 
   val time = 8*3600*1000
   val startStops = routingProblem.nearBusStopsStart(start).toIndexedSeq
@@ -39,3 +42,19 @@ class Request(val routingProblem : RoutingProblem,
 
   override def toString = (Util.toWGS(start), Util.toWGS(end), time).toString
 }
+
+object Request {
+  class RequestFromSuggestion(val routingProblem : RoutingProblem, val suggestion: Suggestion) extends Request {
+    override val start: (Double, Double) = suggestion.start
+    override val end: (Double, Double) = suggestion.end
+    override val actualTime: Double = suggestion.time
+    override val weight: Int = suggestion.weight
+  }
+}
+
+class BasicRequest(val routingProblem: RoutingProblem,
+                   val start: (Double, Double),
+                   val end: (Double, Double),
+                   val actualTime: Double,
+                   val weight: Int = 1
+                  ) extends Request
