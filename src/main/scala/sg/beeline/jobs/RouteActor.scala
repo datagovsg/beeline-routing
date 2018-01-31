@@ -69,7 +69,7 @@ class RouteActor extends Actor {
         .map({ case (x, i) => Suggestion(i, x.start, x.end, 8 * 3600 * 1000) }) // Group them all into the same time slot
       val suggestionsById = suggestions.map(s => (s.id, s)).toMap
 
-      val problem = new BasicRoutingProblem(busStops, suggestions)
+      val problem = new BasicRoutingProblem(busStops, modifiedSuggestions)
       val algorithm = new BasicRoutingAlgorithm(problem)
 
       def mapBackSuggestions(route: Route): Route =
