@@ -2,7 +2,6 @@ package sg.beeline.jobs
 
 import akka.actor.Actor
 import sg.beeline.io.Import
-import sg.beeline.problem
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.{BasicRoutingAlgorithm, BeelineRecreate}
 import sg.beeline.util.Util
@@ -57,7 +56,8 @@ class RouteActor extends Actor {
               Pickup(
                 new Request.RequestFromSuggestion(
                   r.routingProblem,
-                  suggestionsById(modifiedSuggestion.id)
+                  // Seed suggestion won't be available
+                  suggestionsById.getOrElse(modifiedSuggestion.id, modifiedSuggestion)
                 ),
                 s)
             case Dropoff(r, s) =>
@@ -68,7 +68,8 @@ class RouteActor extends Actor {
               Dropoff(
                 new Request.RequestFromSuggestion(
                   r.routingProblem,
-                  suggestionsById(modifiedSuggestion.id)
+                  // Seed suggestion won't be available
+                  suggestionsById.getOrElse(modifiedSuggestion.id, modifiedSuggestion)
                 ),
                 s)
             case a @ _ => a
@@ -82,11 +83,14 @@ class RouteActor extends Actor {
       )(settings)
 
       beelineRecreate.generatePotentialRoutesFromRequest(
-        new BasicRequest(
+        new Request.RequestFromSuggestion(
           beelineProblem,
-          Util.toSVY((sLng, sLat)),
-          Util.toSVY((eLng, eLat)),
-          8 * 3600e3
+          Suggestion(
+            0,
+            Util.toSVY((sLng, sLat)),
+            Util.toSVY((eLng, eLat)),
+            8 * 3600e3
+          )
         )
       ).toList.map(mapBackSuggestions)
   }
