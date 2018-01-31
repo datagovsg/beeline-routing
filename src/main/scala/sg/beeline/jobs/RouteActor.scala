@@ -14,7 +14,6 @@ import scala.util.Try
 abstract class RoutingControl
 abstract class RoutingNotification
 
-case class StartRouting(times : List[Double], regions : Seq[Region])
 case class StopRouting() extends RoutingControl
 case class CurrentSolution() extends RoutingControl
 case class Polyline(indices : List[Int]) extends RoutingControl
@@ -32,12 +31,9 @@ class RouteActor extends Actor {
         case "ezlink" => Import.getEzlinkRequests
         case _ => Import.getLiveRequests()
       }
-      //          .map(x => new Suggestion(x.start, x.end, x.time, x.weight)) // Group them all into the same time slot
-      //          .filter(x => x.time >= 8 * 3600 * 1000 && x.time <= 9 * 3600 * 1000)
       val suggestionsById = suggestions.map(s => (s.id, s)).toMap
       val modifiedSuggestions = suggestions
-        .zipWithIndex
-        .map({ case (x, i) => Suggestion(i, x.start, x.end, 8 * 3600 * 1000) }) // Group them all into the same time slot
+        .map({ x => Suggestion(x.id, x.start, x.end, 8 * 3600 * 1000) }) // Group them all into the same time slot
 
       val beelineProblem = {
         new BasicRoutingProblem(
@@ -90,67 +86,12 @@ class RouteActor extends Actor {
           beelineProblem,
           Util.toSVY((sLng, sLat)),
           Util.toSVY((eLng, eLat)),
-          time
+          8 * 3600e3
         )
       ).toList.map(mapBackSuggestions)
   }
 
   def receive = {
-    case StartRouting(times, regions) =>
-      val suggestions = Import.getLiveRequests.apply
-        .view
-        .filter(x => times.contains(x.time) && regions.exists(_.contains(x.end)))
-      val modifiedSuggestions = suggestions
-        .zipWithIndex
-        .map({ case (x, i) => Suggestion(i, x.start, x.end, 8 * 3600 * 1000) }) // Group them all into the same time slot
-      val suggestionsById = suggestions.map(s => (s.id, s)).toMap
-
-      val problem = new BasicRoutingProblem(busStops, modifiedSuggestions)
-      val algorithm = new BasicRoutingAlgorithm(problem)
-
-      def mapBackSuggestions(route: Route): Route =
-        // Translate the activities into their original time
-        new Route(
-          route.routingProblem,
-          route.activities.map({
-            case Pickup(r, s) =>
-              val modifiedSuggestion = r
-                .asInstanceOf[Request.RequestFromSuggestion]
-                .suggestion
-
-              Pickup(
-                new Request.RequestFromSuggestion(
-                  r.routingProblem,
-                  suggestionsById(modifiedSuggestion.id)
-                ),
-                s)
-            case Dropoff(r, s) =>
-              val modifiedSuggestion = r
-                .asInstanceOf[Request.RequestFromSuggestion]
-                .suggestion
-
-              Dropoff(
-                new Request.RequestFromSuggestion(
-                  r.routingProblem,
-                  suggestionsById(modifiedSuggestion.id)
-                ),
-                s)
-            case a @ _ => a
-          }),
-          route.time
-        )
-
-      context.become(
-        algorithm.solve(
-          context,
-          (routes) => this.lastResults = routes.map(mapBackSuggestions)),
-        discardOld = false)
-
-      sender ! RoutingStarted
-
-    case StopRouting =>
-      sender ! RoutingStopped
-
     case CurrentSolution =>
       sender ! lastResults
 
