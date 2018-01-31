@@ -10,15 +10,14 @@ trait Request {
   def routingProblem : RoutingProblem
   def start: Point
   def end: Point
-  def actualTime: Double
+  def time: Double
   def weight : Int
 
-  val time = 8*3600*1000
-  val startStops = routingProblem.nearBusStopsStart(start).toIndexedSeq
-  val endStops = routingProblem.nearBusStopsEnd(end).toIndexedSeq
+  lazy val startStops = routingProblem.nearBusStopsStart(start).toIndexedSeq
+  lazy val endStops = routingProblem.nearBusStopsEnd(end).toIndexedSeq
 
-  val startStopsSet = startStops.toSet
-  val endStopsSet = endStops.toSet
+  lazy val startStopsSet = startStops.toSet
+  lazy val endStopsSet = endStops.toSet
 
   lazy val startWGS = Util.toWGS(start)
   lazy val endWGS = Util.toWGS(end)
@@ -47,7 +46,7 @@ object Request {
   class RequestFromSuggestion(val routingProblem : RoutingProblem, val suggestion: Suggestion) extends Request {
     override val start: (Double, Double) = suggestion.start
     override val end: (Double, Double) = suggestion.end
-    override val actualTime: Double = suggestion.time
+    override val time: Double = suggestion.time
     override val weight: Int = suggestion.weight
   }
 }
@@ -55,6 +54,6 @@ object Request {
 class BasicRequest(val routingProblem: RoutingProblem,
                    val start: (Double, Double),
                    val end: (Double, Double),
-                   val actualTime: Double,
+                   val time: Double,
                    val weight: Int = 1
                   ) extends Request
