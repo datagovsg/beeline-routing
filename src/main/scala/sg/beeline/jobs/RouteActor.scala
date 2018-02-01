@@ -31,51 +31,16 @@ class RouteActor extends Actor {
         case _ => Import.getLiveRequests()
       }
       val suggestionsById = suggestions.map(s => (s.id, s)).toMap
-      val modifiedSuggestions = suggestions
-        .map({ x => Suggestion(x.id, x.start, x.end, 8 * 3600 * 1000) }) // Group them all into the same time slot
 
       val beelineProblem = {
         new BasicRoutingProblem(
           busStops,
-          modifiedSuggestions,
+          suggestions,
           startWalkingDistance = settings.startWalkingDistance,
-          endWalkingDistance = settings.endWalkingDistance
+          endWalkingDistance = settings.endWalkingDistance,
+          overrideRouteTime = Some(8 * 3600e3)
         )
       }
-
-      def mapBackSuggestions(route: Route): Route =
-      // Translate the activities into their original time
-        new Route(
-          route.routingProblem,
-          route.activities.map({
-            case Pickup(r, s) =>
-              val modifiedSuggestion = r
-                .asInstanceOf[Request.RequestFromSuggestion]
-                .suggestion
-
-              Pickup(
-                new Request.RequestFromSuggestion(
-                  r.routingProblem,
-                  // Seed suggestion won't be available
-                  suggestionsById.getOrElse(modifiedSuggestion.id, modifiedSuggestion)
-                ),
-                s)
-            case Dropoff(r, s) =>
-              val modifiedSuggestion = r
-                .asInstanceOf[Request.RequestFromSuggestion]
-                .suggestion
-
-              Dropoff(
-                new Request.RequestFromSuggestion(
-                  r.routingProblem,
-                  // Seed suggestion won't be available
-                  suggestionsById.getOrElse(modifiedSuggestion.id, modifiedSuggestion)
-                ),
-                s)
-            case a @ _ => a
-          }),
-          route.time
-        )
 
       val beelineRecreate = new BeelineRecreate(
         beelineProblem,
@@ -89,10 +54,11 @@ class RouteActor extends Actor {
             0,
             Util.toSVY((sLng, sLat)),
             Util.toSVY((eLng, eLat)),
-            8 * 3600e3
-          )
+            time
+          ),
+          8 * 3600e3
         )
-      ).toList.map(mapBackSuggestions)
+      ).toList
   }
 
   def receive = {
