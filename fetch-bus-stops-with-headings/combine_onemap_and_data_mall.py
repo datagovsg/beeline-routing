@@ -43,8 +43,32 @@ datamall_stops_by_stop = [
     for r in datamall_stops
 ]
 
-combined = dict(
-    onemap_stops_by_stop + datamall_stops_by_stop
+# Take the location data from OneMap (more accurate)
+# but the bus stop data from DataMall (more info)
+def combine_onemap_and_datamall(onemap_stops_by_stop, datamall_stops_by_stop):
+    keys = onemap_stops_by_stop.keys() + datamall_stops_by_stop.keys()
+
+    lat = lambda k: (
+        onemap_stops_by_stop.get(k) or
+        datamall_stops_by_stop.get(k)
+    )['Latitude']
+
+    lng = lambda k: (
+        onemap_stops_by_stop.get(k) or
+        datamall_stops_by_stop.get(k)
+    )['Longitude']
+
+    return {
+        k: dict(
+            (onemap_stops_by_stop.get(k, dict()).items()) +
+            (datamall_stops_by_stop.get(k, dict()).items()) +
+            [('Latitude', lat(k)), ('Longitude', lng(k))]
+        )
+        for k in keys
+    }
+
+combined = combine_onemap_and_datamall(
+    dict(onemap_stops_by_stop), dict(datamall_stops_by_stop)
 )
 
 print "Combining {} from Data Mall and {} from OneMap into {} bus stops" \

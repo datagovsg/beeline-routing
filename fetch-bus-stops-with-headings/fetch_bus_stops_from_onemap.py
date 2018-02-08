@@ -11,7 +11,7 @@ data = []
 r = requests.get('https://developers.onemap.sg/publicapi/publicsessionid')
 token = r.json()['access_token']
 
-for start in range(0,100):
+for start in range(0, 100):
     print 'Fetching bus stops starting with {0:02d}'.format(start)
 
     rset = 1
@@ -36,4 +36,4 @@ json.dump([
     result
     for result_set in data
     for result in result_set['results']
-], open('bus_stops_from_onemap.json', 'w'))
+], open('bus_stops_from_onemap.json', 'w'), indent=2)

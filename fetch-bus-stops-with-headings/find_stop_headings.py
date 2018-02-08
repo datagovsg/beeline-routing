@@ -1,20 +1,17 @@
-# In[1]:
-
 import requests
 import json
+import itertools as it
+import pyproj
 
+SVY = pyproj.Proj(init='epsg:3414')
 
-# In[2]:
 
 BusRoutes = json.load(open('./bus_routes_from_data_mall.json'))
-
-
-# In[3]:
-
-BusStops = json.load(open('./combined_bus_stops.json'))
-
-
-# In[42]:
+# BusStops = json.load(open('./combined_bus_stops.json'))
+BusStops = {
+    b['BusStopCode']: b
+    for b in json.load(open('./bus_stops_from_data_mall.json'))
+}
 
 def uniq_by(ls, key=lambda x: x):
     s = set()
@@ -31,10 +28,6 @@ def uniq_by(ls, key=lambda x: x):
 def dedup_successive(ls):
     return [x for x,y in it.groupby(ls)]
 
-
-# In[43]:
-
-import itertools as it
 
 stopsByRoute = []
 
@@ -70,26 +63,7 @@ stop_pairs = [
 stop_pairs = [x for x in stop_pairs if not x[0].startswith('E') and not x[1].startswith('E')]
 stop_pairs = list(set(stop_pairs))
 
-stop_pairs[1]
-
-
-# In[45]:
-
-filter(lambda (x,y): x == y, stop_pairs)
-
-
-# In[46]:
-
-import pyproj
-svy = pyproj.Proj(init='epsg:3414')
-
-
-# In[ ]:
-
-
-
-
-# In[47]:
+print(stop_pairs[1])
 
 def make_request(pair):
     ll1 = BusStops[pair[0]]
@@ -130,6 +104,8 @@ pair_routes = [x for x in pair_routes if x[0] != None]
 
 # Display a routed path
 
+print pair_routes
+
 import folium
 
 m = folium.Map(location=[1.38, 103.8], zoom_start=12)
@@ -145,8 +121,8 @@ def swap((x,y)):
     return (y,x)
 
 def heading(ll1, ll2):
-    xy1 = svy(*swap(ll1))
-    xy2 = svy(*swap(ll2))
+    xy1 = SVY(*swap(ll1))
+    xy2 = SVY(*swap(ll2))
 
     return (xy2[0] - xy1[0], xy2[1] - xy1[1])
 

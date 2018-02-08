@@ -8,24 +8,20 @@ credentials = {
     "uuid": None
 }
 
-def authenticate(api_token, uuid):
+def authenticate(api_token):
     credentials['api_token'] = api_token
-    credentials['uuid'] = uuid
 
 def get(service, start = 0, end=None):
-    conn = HTTPConnection('datamall2.mytransport.sg')
-
     return_value = []
 
     while end == None or start < end:
         print  '/ltaodataservice/%s?$skip=%i' % (service, start)
-        r = request.get('http://datamall2.mytransport.sg/ltaodataservice/%s?$skip=%i' % (service, start),
+        r = requests.get('http://datamall2.mytransport.sg/ltaodataservice/%s?$skip=%i' % (service, start),
             headers = {
                 'AccountKey': credentials['api_token'],
-                'UniqueUserId': credentials['uuid'],
+                # 'UniqueUserId': credentials['uuid'],
                 'Accept': 'application/json'
             })
-        )
 
         data = r.json()
 
@@ -34,6 +30,6 @@ def get(service, start = 0, end=None):
         if len(data['value']) == 0:
             break
 
-        start += 50
+        start += len(data['value'])
 
     return return_value
