@@ -24,6 +24,7 @@ object Import {
 
     jsonData.extract[Array[BusStopSchema]]
         .zipWithIndex
+        .filter(_._1.Longitude != 0 && _._1.Latitude != 0)
         .map({
           case (b, i) => BusStop(
             (b.Longitude, b.Latitude),
@@ -70,6 +71,9 @@ object Import {
       new java.util.zip.GZIPInputStream(
         new java.io.FileInputStream("./distances_cache.dat.gz")))
 
+    /* FIXME Hack: Slow down all timings by 50% to account for peak
+      hour bad traffic
+     */
     val arr = ois.readObject().asInstanceOf[Array[Array[Double]]]
     arr.foreach { row =>
       row.indices.foreach { i =>
