@@ -20,7 +20,7 @@ def lat_lng_distance(ll1, ll2):
 
     D_LNG = (ll1[1] - ll2[1])
     D_LAT = (ll1[0] - ll2[0])
-    SUM_LAT = (ll1[0] - ll2[0])
+    SUM_LAT = (ll1[0] + ll2[0])
 
     D_X = radians(D_LNG) * math.cos(radians(SUM_LAT) / 2)
     D_Y = radians(D_LAT)

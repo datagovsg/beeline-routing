@@ -210,9 +210,19 @@ stop_average_headings
 # In[78]:
 
 def add_heading(d, h):
-    return dict(
-        d.items() + [(u'Heading', None if h is None else h / math.pi * 180)]
-    )
+    if h is None:
+        return dict(
+            d.items() + [
+                (u'Heading', None),
+                (u'AutoHeading', False),
+            ]
+        )
+    else:
+        return dict(
+            d.items() + [
+                (u'Heading', h),
+                (u'AutoHeading', True),
+            ])
 
 bus_stops_with_headings = [
     add_heading(s, stop_average_headings.get(s['BusStopCode']))
