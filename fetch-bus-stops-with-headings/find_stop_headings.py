@@ -197,7 +197,7 @@ def average_heading(xys):
 
         acc += xy_normalized
 
-    return math.atan2(*acc)
+    return math.atan2(*acc) / math.pi * 180
 
 stop_average_headings = dict([
     (s, average_heading(x))
