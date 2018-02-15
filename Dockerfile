@@ -29,8 +29,9 @@ COPY ./onemap/mrt-stations.json /app
 COPY ./config.properties /app
 
 COPY --from=compile /build/target/scala-2.11/beeline-routing-assembly*.jar /app/beeline-routing.jar
-COPY ./SG.pbf /app/SG.pbf
-RUN wget https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf -O /app/SG.pbf
+RUN apk add --no-cache curl && \
+	curl https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf -o /app/SG.pbf && \
+	apk del curl
 
 RUN java -jar /app/beeline-routing.jar cache
 
