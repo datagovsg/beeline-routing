@@ -24,7 +24,7 @@ object Import {
 
     jsonData.extract[Array[BusStopSchema]]
         .zipWithIndex
-        .filter(_._1.Longitude != 0 && _._1.Latitude != 0)
+        .filter(s => s._1.Longitude != 0 && s._1.Latitude != 0)
         .map({
           case (b, i) => BusStop(
             (b.Longitude, b.Latitude),

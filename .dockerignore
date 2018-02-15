@@ -1,6 +1,6 @@
-src
-srcjs
-project
+project/build
+project/target
+target
 node_modules
 logs
 .git
