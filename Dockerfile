@@ -42,13 +42,12 @@ WORKDIR /app
 
 COPY --from=one /app/SG-gh /app/SG-gh
 COPY --from=one /app/distances_cache.dat.gz /app
-COPY ./distances_cache.dat.gz /app
 
 COPY ./onemap/bus-stops-headings.json /app/onemap/bus-stops-headings.json
 COPY ./onemap/mrt-stations.json /app
 COPY ./config.properties /app
 
-COPY --from=compile ./target/scala-2.11/beeline-routing-assembly*.jar /app/beeline-routing.jar
+COPY --from=compile /build/target/scala-2.11/beeline-routing-assembly*.jar /app/beeline-routing.jar
 
 ENV PORT 5000
 
