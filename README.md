@@ -69,3 +69,7 @@ To derive the heading of the bus stop, we take successive stop pairs on existing
 routes, route them using GraphHopper (we assume it's trivial enough to route
 between successive stops without having to do illegal U-turns) and take the initial and final
 headings from the route path to determine the heading of the bus stop.
+
+Contributing
+============
+We welcome contributions to code open sourced by the Government Technology Agency of Singapore. All contributors will be asked to sign a Contributor License Agreement (CLA) in order to ensure that everybody is free to use their contributions.
