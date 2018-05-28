@@ -63,5 +63,5 @@ object FuzzyDistanceClusterApp {
       .foreach {
         case ((x, y), weight) => println(s"$x $y $weight")
       }
-}
+  }
 }
