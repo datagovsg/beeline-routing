@@ -17,7 +17,7 @@ import scala.annotation.tailrec
   * Input:
   * <space> refers to any whitespace
   *
-  * NUM_CLUSTERS <space> CLUSTERING_DISTANCE (metres) <space>
+  * CLUSTERING_DISTANCE (metres) <space> NUM_CLUSTERS <space>
   *   POINT_0_X <space> POINT_0_Y <space>
   *   POINT_1_X <space> POINT_1_Y <space>
   *   POINT_2_X <space> POINT_2_Y <space>
