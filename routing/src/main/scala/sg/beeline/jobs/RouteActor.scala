@@ -27,7 +27,7 @@ class RouteActor extends Actor {
   def routeFromRequest(suggestRequest: SuggestRequest) = suggestRequest match {
     case SuggestRequest(sLat, sLng, eLat, eLng, time, settings) =>
       val suggestions : Seq[Suggestion] = settings.dataSource match {
-        case "ezlink" => Import.getEzlinkRequests
+        case "ezlink" => throw new UnsupportedOperationException("EZlink is not supported")
         case _ => Import.getLiveRequests()
       }
       val suggestionsById = suggestions.map(s => (s.id, s)).toMap
