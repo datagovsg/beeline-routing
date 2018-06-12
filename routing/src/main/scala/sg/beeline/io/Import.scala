@@ -3,8 +3,6 @@ package sg.beeline.io
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
 
-import org.json4s._
-import org.json4s.native.JsonMethods._
 import sg.beeline.problem.{BusStop, BusStops, MrtStation, Suggestion}
 import sg.beeline.util.{ExpiringCache, Util}
 
@@ -18,22 +16,26 @@ case class BusStopSchema(Latitude: Double, Longitude: Double, Heading: Option[Do
 object Import {
 
   lazy val getBusStopsOnly = {
-    implicit val formats = DefaultFormats + FieldSerializer[BusStopSchema]()
-    val jsonText = Source.fromFile("onemap/bus-stops-headings.json").mkString
-    val jsonData = parse(jsonText)
+    implicit val busStopSchemaDecoder = _root_.io.circe.generic
+      .semiauto.deriveDecoder[BusStopSchema]
 
-    jsonData.extract[Array[BusStopSchema]]
-        .zipWithIndex
-        .filter(s => s._1.Longitude != 0 && s._1.Latitude != 0)
-        .map({
-          case (b, i) => BusStop(
-            (b.Longitude, b.Latitude),
-            b.Heading.getOrElse(Double.NaN),
-            b.Description,
-            b.RoadName,
-            i
-          )
-        })
+    val stream = this.getClass.getResourceAsStream("/bus-stops-headings.json")
+    val jsonData = _root_.io.circe.parser.decode[List[BusStopSchema]](
+      scala.io.Source.fromInputStream(stream).mkString
+    ).right.get
+
+    jsonData
+      .zipWithIndex
+      .filter(s => s._1.Longitude != 0 && s._1.Latitude != 0)
+      .map({
+        case (b, i) => BusStop(
+          (b.Longitude, b.Latitude),
+          b.Heading.getOrElse(Double.NaN),
+          b.Description,
+          b.RoadName,
+          i
+        )
+      })
   }
 
   lazy val getBusStops = {
@@ -46,21 +48,22 @@ object Import {
   }
 
   lazy val getMrtStations = {
-    implicit val formats = DefaultFormats
-    val jsonText = Source.fromFile("mrt-stations.json").mkString
-    val jsonData = parse(jsonText).asInstanceOf[JArray]
+    implicit val busStopSchemaDecoder = _root_.io.circe.generic
+      .semiauto.deriveDecoder[BusStopSchema]
 
-    jsonData.arr
+    val stream = this.getClass.getResourceAsStream("/mrt-stations.json")
+    val jsonData = _root_.io.circe.parser.decode[List[BusStopSchema]](
+      scala.io.Source.fromInputStream(stream).mkString
+    ).right.get
+
+    jsonData
       .zipWithIndex
       .map({
         case(v, i) => new MrtStation(
-          (
-            (v \ "Longitude").extract[Double],
-            (v \ "Latitude").extract[Double]
-          ),
-          (v \ "Heading").extractOrElse[Double](Double.NaN),
-          (v \ "Description").extract[String],
-          (v \ "RoadName").extract[String],
+          (v.Longitude, v.Latitude),
+          v.Heading.getOrElse(Double.NaN),
+          v.Description,
+          v.RoadName,
           i
         )
       })
@@ -69,7 +72,7 @@ object Import {
   lazy val distanceMatrix = {
     val ois = new java.io.ObjectInputStream(
       new java.util.zip.GZIPInputStream(
-        new java.io.FileInputStream("./distances_cache.dat.gz")))
+        this.getClass.getResourceAsStream("/distances_cache.dat.gz")))
 
     /* FIXME Hack: Slow down all timings by 50% to account for peak
       hour bad traffic
@@ -144,28 +147,5 @@ object Import {
           })
 
     Await.result(db.run(suggestions), 60 seconds)
-  }
-
-  lazy val getEzlinkRequests = {
-    import org.json4s.native.JsonMethods._
-
-    implicit val formats = DefaultFormats
-    val jsonText = new java.util.Scanner(new GZIPInputStream(new FileInputStream("ezlink.json.gz")))
-        .useDelimiter("\\Z").next()
-    val jsonData = parse(jsonText).asInstanceOf[JArray]
-
-    jsonData.arr
-      .filter(_(5).extract[String] != null)
-      .zipWithIndex
-      .map({
-        case (v, index) => Suggestion(
-          id = index,
-          start = Util.toSVY((v(1).extract[Double], v(0).extract[Double])),
-          end = Util.toSVY((v(3).extract[Double], v(2).extract[Double])),
-          actualTime = convertTime(v(5).extract[String]),
-          weight = v(4).extract[Int]
-        )
-      })
-      .filter(_.weight > 25)
   }
 }

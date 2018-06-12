@@ -2,21 +2,20 @@ package sg.beeline.web
 
 import java.util.{NoSuchElementException, UUID}
 
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import akka.http.scaladsl.marshalling.GenericMarshallers._
-import akka.http.scaladsl.marshalling.PredefinedToEntityMarshallers._
-import akka.http.scaladsl.marshalling.PredefinedToResponseMarshallers._
-import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.model.{HttpCharsets, HttpEntity, MediaType, StatusCodes}
 import akka.http.scaladsl.server.{Directives, ExceptionHandler}
 import akka.pattern.ask
 import sg.beeline.JobQueueActor
 import sg.beeline.JobQueueActor.{InitRequest, PollResult, ResultPendingException}
 import sg.beeline.io.Import
 import sg.beeline.jobs.RouteActor
-import sg.beeline.problem.{Dropoff, Pickup, Route, BusStop, Suggestion, Request}
+import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{Geo, Util, kdtreeQuery}
-import spray.json._
+import _root_.io.circe._
+import akka.http.scaladsl.marshalling.PredefinedToEntityMarshallers
+import akka.http.scaladsl.server.directives.ParameterDirectives.ParamMagnet
+import akka.http.scaladsl.unmarshalling.{PredefinedFromEntityUnmarshallers, PredefinedFromStringUnmarshallers, Unmarshaller}
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -24,34 +23,32 @@ import scala.util.Try
 case class Stop(busStop : BusStop, numBoard : Int, numAlight: Int) {}
 case class RouteWithPath(route: Route)
 
-object SuggestionJsonFormat extends RootJsonFormat[Suggestion] {
-  def write(suggestion: Suggestion) =
-    JsObject(
-      "id" -> JsNumber(suggestion.id),
-      "start" -> RouteJsonFormat.latLng(Util.toWGS(suggestion.start)),
-      "end" -> RouteJsonFormat.latLng(Util.toWGS(suggestion.end)),
-      "time" -> JsNumber(suggestion.actualTime)
+object SuggestionJsonEncoder extends Encoder[Suggestion] {
+  override def apply(suggestion: Suggestion): Json =
+    Json.obj(
+      "id" -> Json.fromInt(suggestion.id),
+      "start" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(suggestion.start))),
+      "end" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(suggestion.end))),
+      "time" -> Json.fromDouble(suggestion.actualTime).get
     )
-  def read(value : JsValue) = throw new UnsupportedOperationException()
 }
 
-object RequestJsonFormat extends RootJsonFormat[Request] {
-  def write(request: Request) =
-    JsObject(
-      "start" -> RouteJsonFormat.latLng(Util.toWGS(request.start)),
-      "end" -> RouteJsonFormat.latLng(Util.toWGS(request.end)),
-      "time" -> JsNumber(request.actualTime)
+object RequestJsonEncoder extends Encoder[Request] {
+  override def apply(request: Request) =
+    Json.obj(
+      "start" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(request.start))),
+      "end" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(request.end))),
+      "time" -> Json.fromDouble(request.actualTime).get
     )
-  def read(value : JsValue) = throw new UnsupportedOperationException()
 }
 
-object RouteJsonFormat extends RootJsonFormat[Route] {
-  def latLng(d: (Double, Double)) = JsObject(
-    "lat" -> JsNumber(d._2),
-    "lng" -> JsNumber(d._1)
+object RouteJsonEncoder extends Encoder[Route] {
+  def latLng(d: (Double, Double)) = List(
+    "lat" -> Json.fromDouble(d._2).get,
+    "lng" -> Json.fromDouble(d._1).get
   )
 
-  def write(route: Route) : JsValue = {
+  override def apply(route: Route) : Json = {
     val positions = route.activitiesWithTimes.flatMap({
       case (Pickup(r, l), minTime, maxTime) => Some((Stop(l, 1, 0), minTime, maxTime))
       case (Dropoff(r, l), minTime, maxTime) => Some((Stop(l, 0, 1), minTime, maxTime))
@@ -69,31 +66,42 @@ object RouteJsonFormat extends RootJsonFormat[Route] {
       }
 
     val positionsJson = positions.map({ case (Stop(bs, board, alight), minTime, maxTime) =>
-      JsObject(
-        latLng(bs.coordinates).fields ++
+      Json.fromFields(
+        latLng(bs.coordinates) ++
         List(
-          ("description" -> JsString(bs.description)),
-          ("numBoard" -> JsNumber(board)),
-          ("numAlight" -> JsNumber(alight)),
-          ("index" -> JsNumber(bs.index)),
-          ("minTime" -> JsNumber(minTime)),
-          ("maxTime" -> JsNumber(maxTime))
+          "description" -> Json.fromString(bs.description),
+          "numBoard" -> Json.fromInt(board),
+          "numAlight" -> Json.fromInt(alight),
+          "index" -> Json.fromInt(bs.index),
+          "minTime" -> Json.fromDouble(minTime).get,
+          "maxTime" -> Json.fromDouble(maxTime).get
         )
       )
-    }).toList
+    })
 
     val requestsJson = route.activities
       .flatMap({ case Pickup(request, loc) => Some(request) case _ => None})
-      .map(request => RequestJsonFormat.write(request))
+      .map(request => RequestJsonEncoder(request))
       .toList
 
-    JsObject(
-      "stops" -> JsArray(positionsJson),
-      "requests" -> JsArray(requestsJson)
+    Json.obj(
+      "stops" -> Json.arr(positionsJson:_*),
+      "requests" -> Json.arr(requestsJson:_*)
     )
   }
+}
 
-  def read(value : JsValue) = throw new UnsupportedOperationException()
+object BusStopEncoder extends Encoder[BusStop] {
+  override def apply(a: BusStop): Json = a match {
+    case BusStop((x, y), heading, description, roadName, index) =>
+      Json.obj(
+        "coordinates" -> Json.arr(Json.fromDoubleOrNull(x), Json.fromDoubleOrNull(y)),
+        "heading" -> Json.fromDoubleOrNull(heading),
+        "description" -> Json.fromString(description),
+        "roadName" -> Json.fromString(roadName),
+        "index" -> Json.fromInt(index)
+      )
+  }
 }
 
 case class CircularRegionRequest(lat : Double, lng : Double, radius : Double) {}
@@ -108,23 +116,43 @@ case class SuggestRequest(startLat: Double,
 case class PathRequestsRequest(maxDistance: Double)
 case class LatLng(lat : Double, lng : Double)
 
-trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
-  implicit val latLngFormat = jsonFormat2(LatLng)
-  implicit val busStopFormat : JsonFormat[BusStop] = jsonFormat[
-    (Double, Double), Double, String, String, Int, BusStop
-    ](
-    BusStop,
-    "coordinates", "heading", "description", "roadName", "index"
+trait JsonSupport extends PredefinedToEntityMarshallers {
+  import _root_.io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
+
+  implicit val latLngEncoder = deriveEncoder[LatLng]
+  implicit val busStopEncoder = BusStopEncoder
+  implicit val routeFormat = RouteJsonEncoder
+  implicit val suggestionFormat = SuggestionJsonEncoder
+  implicit val requestFormat = RequestJsonEncoder
+  implicit val beelineRecreateSettingsDecoder = deriveDecoder[BeelineRecreateSettings]
+
+  implicit val jsonMarshaller = stringMarshaller(
+    MediaType.applicationWithFixedCharset(
+      "json",
+      HttpCharsets.`UTF-8`)
   )
-  implicit val routeFormat = RouteJsonFormat
-  implicit val suggestionFormat = SuggestionJsonFormat
-  implicit val requestFormat = RequestJsonFormat
-  implicit val beelineRecreateSettingsFormat = jsonFormat6(BeelineRecreateSettings.apply)
+    .compose(
+      (json: Json) => _root_.io.circe.Printer.noSpaces.pretty(json)
+    )
+
+  /* Needed to unmarshall JSON in Query Params */
+  implicit val jsonUnmarshaller = Unmarshaller.strict[String, Json](s =>
+    _root_.io.circe.parser.parse(s) match {
+      case Right(t) => t
+      case Left(e) => throw e
+    })
+  implicit val beelineRecreateSettingsUnmarshaller: Unmarshaller[String, BeelineRecreateSettings]
+  = jsonUnmarshaller
+    .map(s => s.as[BeelineRecreateSettings] match {
+      case Right(t) => t
+      case Left(e) => throw e
+    })
 }
 
 // this trait defines our service behavior independently from the service actor
 object IntelligentRoutingService extends Directives with JsonSupport {
   import akka.actor._
+  import _root_.io.circe.syntax._
 
   import ExecutionContext.Implicits.global
   implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
@@ -135,19 +163,19 @@ object IntelligentRoutingService extends Directives with JsonSupport {
   val myRoute =
     path("bus_stops") {
       get {
-        complete(Import.getBusStopsOnly)
+        complete(Import.getBusStopsOnly.asJson)
       }
     } ~
     path("bus_stops" / Remaining) { remaining =>
       get {
         val requestedSet = remaining.split("/").filter(_ != "").map(s => s.toInt)
 
-        complete(
+        complete({
           if (requestedSet.isEmpty)
             Import.getBusStopsOnly
           else
             Import.getBusStopsOnly.filter(requestedSet contains _.index)
-        )
+        }.asJson)
       }
     } ~
     path("paths" / Remaining) { remaining =>
@@ -167,7 +195,7 @@ object IntelligentRoutingService extends Directives with JsonSupport {
         }).toList
 
         complete(
-          polyline.map(_.map({case (x,y) => LatLng(y,x)}))
+          polyline.map(_.map({case (x,y) => LatLng(y,x)})).asJson
         )
       }
     } ~
@@ -181,7 +209,7 @@ object IntelligentRoutingService extends Directives with JsonSupport {
             Import.distanceMatrix(aIndex)(bIndex)
         }).toArray
 
-        complete(travelTimes)
+        complete(travelTimes.asJson)
       }
     } ~
     /**
@@ -214,7 +242,7 @@ object IntelligentRoutingService extends Directives with JsonSupport {
             minPickupStop < maxDropoffStop
           }
 
-          complete {
+          complete({
             val allBusStops = Import.getBusStopsOnly
             val busStops = remaining.split("/").filter(_ != "")
               .map(s => allBusStops(s.toInt))
@@ -222,7 +250,7 @@ object IntelligentRoutingService extends Directives with JsonSupport {
 
             suggestions
             .filter(suggestion => pathServesSuggestion(busStops, suggestion))
-          }
+          }.asJson)
         }
       }
     } ~
@@ -237,10 +265,12 @@ object IntelligentRoutingService extends Directives with JsonSupport {
           'settings.as[BeelineRecreateSettings]
         ).as(SuggestRequest) { suggestRequest =>
           complete {
-            implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
+            implicit val timeout = new akka.util.Timeout(300e3.toLong,
+              java.util.concurrent.TimeUnit.MILLISECONDS)
 
             (routingActor ? suggestRequest)
-                .map(_.asInstanceOf[Try[List[Route]]])
+              .mapTo[Try[List[Route]]]
+              .map(_.map(_.asJson))
           }
         } ~
         {
@@ -250,8 +280,6 @@ object IntelligentRoutingService extends Directives with JsonSupport {
     } ~
     path("routing" / "begin") {
       get {
-        implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
-
         parameters(
           'startLat.as[Double],
           'startLng.as[Double],
@@ -261,10 +289,10 @@ object IntelligentRoutingService extends Directives with JsonSupport {
           'settings.as[BeelineRecreateSettings]
         ).as(SuggestRequest) { suggestRequest =>
           complete {
+            implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
+
             (jobQueueActor ? InitRequest(suggestRequest))
-              .map({
-                case uuid: String => uuid
-              })
+              .mapTo[String]
           }
         }
       }
@@ -283,7 +311,8 @@ object IntelligentRoutingService extends Directives with JsonSupport {
           }) {
             complete {
               (jobQueueActor ? PollResult(UUID.fromString(uuid)))
-                .map(_.asInstanceOf[Try[Try[List[Route]]]])
+                .mapTo[Try[Try[List[Route]]]]
+                .map(_.flatten.map(_.asJson))
             }
           }
         }
