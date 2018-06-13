@@ -1,6 +1,7 @@
 package sg.beeline
 
 import org.scalatest._
+import sg.beeline.io.DataSource
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate._
 import sg.beeline.util.Util.toSVY
@@ -17,7 +18,7 @@ class RuinSpec extends FlatSpec with Matchers {
   val busStops = latlngs.zipWithIndex.map({
     case (ll, i) => BusStop(ll, i, s"BS ${i}", s"R ${i}", i)
     case _ => throw new Error()
-  })
+  }).toArray
 
   val perturb : ((Double,Double)) => (Double,Double) =
     {case (x: Double,y :Double) => (x + Math.random() * 0.0001 - 0.00005, y + Math.random() * 0.0001 - 0.00005) }
@@ -27,10 +28,15 @@ class RuinSpec extends FlatSpec with Matchers {
 
   val requests = (starts zip ends).zipWithIndex.map({case ((s,e), i) => Suggestion(i, s, e, TIME)})
 
-  val problem = new BasicRoutingProblem(
-    BusStops(busStops, (b1, b2) => kdtreeQuery.squaredDistance(b1.xy, b2.xy) / 11 / 60),
-    requests
-  )
+  val testDataSource = new DataSource {
+    override def getMrtStations: Seq[MrtStation] = throw new UnsupportedOperationException
+    override def getBusStops: BusStops =
+      BusStops(busStops,
+        (b1, b2) => kdtreeQuery.squaredDistance(busStops(b1).xy, busStops(b2).xy) / 11 / 60)
+    override def getBusStopsOnly: Seq[BusStop] = busStops
+  }
+
+  val problem = new BasicRoutingProblem(requests, datasource = testDataSource)
 
   val (routes, validRequests, badRequests) = problem.initialize
 

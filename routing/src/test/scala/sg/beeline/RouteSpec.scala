@@ -1,6 +1,7 @@
 package sg.beeline
 
 import org.scalatest._
+import sg.beeline.io.DataSource
 import sg.beeline.problem._
 
 class RouteSpec extends FlatSpec with Matchers {
@@ -22,9 +23,17 @@ class RouteSpec extends FlatSpec with Matchers {
       (List(), List(), List())
     }
   }
+  val testDataSource = new DataSource {
+    override def getMrtStations: Seq[MrtStation] = throw new UnsupportedOperationException
+
+    override def getBusStops: BusStops = throw new UnsupportedOperationException
+
+    override def getBusStopsOnly: Seq[BusStop] = ZeroDistance.busStops
+  }
 
   class TestActivity(val routingProblem: RoutingProblem, val busStop: BusStop,
-      val st : Double, val et : Double, val dt: Double, val svct: Double) extends Pickup(new BasicRequest(routingProblem, (0,0), (0,0), 0), busStop) {
+      val st : Double, val et : Double, val dt: Double, val svct: Double)
+    extends Pickup(new BasicRequest(routingProblem, (0,0), (0,0), 0, 1, testDataSource), busStop) {
 
     override def minTime = st
     override def maxTime = et
