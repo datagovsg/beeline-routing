@@ -116,7 +116,7 @@ case class SuggestRequest(startLat: Double,
 case class PathRequestsRequest(maxDistance: Double)
 case class LatLng(lat : Double, lng : Double)
 
-trait JsonSupport extends PredefinedToEntityMarshallers {
+trait JsonSupport extends JsonMarshallers {
   import _root_.io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 
   implicit val latLngEncoder = deriveEncoder[LatLng]
@@ -126,23 +126,8 @@ trait JsonSupport extends PredefinedToEntityMarshallers {
   implicit val requestFormat = RequestJsonEncoder
   implicit val beelineRecreateSettingsDecoder = deriveDecoder[BeelineRecreateSettings]
 
-  implicit val jsonMarshaller = stringMarshaller(
-    MediaType.applicationWithFixedCharset(
-      "json",
-      HttpCharsets.`UTF-8`)
-  )
-    .compose(
-      (json: Json) => _root_.io.circe.Printer.noSpaces.pretty(json)
-    )
-
-  /* Needed to unmarshall JSON in Query Params */
-  implicit val jsonUnmarshaller = Unmarshaller.strict[String, Json](s =>
-    _root_.io.circe.parser.parse(s) match {
-      case Right(t) => t
-      case Left(e) => throw e
-    })
   implicit val beelineRecreateSettingsUnmarshaller: Unmarshaller[String, BeelineRecreateSettings]
-  = jsonUnmarshaller
+  = stringToJsonUnmarshaller
     .map(s => s.as[BeelineRecreateSettings] match {
       case Right(t) => t
       case Left(e) => throw e

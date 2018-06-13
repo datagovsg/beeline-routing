@@ -28,7 +28,6 @@ lazy val routing = (project in file("routing"))
     commonSettings,
     name := "routing",
     libraryDependencies ++= Seq(
-//      "org.json4s" %% "json4s-native" % "3.5.2",
       "io.jeo" % "jeo" % "0.7",
       "com.graphhopper" % "graphhopper" % "0.7.0",
       "com.thesamet" %% "kdtree" % "1.0.4",
@@ -36,7 +35,6 @@ lazy val routing = (project in file("routing"))
       scalatest,
       "org.postgresql" % "postgresql" % "42.1.3",
       "com.typesafe.akka"   %% "akka-http" % "10.0.9",
-//      "com.typesafe.akka"   %% "akka-http-spray-json" % "10.0.9",
       "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
       "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
       "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5",
