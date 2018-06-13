@@ -47,7 +47,9 @@ trait JsonSupport extends JsonMarshallers {
 }
 
 // this trait defines our service behavior independently from the service actor
-class IntelligentRoutingService(datasource: DataSource) extends Directives with JsonSupport {
+class IntelligentRoutingService(datasource: DataSource,
+                                suggestionsSource: Seq[Suggestion])
+  extends Directives with JsonSupport {
   import akka.actor._
   import _root_.io.circe.syntax._
 
@@ -55,10 +57,7 @@ class IntelligentRoutingService(datasource: DataSource) extends Directives with 
   implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
   implicit val system = ActorSystem()
   val routingActor = system.actorOf(Props({
-    new RouteActor(datasource, {
-      case "ezlink" => throw new Exception("EZLink is no longer a supported dataset")
-      case _ => Import.getLiveRequests
-    })
+    new RouteActor(datasource, _ => suggestionsSource)
   }), "intelligent-routing")
   val jobQueueActor = system.actorOf(Props(new JobQueueActor(routingActor)), "job-queue")
 
@@ -150,9 +149,7 @@ class IntelligentRoutingService(datasource: DataSource) extends Directives with 
             val allBusStops = datasource.getBusStopsOnly
             val busStops = remaining.split("/").filter(_ != "")
               .map(s => allBusStops(s.toInt))
-            val suggestions = Import.getLiveRequests
-
-            suggestions
+            suggestionsSource
             .filter(suggestion => pathServesSuggestion(busStops, suggestion))
           }.asJson)
         }
