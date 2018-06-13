@@ -35,6 +35,9 @@ case class MrtStation(coordinates: Util.Point, heading: Double, description: Str
 case class Suggestion(id: Int, start: Util.Point, end: Util.Point, actualTime: Double, weight : Int = 1) {
   val time = actualTime
 
+  def startLngLat = Util.toWGS(start)
+  def endLngLat = Util.toWGS(end)
+
   override def toString =
     s"Suggestion(${start._1}, ${start._2}) to (${end._1}, ${end._2}) @${time}"
 }

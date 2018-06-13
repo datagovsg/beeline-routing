@@ -5,39 +5,47 @@ package sg.beeline.util
   */
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.util.Random
 ;
 
 object WeightedRandomShuffle {
 
-  def shuffle[A](items : Traversable[A], weights : Traversable[Double])
-                (implicit c : ClassTag[A])= {
-    val arrayed = weights.toArray
-    val arrayedItems = items.toArray[A]
+  def shuffle[A <: AnyRef](items : Traversable[A], weights : Traversable[Double])
+                (implicit c : ClassTag[A]): Seq[A]= {
+    if (items.isEmpty) {
+      Array[A]()
+    } else {
+      val arrayed = weights.toArray
+      val arrayedItems = items.toArray[A]
 
-    // max array length is 2^31-1
-    val root = buildTree(arrayed, 29)
+      // max array length is 2^31-1
+      val root = buildTree(arrayed, 29)
 
-    @tailrec
-    def nextIteration(
-                     acc : List[A],
-                     cache : TreeSumNode,
-                     count : Int
-                     ) : List[A] = {
-      if (count == 0)
-        acc
-      else {
-        val rand = Random.nextDouble * cache.sum
-        val pickIndex = cache.at(rand)
+      @tailrec
+      def nextIteration(
+                         acc : mutable.ArrayBuilder[A],
+                         cache : TreeSumNode,
+                         count : Int
+                       ) : mutable.ArrayBuilder[A] = {
+        if (count == 0) {
+          acc
+        } else {
+          val rand = Random.nextDouble * cache.sum
+          val pickIndex = cache.at(rand)
 
-        nextIteration(
-          arrayedItems(pickIndex) :: acc,
-          cache.updated(pickIndex, 0.0),
-          count - 1)
+          acc += arrayedItems(pickIndex)
+
+          nextIteration(
+            acc,
+            cache.updated(pickIndex, 0.0),
+            count - 1)
+        }
       }
+      nextIteration(new mutable.ArrayBuilder.ofRef[A], root, root.maxIndex + 1)
+        .result()
     }
-    nextIteration(List(), root, root.maxIndex + 1).reverse
   }
 
   def buildTree(array : Array[Double], logMid : Int, offset : Int = 0)
