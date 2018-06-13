@@ -19,9 +19,8 @@ object Import {
     implicit val busStopSchemaDecoder = _root_.io.circe.generic
       .semiauto.deriveDecoder[BusStopSchema]
 
-    val stream = this.getClass.getResourceAsStream("/bus-stops-headings.json")
     val jsonData = _root_.io.circe.parser.decode[List[BusStopSchema]](
-      scala.io.Source.fromInputStream(stream).mkString
+      Source.fromFile("onemap/bus-stops-headings.json").mkString
     ).right.get
 
     jsonData
@@ -51,9 +50,8 @@ object Import {
     implicit val busStopSchemaDecoder = _root_.io.circe.generic
       .semiauto.deriveDecoder[BusStopSchema]
 
-    val stream = this.getClass.getResourceAsStream("/mrt-stations.json")
     val jsonData = _root_.io.circe.parser.decode[List[BusStopSchema]](
-      scala.io.Source.fromInputStream(stream).mkString
+      Source.fromFile("mrt-stations.json").mkString
     ).right.get
 
     jsonData
@@ -72,7 +70,7 @@ object Import {
   lazy val distanceMatrix = {
     val ois = new java.io.ObjectInputStream(
       new java.util.zip.GZIPInputStream(
-        this.getClass.getResourceAsStream("/distances_cache.dat.gz")))
+        new java.io.FileInputStream("./distances_cache.dat.gz")))
 
     /* FIXME Hack: Slow down all timings by 50% to account for peak
       hour bad traffic
