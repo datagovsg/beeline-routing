@@ -11,7 +11,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import Directives._
 import akka.http.scaladsl.model.{StatusCodes, Uri}
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
-import sg.beeline.util.Util
+import sg.beeline.util.{Util, kdtreeQuery}
 
 import scala.annotation.tailrec
 import scala.concurrent.Future
@@ -23,8 +23,8 @@ import scala.util.{Failure, Success, Try}
 class WebSpec extends FunSuite with ScalatestRouteTest {
 
   final private def gridToLngLat(i: Double, j: Double) = {
-    val x = 200 * i
-    val y = 200 * j
+    val x = 250 * i
+    val y = 250 * j
 
     val originLat = 1.33
     val originLng = 103.78
@@ -72,17 +72,17 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
 
   // Make a whole bunch of requests
   val getRequests: Seq[Suggestion] = {
-    List(8.0, 8.5, 9.0, 9.5)
+    genericWrapArray(List(8.0, 8.5, 9.0, 9.5)
       .view
       .flatMap({ hour =>
         (0 until 3000).map({ _ =>
           (index: Int) => {
             val randStart = gridToLngLat(
-              scala.util.Random.nextDouble() * 50,
-              scala.util.Random.nextDouble() * 50)
+              scala.util.Random.nextDouble() * 20,
+              scala.util.Random.nextDouble() * 20)
             val randEnd = gridToLngLat(
-              scala.util.Random.nextDouble() * 50,
-              scala.util.Random.nextDouble() * 50)
+              30 + scala.util.Random.nextDouble() * 20,
+              30 + scala.util.Random.nextDouble() * 20)
 
             Suggestion(index, Util.toSVY(randStart), Util.toSVY(randEnd), hour * 3600 * 1000, 1)
           }
@@ -90,9 +90,14 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       })
       .zipWithIndex
       .map({ case (f, i) => f(i) })
+      .toArray)
   }
 
   val testService = new IntelligentRoutingService(testDataSource, getRequests).myRoute
+
+  // Some assertions on our assumptions
+  require { getRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
+  require { testDataSource.getBusStopsOnly.zipWithIndex.forall { case (o, i) => o.index == i} }
 
   test("/bus_stops fetches all bus stops") {
     Get("/bus_stops") ~> testService ~> check {
@@ -121,6 +126,10 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
     }
   }
 
+  // TODO: Test for the following
+  // - Distance restriction works (all stops are within X m from a request)
+  // - Cluster restriction works (all stops are within X m from centre)
+  // - Implement time restriction
   test("/routing/begin returns a UUID and polling finally returns a result") {
     import _root_.io.circe.syntax._
     import scala.concurrent.duration._
@@ -129,15 +138,9 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       .semiauto.deriveEncoder[BeelineRecreateSettings]
     implicit val defaultTimeout = RouteTestTimeout(10 seconds)
 
-    println(testDataSource.getBusStopsOnly.map(_.coordinates._1).max)
-    println(testDataSource.getBusStopsOnly.map(_.coordinates._2).max)
-
-    println(testDataSource.getBusStopsOnly.map(_.coordinates._1).min)
-    println(testDataSource.getBusStopsOnly.map(_.coordinates._2).min)
-
-    // Use a suggestion from the getRequests() --> ensure that at least this one is served
+        // Use a suggestion from the getRequests() --> ensure that at least this one is served
     Get(Uri("/routing/begin").withQuery(Uri.Query(
-      "startLat" -> getRequests(0).startLngLat._2.toString,
+      "startLat" -> (getRequests(0).startLngLat._2 + 0.0001).toString,
       "startLng" -> getRequests(0).startLngLat._1.toString,
       "endLat" -> getRequests(0).endLngLat._2.toString,
       "endLng" -> getRequests(0).endLngLat._1.toString,
@@ -145,10 +148,10 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       "settings" -> _root_.io.circe.Printer.noSpaces.pretty(
         BeelineRecreateSettings(
           maxDetourMinutes = 2.0,
-          startClusterRadius = 2000,
-          startWalkingDistance = 300,
-          endClusterRadius = 2000,
-          endWalkingDistance = 300
+          startClusterRadius = 1500,
+          startWalkingDistance = 200,
+          endClusterRadius = 1500,
+          endWalkingDistance = 200
         ).asJson
       ))
     )) ~> testService ~> check {
@@ -156,7 +159,6 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       val uuidTry = Try { UUID.fromString(response) }
 
       assert { uuidTry.isSuccess }
-
 
       def tryUntilResult(): Future[String] = {
         Get(Uri("/routing/poll").withQuery(Uri.Query("uuid" -> response))) ~> testService ~>
@@ -194,13 +196,13 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
           assert {
             val arr = m("requests").asArray.get
             arr.nonEmpty && arr.forall({ jobj =>
-              Set("start", "end", "timex")
+              Set("start", "end", "time")
                 .forall(field => jobj.asObject.get.fieldSet contains field)
             })
           }
         })
       })
-      scala.concurrent.Await.result(fut, 40 seconds)
+      scala.concurrent.Await.result(fut, 60 seconds)
     }
   }
 
@@ -219,6 +221,44 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   }
 
   test("/paths_requests/x/y/z returns the requests served by x --> y --> z") {
-    throw new UnsupportedOperationException
+    import sg.beeline.util.kdtreeQuery.squaredDistance
+
+    val servingNth = (n: Int) => {
+      val req = getRequests(n)
+
+      (
+        testDataSource.getBusStopsOnly.find(stop =>
+          squaredDistance(stop.xy, req.start) <= 90000
+        ).get.index,
+        testDataSource.getBusStopsOnly.find(stop =>
+          squaredDistance(stop.xy, req.end) <= 90000
+        ).get.index
+      )
+    }
+
+    val (w, y) = servingNth(100)
+    val (x, z) = servingNth(105)
+
+    // w -> y, x -> z
+    Get(s"/path_requests/$w/$x/$y/$z?maxDistance=300") ~> testService ~> check {
+      val json = _root_.io.circe.parser.parse(responseAs[String]).right.get
+      val jarr = json.asArray.get
+      val indices = jarr.map(j => j.asObject.get.toMap("id").asNumber.get.toInt.get)
+        .toSet
+
+      assert { indices contains 100 }
+      assert { indices contains 105 }
+    }
+
+    // (wrong direction) y -> w , z -> x
+    Get(s"/path_requests/$y/$z/$w/$x?maxDistance=300") ~> testService ~> check {
+      val json = _root_.io.circe.parser.parse(responseAs[String]).right.get
+      val jarr = json.asArray.get
+      val indices = jarr.map(j => j.asObject.get.toMap("id").asNumber.get.toInt.get)
+        .toSet
+
+      assert { !(indices contains 100) }
+      assert { !(indices contains 105) }
+    }
   }
 }

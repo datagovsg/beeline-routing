@@ -136,19 +136,21 @@ class IntelligentRoutingService(datasource: DataSource,
             val minPickupStop =
               busStops.indices
                 .filter(i => withinReach(busStops(i).xy, suggestion.start))
-                .min
+
             val maxDropoffStop =
               busStops.indices
                 .filter(i => withinReach(busStops(i).xy, suggestion.end))
-                .max
 
-            minPickupStop < maxDropoffStop
+            minPickupStop.nonEmpty &&
+              maxDropoffStop.nonEmpty &&
+              minPickupStop.min < maxDropoffStop.max
           }
 
+          val allBusStops = datasource.getBusStopsOnly
+          val busStops = remaining.split("/").filter(_ != "")
+            .map(s => allBusStops(s.toInt))
+
           complete({
-            val allBusStops = datasource.getBusStopsOnly
-            val busStops = remaining.split("/").filter(_ != "")
-              .map(s => allBusStops(s.toInt))
             suggestionsSource
             .filter(suggestion => pathServesSuggestion(busStops, suggestion))
           }.asJson)

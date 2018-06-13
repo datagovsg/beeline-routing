@@ -47,7 +47,7 @@ class RouteActor(datasource: DataSource, suggestionSource: String => Seq[Suggest
         new Request.RequestFromSuggestion(
           beelineProblem,
           Suggestion(
-            0,
+            -999, // Some ID that would not occur naturally in the database
             Util.toSVY((sLng, sLat)),
             Util.toSVY((eLng, eLat)),
             time
