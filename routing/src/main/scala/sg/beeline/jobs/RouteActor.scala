@@ -1,7 +1,7 @@
 package sg.beeline.jobs
 
 import akka.actor.Actor
-import sg.beeline.io.Import
+import sg.beeline.io.{DataSource, Import}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.{BasicRoutingAlgorithm, BeelineRecreate}
 import sg.beeline.util.Util
@@ -20,25 +20,21 @@ case class Polyline(indices : List[Int]) extends RoutingControl
 case class RoutingStopped() extends RoutingNotification
 case class RoutingStarted() extends RoutingNotification
 
-class RouteActor extends Actor {
+class RouteActor(datasource: DataSource, suggestionSource: String => Seq[Suggestion]) extends Actor {
   var lastResults : Traversable[Route] = List()
-  val busStops = Import.getBusStops
 
   def routeFromRequest(suggestRequest: SuggestRequest) = suggestRequest match {
     case SuggestRequest(sLat, sLng, eLat, eLng, time, settings) =>
-      val suggestions : Seq[Suggestion] = settings.dataSource match {
-        case "ezlink" => throw new UnsupportedOperationException("EZlink is not supported")
-        case _ => Import.getLiveRequests()
-      }
+      val suggestions : Seq[Suggestion] = suggestionSource(settings.dataSource)
       val suggestionsById = suggestions.map(s => (s.id, s)).toMap
 
       val beelineProblem = {
         new BasicRoutingProblem(
-          busStops,
           suggestions,
           startWalkingDistance = settings.startWalkingDistance,
           endWalkingDistance = settings.endWalkingDistance,
-          overrideRouteTime = Some(8 * 3600e3)
+          overrideRouteTime = Some(8 * 3600e3),
+          datasource
         )
       }
 
@@ -56,7 +52,8 @@ class RouteActor extends Actor {
             Util.toSVY((eLng, eLat)),
             time
           ),
-          8 * 3600e3
+          8 * 3600e3,
+          datasource
         )
       ).toList
   }

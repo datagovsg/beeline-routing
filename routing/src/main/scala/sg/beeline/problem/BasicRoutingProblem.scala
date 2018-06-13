@@ -1,25 +1,30 @@
 package sg.beeline.problem
 
 import com.thesamet.spatial.KDTreeMap
+import sg.beeline.io.DataSource
 import sg.beeline.ruinrecreate.DirectFerryRecreate
 import sg.beeline.util.Util._
 import sg.beeline.util.{Util, kdtreeQuery}
 
-class BasicRoutingProblem(val busStops: BusStops,
-                          val suggestions: Seq[Suggestion],
+class BasicRoutingProblem(val suggestions: Seq[Suggestion],
                           val startWalkingDistance : Double = 300.0,
                           val endWalkingDistance : Double = 300.0,
-                          val overrideRouteTime: Option[Double] = None) extends RoutingProblem {
-  println(s"Problem with ${suggestions.size} suggestions")
+                          val overrideRouteTime: Option[Double] = None,
+                          val datasource: DataSource)
+  extends RoutingProblem {
 
   type BusStopsTree = KDTreeMap[(Double, Double), BusStop]
+
+  val busStops = datasource.getBusStops
+
+  println(s"Problem with ${suggestions.size} suggestions")
 
   val busStopsTree : BusStopsTree = KDTreeMap.fromSeq(
     busStops.busStops map {x => x.xy -> x}
   )
 
   val requests : Seq[Request] = suggestions.map(sugg =>
-    new Request.RequestFromSuggestion(this, sugg, overrideRouteTime.getOrElse(sugg.time)))
+    new Request.RequestFromSuggestion(this, sugg, overrideRouteTime.getOrElse(sugg.time), datasource))
     .filter(_.startStops.nonEmpty)
     .filter(_.endStops.nonEmpty)
 
@@ -29,7 +34,7 @@ class BasicRoutingProblem(val busStops: BusStops,
 
 
   // The current set of routes for the current iteration
-  def distance(a : BusStop, b: BusStop) : Double = busStops.distanceFunction(a, b)
+  def distance(a : BusStop, b: BusStop) : Double = busStops.distanceFunction(a.index, b.index)
 
   //
   def nearBusStopsStart(origin : Point) =

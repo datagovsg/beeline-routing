@@ -1,8 +1,5 @@
 package sg.beeline.io
 
-import java.io.FileInputStream
-import java.util.zip.GZIPInputStream
-
 import sg.beeline.problem.{BusStop, BusStops, MrtStation, Suggestion}
 import sg.beeline.util.{ExpiringCache, Util}
 
@@ -13,9 +10,15 @@ import scala.io.Source
 
 case class BusStopSchema(Latitude: Double, Longitude: Double, Heading: Option[Double], Description: String, RoadName: String)
 
-object Import {
+trait DataSource {
+  def getBusStopsOnly: Seq[BusStop]
+  def getBusStops: BusStops
+  def getMrtStations: Seq[MrtStation]
+}
 
-  lazy val getBusStopsOnly = {
+object Import extends DataSource {
+
+  override lazy val getBusStopsOnly = {
     implicit val busStopSchemaDecoder = _root_.io.circe.generic
       .semiauto.deriveDecoder[BusStopSchema]
 
@@ -37,16 +40,16 @@ object Import {
       })
   }
 
-  lazy val getBusStops = {
+  override lazy val getBusStops = {
     val busStops = getBusStopsOnly
 
     BusStops(
       busStops,
-      (b1: BusStop, b2: BusStop) => distanceMatrix(b1.index)(b2.index)
+      (b1: Int, b2: Int) => distanceMatrix(b1)(b2)
     )
   }
 
-  lazy val getMrtStations = {
+  override lazy val getMrtStations = {
     implicit val busStopSchemaDecoder = _root_.io.circe.generic
       .semiauto.deriveDecoder[BusStopSchema]
 
@@ -89,7 +92,7 @@ object Import {
     timeString.substring(0,2).toLong * 3600000 +
     timeString.substring(2,4).toLong * 60000
 
-  val getLiveRequests : ExpiringCache[Array[Suggestion]] = ExpiringCache(10.minutes) {
+  private val liveRequestsCache : ExpiringCache[Seq[Suggestion]] = ExpiringCache(10.minutes) {
     import slick.jdbc.PostgresProfile.api._
 
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -132,8 +135,8 @@ object Import {
        |
        """.stripMargin('|')
           .as[(Long, Int, Double, Double, Double, Double, String, Long, java.sql.Timestamp)]
-          .map({ results =>
-            results.view.map({
+          .map[Seq[Suggestion]]({ results =>
+            genericWrapArray(results.view.map({
               case (travelTime, id, boardLng, boardLat, alightLng, alightLat, email, time, createdAt) =>
                 Suggestion(
                   id=id,
@@ -141,9 +144,10 @@ object Import {
                   end=Util.toSVY((alightLng, alightLat)),
                   actualTime=time
                 )
-            }).toArray
+            }).toArray)
           })
 
     Await.result(db.run(suggestions), 60 seconds)
   }
+  def getLiveRequests = liveRequestsCache.apply
 }

@@ -68,7 +68,7 @@ object BeelineRoutingApp extends App {
     Geo.initialize()
 
     val bindingFuture = Http().bindAndHandle(
-      IntelligentRoutingService.myRoute,
+      new IntelligentRoutingService(Import).myRoute,
       "0.0.0.0",
       scala.util.Properties.envOrElse("PORT", "8080").toInt
     )

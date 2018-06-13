@@ -35,6 +35,7 @@ lazy val routing = (project in file("routing"))
       scalatest,
       "org.postgresql" % "postgresql" % "42.1.3",
       "com.typesafe.akka"   %% "akka-http" % "10.0.9",
+      "com.typesafe.akka"   %%  "akka-http-testkit"  % "10.0.9" % "test",
       "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
       "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
       "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5",

@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.{Directives, ExceptionHandler}
 import akka.pattern.ask
 import sg.beeline.JobQueueActor
 import sg.beeline.JobQueueActor.{InitRequest, PollResult, ResultPendingException}
-import sg.beeline.io.Import
+import sg.beeline.io.{DataSource, Import}
 import sg.beeline.jobs.RouteActor
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
@@ -47,20 +47,25 @@ trait JsonSupport extends JsonMarshallers {
 }
 
 // this trait defines our service behavior independently from the service actor
-object IntelligentRoutingService extends Directives with JsonSupport {
+class IntelligentRoutingService(datasource: DataSource) extends Directives with JsonSupport {
   import akka.actor._
   import _root_.io.circe.syntax._
 
   import ExecutionContext.Implicits.global
   implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
   implicit val system = ActorSystem()
-  val routingActor = system.actorOf(Props[RouteActor], "intelligent-routing")
+  val routingActor = system.actorOf(Props({
+    new RouteActor(datasource, {
+      case "ezlink" => throw new Exception("EZLink is no longer a supported dataset")
+      case _ => Import.getLiveRequests
+    })
+  }), "intelligent-routing")
   val jobQueueActor = system.actorOf(Props(new JobQueueActor(routingActor)), "job-queue")
 
   val myRoute =
     path("bus_stops") {
       get {
-        complete(Import.getBusStopsOnly.asJson)
+        complete(datasource.getBusStopsOnly.asJson)
       }
     } ~
     path("bus_stops" / Remaining) { remaining =>
@@ -69,15 +74,15 @@ object IntelligentRoutingService extends Directives with JsonSupport {
 
         complete({
           if (requestedSet.isEmpty)
-            Import.getBusStopsOnly
+            datasource.getBusStopsOnly
           else
-            Import.getBusStopsOnly.filter(requestedSet contains _.index)
+            datasource.getBusStopsOnly.filter(requestedSet contains _.index)
         }.asJson)
       }
     } ~
     path("paths" / Remaining) { remaining =>
       get {
-        val busStops = Import.getBusStopsOnly
+        val busStops = datasource.getBusStopsOnly
         val indices = remaining.split("/").filter(_ != "").map(s => s.toInt)
 
         val polyline = indices.sliding(2).map({
@@ -98,12 +103,12 @@ object IntelligentRoutingService extends Directives with JsonSupport {
     } ~
     path("travel_times" / Remaining) { remaining =>
       get {
-        val busStops = Import.getBusStopsOnly
+        val busStops = datasource.getBusStopsOnly
         val indices = remaining.split("/").filter(_ != "").map(s => s.toInt)
 
         val travelTimes: Seq[Double] = indices.sliding(2).map({
           case Array(aIndex, bIndex) =>
-            Import.distanceMatrix(aIndex)(bIndex)
+            datasource.getBusStops.distanceFunction(aIndex, bIndex)
         }).toArray
 
         complete(travelTimes.asJson)
@@ -142,10 +147,10 @@ object IntelligentRoutingService extends Directives with JsonSupport {
           }
 
           complete({
-            val allBusStops = Import.getBusStopsOnly
+            val allBusStops = datasource.getBusStopsOnly
             val busStops = remaining.split("/").filter(_ != "")
               .map(s => allBusStops(s.toInt))
-            val suggestions = Import.getLiveRequests()
+            val suggestions = Import.getLiveRequests
 
             suggestions
             .filter(suggestion => pathServesSuggestion(busStops, suggestion))
