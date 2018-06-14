@@ -34,7 +34,7 @@ class BasicRoutingProblem(val suggestions: Seq[Suggestion],
 
 
   // The current set of routes for the current iteration
-  def distance(a : BusStop, b: BusStop) : Double = busStops.distanceFunction(a.index, b.index)
+  def distance(a : BusStop, b: BusStop) : Double = busStops.distanceFunction(a, b)
 
   //
   def nearBusStopsStart(origin : Point) =

@@ -45,7 +45,7 @@ object Import extends DataSource {
 
     BusStops(
       busStops,
-      (b1: Int, b2: Int) => distanceMatrix(b1)(b2)
+      (b1, b2) => distanceMatrix(b1.index)(b2.index)
     )
   }
 

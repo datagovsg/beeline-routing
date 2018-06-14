@@ -57,9 +57,9 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
 
     override val getBusStops: BusStops = BusStops(
       getBusStopsOnly,
-      (a: Int, b: Int) => {
-        val (ai, aj) = (a / 50, a % 50)
-        val (bi, bj) = (b / 50, b % 50)
+      (a, b) => {
+        val (ai, aj) = (a.index / 50, a.index % 50)
+        val (bi, bj) = (b.index / 50, b.index % 50)
 
         // Manhattan distance
         val gridManhattanDistance = math.abs(ai - bi) + math.abs(bj - aj)
@@ -214,7 +214,10 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
         .toList
 
       val d = (i: Int, j: Int) =>
-        testDataSource.getBusStops.distanceFunction(i, j)
+        testDataSource.getBusStops.distanceFunction(
+          testDataSource.getBusStops.busStopsByIndex(i),
+          testDataSource.getBusStops.busStopsByIndex(j)
+        )
 
       assert { travelTimes == List(d(5, 10), d(10, 15), d(15, 100), d(100, 150)) }
     }

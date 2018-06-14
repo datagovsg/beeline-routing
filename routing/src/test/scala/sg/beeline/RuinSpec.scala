@@ -32,7 +32,7 @@ class RuinSpec extends FlatSpec with Matchers {
     override def getMrtStations: Seq[MrtStation] = throw new UnsupportedOperationException
     override def getBusStops: BusStops =
       BusStops(busStops,
-        (b1, b2) => kdtreeQuery.squaredDistance(busStops(b1).xy, busStops(b2).xy) / 11 / 60)
+        (b1, b2) => kdtreeQuery.squaredDistance(b1.xy, b2.xy) / 11 / 60)
     override def getBusStopsOnly: Seq[BusStop] = busStops
   }
 
