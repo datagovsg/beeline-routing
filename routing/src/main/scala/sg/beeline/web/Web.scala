@@ -69,19 +69,20 @@ class IntelligentRoutingService(datasource: DataSource,
     } ~
     path("bus_stops" / Remaining) { remaining =>
       get {
-        val requestedSet = remaining.split("/").filter(_ != "").map(s => s.toInt)
+        val requestedSet = remaining.split("/")
+          .filter(_ != "")
+          .map(s => s.toInt)
+          .map(datasource.getBusStops.busStopsByIndex)
+        val finalSet: Seq[BusStop] =
+          if (requestedSet.isEmpty) datasource.getBusStopsOnly // all bus stops
+          else requestedSet
 
-        complete({
-          if (requestedSet.isEmpty)
-            datasource.getBusStopsOnly
-          else
-            datasource.getBusStopsOnly.filter(requestedSet contains _.index)
-        }.asJson)
+        complete(finalSet.asJson)
       }
     } ~
     path("paths" / Remaining) { remaining =>
       get {
-        val busStops = datasource.getBusStopsOnly
+        val busStops = datasource.getBusStops.busStopsByIndex
         val indices = remaining.split("/").filter(_ != "").map(s => s.toInt)
 
         val polyline = indices.sliding(2).map({
@@ -107,7 +108,10 @@ class IntelligentRoutingService(datasource: DataSource,
 
         val travelTimes: Seq[Double] = indices.sliding(2).map({
           case Array(aIndex, bIndex) =>
-            datasource.getBusStops.distanceFunction(aIndex, bIndex)
+            datasource.getBusStops.distanceFunction(
+              datasource.getBusStops.busStopsByIndex(aIndex),
+              datasource.getBusStops.busStopsByIndex(bIndex)
+            )
         }).toArray
 
         complete(travelTimes.asJson)
@@ -146,9 +150,8 @@ class IntelligentRoutingService(datasource: DataSource,
               minPickupStop.min < maxDropoffStop.max
           }
 
-          val allBusStops = datasource.getBusStopsOnly
           val busStops = remaining.split("/").filter(_ != "")
-            .map(s => allBusStops(s.toInt))
+            .map(s => datasource.getBusStops.busStopsByIndex(s.toInt))
 
           complete({
             suggestionsSource
