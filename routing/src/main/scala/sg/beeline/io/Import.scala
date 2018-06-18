@@ -1,6 +1,6 @@
 package sg.beeline.io
 
-import sg.beeline.problem.{BusStop, BusStops, MrtStation, Suggestion}
+import sg.beeline.problem.{BusStop, MrtStation, Suggestion}
 import sg.beeline.util.{ExpiringCache, Util}
 
 import scala.concurrent.Await
@@ -11,14 +11,21 @@ import scala.io.Source
 case class BusStopSchema(Latitude: Double, Longitude: Double, Heading: Option[Double], Description: String, RoadName: String)
 
 trait DataSource {
-  def getBusStopsOnly: Seq[BusStop]
-  def getBusStops: BusStops
-  def getMrtStations: Seq[MrtStation]
+  def busStops: Seq[BusStop]
+  def distanceFunction(a: BusStop, b: BusStop): Double
+  def mrtStations: Seq[MrtStation]
+
+  lazy val busStopsByIndex = Map(
+    busStops.map(b => (b.index, b)) : _*
+  )
 }
 
 object Import extends DataSource {
 
-  override lazy val getBusStopsOnly = {
+  override def distanceFunction(a: BusStop, b: BusStop) =
+    distanceMatrix(a.index)(b.index)
+
+  override lazy val busStops = {
     implicit val busStopSchemaDecoder = _root_.io.circe.generic
       .semiauto.deriveDecoder[BusStopSchema]
 
@@ -40,16 +47,7 @@ object Import extends DataSource {
       })
   }
 
-  override lazy val getBusStops = {
-    val busStops = getBusStopsOnly
-
-    BusStops(
-      busStops,
-      (b1, b2) => distanceMatrix(b1.index)(b2.index)
-    )
-  }
-
-  override lazy val getMrtStations = {
+  override lazy val mrtStations = {
     implicit val busStopSchemaDecoder = _root_.io.circe.generic
       .semiauto.deriveDecoder[BusStopSchema]
 

@@ -15,12 +15,10 @@ class BasicRoutingProblem(val suggestions: Seq[Suggestion],
 
   type BusStopsTree = KDTreeMap[(Double, Double), BusStop]
 
-  val busStops = dataSource.getBusStops
-
   println(s"Problem with ${suggestions.size} suggestions")
 
   val busStopsTree : BusStopsTree = KDTreeMap.fromSeq(
-    busStops.busStops map {x => x.xy -> x}
+    dataSource.busStops map {x => x.xy -> x}
   )
 
   val requests : Seq[Request] = suggestions.map(sugg =>
@@ -34,7 +32,7 @@ class BasicRoutingProblem(val suggestions: Seq[Suggestion],
 
 
   // The current set of routes for the current iteration
-  def distance(a : BusStop, b: BusStop) : Double = busStops.distanceFunction(a, b)
+  def distance(a : BusStop, b: BusStop) : Double = dataSource.distanceFunction(a, b)
 
   //
   def nearBusStopsStart(origin : Point) =
