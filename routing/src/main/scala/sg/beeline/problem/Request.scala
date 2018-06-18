@@ -14,7 +14,7 @@ trait Request {
   def actualTime: Double
   def weight : Int
 
-  def datasource: DataSource
+  def dataSource: DataSource
 
   lazy val startStops = routingProblem.nearBusStopsStart(start).toIndexedSeq
   lazy val endStops = routingProblem.nearBusStopsEnd(end).toIndexedSeq
@@ -27,7 +27,7 @@ trait Request {
 
   // Everything relating to distance here is in metres, and points here is in (lat, lon)
   lazy val distanceFromNearestMrt : Double = {
-    val distances = datasource.getMrtStations.map(mrtStation => Util.computeDistance(mrtStation.coordinates, startWGS))
+    val distances = dataSource.getMrtStations.map(mrtStation => Util.computeDistance(mrtStation.coordinates, startWGS))
     val minDist = distances.foldLeft(Double.PositiveInfinity)(min(_,_))
     minDist
   }
@@ -49,7 +49,7 @@ object Request {
   class RequestFromSuggestion(val routingProblem : RoutingProblem,
                               val suggestion: Suggestion,
                               val routeTime: Double,
-                              val datasource: DataSource) extends Request {
+                              val dataSource: DataSource) extends Request {
     override val start: (Double, Double) = suggestion.start
     override val end: (Double, Double) = suggestion.end
     override val time: Double = routeTime
@@ -63,7 +63,7 @@ class BasicRequest(val routingProblem: RoutingProblem,
                    val end: (Double, Double),
                    val time: Double,
                    val weight: Int = 1,
-                   val datasource: DataSource
+                   val dataSource: DataSource
                   ) extends Request {
   override val actualTime: Double = time
 }

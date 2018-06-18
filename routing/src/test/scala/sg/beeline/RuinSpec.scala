@@ -36,7 +36,7 @@ class RuinSpec extends FlatSpec with Matchers {
     override def getBusStopsOnly: Seq[BusStop] = busStops
   }
 
-  val problem = new BasicRoutingProblem(requests, datasource = testDataSource)
+  val problem = new BasicRoutingProblem(requests, dataSource = testDataSource)
 
   val (routes, validRequests, badRequests) = problem.initialize
 

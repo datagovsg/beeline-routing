@@ -10,12 +10,12 @@ class BasicRoutingProblem(val suggestions: Seq[Suggestion],
                           val startWalkingDistance : Double = 300.0,
                           val endWalkingDistance : Double = 300.0,
                           val overrideRouteTime: Option[Double] = None,
-                          val datasource: DataSource)
+                          val dataSource: DataSource)
   extends RoutingProblem {
 
   type BusStopsTree = KDTreeMap[(Double, Double), BusStop]
 
-  val busStops = datasource.getBusStops
+  val busStops = dataSource.getBusStops
 
   println(s"Problem with ${suggestions.size} suggestions")
 
@@ -24,7 +24,7 @@ class BasicRoutingProblem(val suggestions: Seq[Suggestion],
   )
 
   val requests : Seq[Request] = suggestions.map(sugg =>
-    new Request.RequestFromSuggestion(this, sugg, overrideRouteTime.getOrElse(sugg.time), datasource))
+    new Request.RequestFromSuggestion(this, sugg, overrideRouteTime.getOrElse(sugg.time), dataSource))
     .filter(_.startStops.nonEmpty)
     .filter(_.endStops.nonEmpty)
 
