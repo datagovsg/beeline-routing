@@ -84,6 +84,8 @@ object Import extends DataSource {
         row(i) = row(i) * 1.5
       }
     }
+
+    ois.close()
     arr
   }
 
