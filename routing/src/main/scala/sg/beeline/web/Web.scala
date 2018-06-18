@@ -47,7 +47,7 @@ trait JsonSupport extends JsonMarshallers {
 }
 
 // this trait defines our service behavior independently from the service actor
-class IntelligentRoutingService(datasource: DataSource,
+class IntelligentRoutingService(dataSource: DataSource,
                                 suggestionsSource: Seq[Suggestion])
   extends Directives with JsonSupport {
   import akka.actor._
@@ -57,14 +57,14 @@ class IntelligentRoutingService(datasource: DataSource,
   implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
   implicit val system = ActorSystem()
   val routingActor = system.actorOf(Props({
-    new RouteActor(datasource, _ => suggestionsSource)
+    new RouteActor(dataSource, _ => suggestionsSource)
   }), "intelligent-routing")
   val jobQueueActor = system.actorOf(Props(new JobQueueActor(routingActor)), "job-queue")
 
   val myRoute =
     path("bus_stops") {
       get {
-        complete(datasource.getBusStopsOnly.asJson)
+        complete(dataSource.getBusStopsOnly.asJson)
       }
     } ~
     path("bus_stops" / Remaining) { remaining =>
@@ -72,9 +72,9 @@ class IntelligentRoutingService(datasource: DataSource,
         val requestedSet = remaining.split("/")
           .filter(_ != "")
           .map(s => s.toInt)
-          .map(datasource.getBusStops.busStopsByIndex)
+          .map(dataSource.getBusStops.busStopsByIndex)
         val finalSet: Seq[BusStop] =
-          if (requestedSet.isEmpty) datasource.getBusStopsOnly // all bus stops
+          if (requestedSet.isEmpty) dataSource.getBusStopsOnly // all bus stops
           else requestedSet
 
         complete(finalSet.asJson)
@@ -82,7 +82,7 @@ class IntelligentRoutingService(datasource: DataSource,
     } ~
     path("paths" / Remaining) { remaining =>
       get {
-        val busStops = datasource.getBusStops.busStopsByIndex
+        val busStops = dataSource.getBusStops.busStopsByIndex
         val indices = remaining.split("/").filter(_ != "").map(s => s.toInt)
 
         val polyline = indices.sliding(2).map({
@@ -103,14 +103,14 @@ class IntelligentRoutingService(datasource: DataSource,
     } ~
     path("travel_times" / Remaining) { remaining =>
       get {
-        val busStops = datasource.getBusStopsOnly
+        val busStops = dataSource.getBusStopsOnly
         val indices = remaining.split("/").filter(_ != "").map(s => s.toInt)
 
         val travelTimes: Seq[Double] = indices.sliding(2).map({
           case Array(aIndex, bIndex) =>
-            datasource.getBusStops.distanceFunction(
-              datasource.getBusStops.busStopsByIndex(aIndex),
-              datasource.getBusStops.busStopsByIndex(bIndex)
+            dataSource.getBusStops.distanceFunction(
+              dataSource.getBusStops.busStopsByIndex(aIndex),
+              dataSource.getBusStops.busStopsByIndex(bIndex)
             )
         }).toArray
 
@@ -151,7 +151,7 @@ class IntelligentRoutingService(datasource: DataSource,
           }
 
           val busStops = remaining.split("/").filter(_ != "")
-            .map(s => datasource.getBusStops.busStopsByIndex(s.toInt))
+            .map(s => dataSource.getBusStops.busStopsByIndex(s.toInt))
 
           complete({
             suggestionsSource

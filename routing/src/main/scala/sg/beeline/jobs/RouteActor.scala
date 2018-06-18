@@ -20,7 +20,7 @@ case class Polyline(indices : List[Int]) extends RoutingControl
 case class RoutingStopped() extends RoutingNotification
 case class RoutingStarted() extends RoutingNotification
 
-class RouteActor(datasource: DataSource, suggestionSource: String => Seq[Suggestion]) extends Actor {
+class RouteActor(dataSource: DataSource, suggestionSource: String => Seq[Suggestion]) extends Actor {
   var lastResults : Traversable[Route] = List()
 
   def routeFromRequest(suggestRequest: SuggestRequest) = suggestRequest match {
@@ -34,7 +34,7 @@ class RouteActor(datasource: DataSource, suggestionSource: String => Seq[Suggest
           startWalkingDistance = settings.startWalkingDistance,
           endWalkingDistance = settings.endWalkingDistance,
           overrideRouteTime = Some(8 * 3600e3),
-          datasource
+          dataSource
         )
       }
 
@@ -53,7 +53,7 @@ class RouteActor(datasource: DataSource, suggestionSource: String => Seq[Suggest
             time
           ),
           8 * 3600e3,
-          datasource
+          dataSource
         )
       ).toList
   }
