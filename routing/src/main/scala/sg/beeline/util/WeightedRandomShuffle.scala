@@ -12,16 +12,16 @@ import scala.util.Random
 
 object WeightedRandomShuffle {
 
-  def shuffle[A <: AnyRef](items : Traversable[A], weights : Traversable[Double])
+  def shuffle[A](items : Traversable[A], weights : Traversable[Double])
                 (implicit c : ClassTag[A]): Seq[A]= {
     if (items.isEmpty) {
-      Array[A]()
+      Nil
     } else {
-      val arrayed = weights.toArray
+      val arrayedWeights = weights.toArray
       val arrayedItems = items.toArray[A]
 
       // max array length is 2^31-1
-      val root = buildTree(arrayed, 29)
+      val root = buildTree(arrayedWeights, 29)
 
       @tailrec
       def nextIteration(
@@ -43,7 +43,7 @@ object WeightedRandomShuffle {
             count - 1)
         }
       }
-      nextIteration(new mutable.ArrayBuilder.ofRef[A], root, root.maxIndex + 1)
+      nextIteration(mutable.ArrayBuilder.make[A], root, root.maxIndex + 1)
         .result()
     }
   }
