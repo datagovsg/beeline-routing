@@ -15,9 +15,10 @@ COPY ./build.sbt /build/build.sbt
 RUN sbt assembly
 
 # COPY ./scalastyle-config.xml /build/
-COPY ./src /build/src
+COPY ./routing /build/routing
+COPY ./fuzzy-clustering /build/fuzzy-clustering
 
-RUN sbt assembly
+RUN sbt routing/assembly
 
 # Run the assembly, generate the intermediate files (cache, maps)
 FROM openjdk:jre-alpine AS one
