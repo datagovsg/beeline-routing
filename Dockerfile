@@ -29,7 +29,7 @@ COPY ./onemap/bus-stops-headings.json /app/onemap/bus-stops-headings.json
 COPY ./onemap/mrt-stations.json /app
 COPY ./config.properties /app
 
-COPY --from=compile /build/target/scala-2.11/beeline-routing-assembly*.jar /app/beeline-routing.jar
+COPY --from=compile /build/routing/target/scala-2.11/routing-assembly-*.jar /app/beeline-routing.jar
 RUN apk add --no-cache curl && \
 	curl https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf -o /app/SG.pbf && \
 	apk del curl
@@ -49,7 +49,7 @@ COPY ./onemap/bus-stops-headings.json /app/onemap/bus-stops-headings.json
 COPY ./onemap/mrt-stations.json /app
 COPY ./config.properties /app
 
-COPY --from=compile /build/target/scala-2.11/beeline-routing-assembly*.jar /app/beeline-routing.jar
+COPY --from=compile /build/routing/target/scala-2.11/routing-assembly-*.jar /app/beeline-routing.jar
 
 ENV PORT 5000
 
