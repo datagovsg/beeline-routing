@@ -6,29 +6,27 @@ import sg.beeline.problem._
 
 class RouteSpec extends FlatSpec with Matchers {
 
-  object ZeroDistance {
+  object ZeroDistance extends RoutingProblem {
     val busStops = Array(
       BusStop((103.8, 1.38), 0, "BS1", "BS Road", 0),
       BusStop((103.8, 1.38), 1, "BS1", "BS Road", 1)
     )
-  }
 
-  class ZeroDistance extends RoutingProblem {
-    def distance(a : BusStop, b: BusStop) = 0
+    override def distance(a : BusStop, b: BusStop) = 0
 
-    def nearBusStopsStart(p : (Double, Double)) = ZeroDistance.busStops
-    def nearBusStopsEnd(p : (Double, Double)) = ZeroDistance.busStops
+    override def nearBusStopsStart(p : (Double, Double)) = ZeroDistance.busStops
+    override def nearBusStopsEnd(p : (Double, Double)) = ZeroDistance.busStops
 
-    def initialize = {
+    override def initialize = {
       (List(), List(), List())
     }
   }
   val testDataSource = new DataSource {
-    override def getMrtStations: Seq[MrtStation] = throw new UnsupportedOperationException
+    override def mrtStations: Seq[MrtStation] = throw new UnsupportedOperationException
 
-    override def getBusStops: BusStops = throw new UnsupportedOperationException
+    override def busStops: Seq[BusStop] = ZeroDistance.busStops
 
-    override def getBusStopsOnly: Seq[BusStop] = ZeroDistance.busStops
+    override def distanceFunction(a: BusStop, b: BusStop): Double = ZeroDistance.distance(a, b)
   }
 
   class TestActivity(val routingProblem: RoutingProblem, val busStop: BusStop,
@@ -42,7 +40,7 @@ class RouteSpec extends FlatSpec with Matchers {
   }
 
   "Route" should "reflect min/max times correctly (1)" in {
-    val problem = new ZeroDistance
+    val problem = ZeroDistance
 
     val activities = List(
       new StartActivity,
@@ -67,7 +65,7 @@ class RouteSpec extends FlatSpec with Matchers {
   }
 
   "Route" should "insert activities correctly" in {
-    val problem = new ZeroDistance
+    val problem = ZeroDistance
 
     val activities = Array(
       new StartActivity,

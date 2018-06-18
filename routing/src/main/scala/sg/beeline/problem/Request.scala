@@ -27,7 +27,7 @@ trait Request {
 
   // Everything relating to distance here is in metres, and points here is in (lat, lon)
   lazy val distanceFromNearestMrt : Double = {
-    val distances = dataSource.getMrtStations.map(mrtStation => Util.computeDistance(mrtStation.coordinates, startWGS))
+    val distances = dataSource.mrtStations.map(mrtStation => Util.computeDistance(mrtStation.coordinates, startWGS))
     val minDist = distances.foldLeft(Double.PositiveInfinity)(min(_,_))
     minDist
   }

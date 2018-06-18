@@ -4,7 +4,7 @@ import java.util.UUID
 
 import org.scalatest.FunSuite
 import sg.beeline.io.DataSource
-import sg.beeline.problem.{BusStop, BusStops, MrtStation, Suggestion}
+import sg.beeline.problem.{BusStop, MrtStation, Suggestion}
 import sg.beeline.web.IntelligentRoutingService
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
@@ -36,9 +36,9 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   }
 
   val testDataSource = new DataSource {
-    override val getMrtStations: Seq[MrtStation] = Array[MrtStation]()
+    override val mrtStations: Seq[MrtStation] = Array[MrtStation]()
 
-    override val getBusStopsOnly: Seq[BusStop] = {
+    override val busStops: Seq[BusStop] = {
       // Make a rough square grid, 200m apart
       (0 until 50).flatMap(i =>
         (0 until 50).map(j => {
@@ -55,19 +55,16 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       )
     }
 
-    override val getBusStops: BusStops = BusStops(
-      getBusStopsOnly,
-      (a, b) => {
-        val (ai, aj) = (a.index / 50, a.index % 50)
-        val (bi, bj) = (b.index / 50, b.index % 50)
+    override def distanceFunction(a: BusStop, b: BusStop) = {
+      val (ai, aj) = (a.index / 50, a.index % 50)
+      val (bi, bj) = (b.index / 50, b.index % 50)
 
-        // Manhattan distance
-        val gridManhattanDistance = math.abs(ai - bi) + math.abs(bj - aj)
+      // Manhattan distance
+      val gridManhattanDistance = math.abs(ai - bi) + math.abs(bj - aj)
 
-        // Assume two minutes between stops
-        gridManhattanDistance * 120
-      }
-    )
+      // Assume two minutes between stops
+      gridManhattanDistance * 120
+    }
   }
 
   // Make a whole bunch of requests
@@ -97,13 +94,13 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
 
   // Some assertions on our assumptions
   require { getRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
-  require { testDataSource.getBusStopsOnly.zipWithIndex.forall { case (o, i) => o.index == i} }
+  require { testDataSource.busStops.zipWithIndex.forall { case (o, i) => o.index == i} }
 
   test("/bus_stops fetches all bus stops") {
     Get("/bus_stops") ~> testService ~> check {
       val jarr = _root_.io.circe.parser.parse(responseAs[String]).right.get
 
-      val currentSetOfBusStops = testDataSource.getBusStopsOnly.map(_.description).toSet
+      val currentSetOfBusStops = testDataSource.busStops.map(_.description).toSet
 
       val returnedSetOfBusStops = jarr.asArray.get.map({ jbs =>
         jbs.asObject.get.toMap("description").asString.get
@@ -214,9 +211,9 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
         .toList
 
       val d = (i: Int, j: Int) =>
-        testDataSource.getBusStops.distanceFunction(
-          testDataSource.getBusStops.busStopsByIndex(i),
-          testDataSource.getBusStops.busStopsByIndex(j)
+        testDataSource.distanceFunction(
+          testDataSource.busStopsByIndex(i),
+          testDataSource.busStopsByIndex(j)
         )
 
       assert { travelTimes == List(d(5, 10), d(10, 15), d(15, 100), d(100, 150)) }
@@ -230,10 +227,10 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       val req = getRequests(n)
 
       (
-        testDataSource.getBusStopsOnly.find(stop =>
+        testDataSource.busStops.find(stop =>
           squaredDistance(stop.xy, req.start) <= 90000
         ).get.index,
-        testDataSource.getBusStopsOnly.find(stop =>
+        testDataSource.busStops.find(stop =>
           squaredDistance(stop.xy, req.end) <= 90000
         ).get.index
       )

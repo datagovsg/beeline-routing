@@ -15,7 +15,7 @@ class RuinSpec extends FlatSpec with Matchers {
   // Randomly generate 100 bus stops
   def randomLatLng = {(Math.random() * 0.15 - 0.075 + 103.8, Math.random() * 0.15 - 0.075 + 1.38)}
   val latlngs = for (i <- 0 until 100) yield randomLatLng
-  val busStops = latlngs.zipWithIndex.map({
+  val myBusStops = latlngs.zipWithIndex.map({
     case (ll, i) => BusStop(ll, i, s"BS ${i}", s"R ${i}", i)
     case _ => throw new Error()
   }).toArray
@@ -29,11 +29,10 @@ class RuinSpec extends FlatSpec with Matchers {
   val requests = (starts zip ends).zipWithIndex.map({case ((s,e), i) => Suggestion(i, s, e, TIME)})
 
   val testDataSource = new DataSource {
-    override def getMrtStations: Seq[MrtStation] = throw new UnsupportedOperationException
-    override def getBusStops: BusStops =
-      BusStops(busStops,
-        (b1, b2) => kdtreeQuery.squaredDistance(b1.xy, b2.xy) / 11 / 60)
-    override def getBusStopsOnly: Seq[BusStop] = busStops
+    override def mrtStations: Seq[MrtStation] = throw new UnsupportedOperationException
+    override def busStops: Seq[BusStop] = myBusStops
+    override def distanceFunction(a: BusStop, b: BusStop): Double =
+      kdtreeQuery.squaredDistance(a.xy, b.xy) / 11 / 60
   }
 
   val problem = new BasicRoutingProblem(requests, dataSource = testDataSource)

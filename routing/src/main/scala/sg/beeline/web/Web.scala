@@ -64,7 +64,7 @@ class IntelligentRoutingService(dataSource: DataSource,
   val myRoute =
     path("bus_stops") {
       get {
-        complete(dataSource.getBusStopsOnly.asJson)
+        complete(dataSource.busStops.asJson)
       }
     } ~
     path("bus_stops" / Remaining) { remaining =>
@@ -72,9 +72,9 @@ class IntelligentRoutingService(dataSource: DataSource,
         val requestedSet = remaining.split("/")
           .filter(_ != "")
           .map(s => s.toInt)
-          .map(dataSource.getBusStops.busStopsByIndex)
+          .map(dataSource.busStopsByIndex)
         val finalSet: Seq[BusStop] =
-          if (requestedSet.isEmpty) dataSource.getBusStopsOnly // all bus stops
+          if (requestedSet.isEmpty) dataSource.busStops // all bus stops
           else requestedSet
 
         complete(finalSet.asJson)
@@ -82,7 +82,7 @@ class IntelligentRoutingService(dataSource: DataSource,
     } ~
     path("paths" / Remaining) { remaining =>
       get {
-        val busStops = dataSource.getBusStops.busStopsByIndex
+        val busStops = dataSource.busStopsByIndex
         val indices = remaining.split("/").filter(_ != "").map(s => s.toInt)
 
         val polyline = indices.sliding(2).map({
@@ -103,14 +103,14 @@ class IntelligentRoutingService(dataSource: DataSource,
     } ~
     path("travel_times" / Remaining) { remaining =>
       get {
-        val busStops = dataSource.getBusStopsOnly
+        val busStops = dataSource.busStops
         val indices = remaining.split("/").filter(_ != "").map(s => s.toInt)
 
         val travelTimes: Seq[Double] = indices.sliding(2).map({
           case Array(aIndex, bIndex) =>
-            dataSource.getBusStops.distanceFunction(
-              dataSource.getBusStops.busStopsByIndex(aIndex),
-              dataSource.getBusStops.busStopsByIndex(bIndex)
+            dataSource.distanceFunction(
+              dataSource.busStopsByIndex(aIndex),
+              dataSource.busStopsByIndex(bIndex)
             )
         }).toArray
 
@@ -151,7 +151,7 @@ class IntelligentRoutingService(dataSource: DataSource,
           }
 
           val busStops = remaining.split("/").filter(_ != "")
-            .map(s => dataSource.getBusStops.busStopsByIndex(s.toInt))
+            .map(s => dataSource.busStopsByIndex(s.toInt))
 
           complete({
             suggestionsSource
