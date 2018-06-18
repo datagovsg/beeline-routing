@@ -1,4 +1,21 @@
 language: scala
+services:
+  - docker
 scala:
   - 2.11.11
+
+before_deploy:
+  - docker build -t beeline-routing:$TRAVIS_COMMIT --build-arg SKIP_CACHE_UPDATE=1 .
+
+deploy:
+  - provider: elasticbeanstalk
+    skip_cleanup: true
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key: $AWS_SECRET_ACCESS_KEY
+    region: "ap-southeast-1"
+    app: "beeline-routing"
+    env: "BeelineRouting-env"
+    bucket_name: "elasticbeanstalk-ap-southeast-1-882000534153"
+    on:
+      branch: master
 

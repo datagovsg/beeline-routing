@@ -1,5 +1,7 @@
 project/build
 project/target
+routing/target
+fuzzy-clustering/target
 target
 node_modules
 logs
