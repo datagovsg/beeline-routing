@@ -34,7 +34,7 @@ RUN apk add --no-cache curl && \
 	curl https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf -o /app/SG.pbf && \
 	apk del curl
 
-ARG SKIP_CACHE_UPDATE
+ARG SKIP_CACHE_UPDATE=1
 RUN if [ ! -z "$SKIP_CACHE_UPDATE" ]; then java -jar /app/beeline-routing.jar cache; fi
 
 # Final docker image
