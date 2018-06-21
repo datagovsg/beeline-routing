@@ -16,6 +16,7 @@ java -jar $JAR_FILE initialize-geo
 mv $JAR_FILE beeline-routing.jar
 
 zip bundle.zip beeline-routing.jar
+zip bundle.zip SG.pbf
 zip bundle.zip SG-gh
 zip bundle.zip distances_cache.dat.gz
 zip bundle.zip Procfile
