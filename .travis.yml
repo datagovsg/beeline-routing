@@ -6,6 +6,7 @@ scala:
 
 before_deploy:
   - sudo apt-get install -y bash zip
+  - sbt routing/assembly
   - bash ./create-eb-bundle.sh
 
 deploy:
