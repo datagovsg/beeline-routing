@@ -5,7 +5,7 @@ scala:
   - 2.11.11
 
 before_deploy:
-  - docker build -t beeline-routing:$TRAVIS_COMMIT --build-arg SKIP_CACHE_UPDATE=1 .
+  - bash ./create-eb-bundle.sh
 
 deploy:
   - provider: elasticbeanstalk
@@ -16,6 +16,7 @@ deploy:
     app: "beeline-routing"
     env: "BeelineRouting-env"
     bucket_name: "elasticbeanstalk-ap-southeast-1-882000534153"
+    zipfile: bundle.zip
     on:
       branch: master
 

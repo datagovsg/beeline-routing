@@ -1,1 +1,1 @@
-web: tar xz < SG-gh.ghz && ./target/universal/stage/bin/beeline-routing web
+web: java -jar beeline-routing.jar
