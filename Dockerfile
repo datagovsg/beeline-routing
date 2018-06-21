@@ -30,10 +30,15 @@ COPY ./onemap/mrt-stations.json /app
 COPY ./config.properties /app
 
 COPY --from=compile /build/routing/target/scala-2.11/routing-assembly-*.jar /app/beeline-routing.jar
+
+# Build the SG map cache files
 RUN apk add --no-cache curl && \
 	curl https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf -o /app/SG.pbf && \
 	apk del curl
+RUN java -jar /app/beeline-routing.jar initialize-geo
 
+# Rebuild the distance cache if requested
+COPY ./distances_cache.dat.gz /app/
 ARG SKIP_CACHE_UPDATE=1
 RUN if [ "${SKIP_CACHE_UPDATE}" = "" ]; then java -jar /app/beeline-routing.jar cache; fi
 

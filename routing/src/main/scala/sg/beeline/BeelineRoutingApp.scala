@@ -18,6 +18,9 @@ object BeelineRoutingApp extends App {
   else if (args(0) == "estimate") {
     estimate()
   }
+  else if (args(0) == "initialize-geo") {
+    Geo.initialize()
+  }
   else require(false)
 
   def cache() {
