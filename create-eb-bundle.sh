@@ -7,7 +7,7 @@ JAR_FILE=./routing/target/scala-2.11/routing-assembly-*.jar
 [ -f $JAR_FILE ]
 
 # Download the SG map
-curl https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf -o /app/SG.pbf
+curl https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf -o SG.pbf
 
 # Activate the map
 java -jar $JAR_FILE initialize-geo
