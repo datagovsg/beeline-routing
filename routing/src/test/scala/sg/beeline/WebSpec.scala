@@ -133,7 +133,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
 
     implicit val recreateSettingsEncoder = _root_.io.circe.generic
       .semiauto.deriveEncoder[BeelineRecreateSettings]
-    implicit val defaultTimeout = RouteTestTimeout(10 seconds)
+    implicit val defaultTimeout = RouteTestTimeout(50 seconds)
 
         // Use a suggestion from the getRequests() --> ensure that at least this one is served
     Get(Uri("/routing/begin").withQuery(Uri.Query(

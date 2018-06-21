@@ -35,7 +35,7 @@ RUN apk add --no-cache curl && \
 	apk del curl
 
 ARG SKIP_CACHE_UPDATE=1
-RUN if [ ! -z "$SKIP_CACHE_UPDATE" ]; then java -jar /app/beeline-routing.jar cache; fi
+RUN if [ "${SKIP_CACHE_UPDATE}" = "" ]; then java -jar /app/beeline-routing.jar cache; fi
 
 # Final docker image
 FROM openjdk:jre-alpine AS final
