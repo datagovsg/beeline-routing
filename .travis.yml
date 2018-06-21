@@ -16,7 +16,7 @@ deploy:
     secret_access_key: $AWS_SECRET_ACCESS_KEY
     region: "ap-southeast-1"
     app: "beeline-routing"
-    env: "beeline-routing-deployment"
+    env: "beeline-routing-prod"
     bucket_name: "beeline-routing"
     zip_file: bundle.zip
     on:
