@@ -34,11 +34,15 @@ lazy val routing = (project in file("routing"))
       "org.scalactic" %% "scalactic" % "3.0.0",
       scalatest,
       "org.postgresql" % "postgresql" % "42.1.3",
-      "com.typesafe.akka"   %% "akka-http" % "10.0.9",
-      "com.typesafe.akka"   %%  "akka-http-testkit"  % "10.0.9" % "test",
+      "com.typesafe.akka"   %% "akka-http" % "10.1.0",
+      "com.typesafe.akka"   %%  "akka-http-testkit"  % "10.1.0" % "test",
       "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
       "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
+      "com.typesafe.akka"   %% "akka-stream" % "2.5.13",
       "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5",
+
+      // for CORS support
+      "ch.megard" %% "akka-http-cors" % "0.3.0",
 
       // for database support
       "com.typesafe.slick" %% "slick" % "3.2.1",

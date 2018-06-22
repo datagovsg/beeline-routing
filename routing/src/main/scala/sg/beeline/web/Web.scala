@@ -16,6 +16,7 @@ import _root_.io.circe._
 import akka.http.scaladsl.marshalling.PredefinedToEntityMarshallers
 import akka.http.scaladsl.server.directives.ParameterDirectives.ParamMagnet
 import akka.http.scaladsl.unmarshalling.{PredefinedFromEntityUnmarshallers, PredefinedFromStringUnmarshallers, Unmarshaller}
+import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -61,7 +62,7 @@ class IntelligentRoutingService(dataSource: DataSource,
   }), "intelligent-routing")
   val jobQueueActor = system.actorOf(Props(new JobQueueActor(routingActor)), "job-queue")
 
-  val myRoute =
+  val myRoute = cors() {
     path("bus_stops") {
       get {
         complete(dataSource.busStops.asJson)
@@ -224,4 +225,5 @@ class IntelligentRoutingService(dataSource: DataSource,
         }
       }
     }
+  }
 }

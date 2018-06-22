@@ -8,12 +8,11 @@ import sg.beeline.problem.{BusStop, MrtStation, Suggestion}
 import sg.beeline.web.IntelligentRoutingService
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
-import Directives._
-import akka.http.scaladsl.model.{StatusCodes, Uri}
+import akka.http.scaladsl.model.headers._
+import akka.http.scaladsl.model.{HttpMethods, StatusCodes, Uri}
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
-import sg.beeline.util.{Util, kdtreeQuery}
+import sg.beeline.util.{Util}
 
-import scala.annotation.tailrec
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
@@ -259,6 +258,17 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
 
       assert { !(indices contains 100) }
       assert { !(indices contains 105) }
+    }
+  }
+
+  test("CORS settings work") {
+    Options("/bus_stops/1/2/3")
+      .addHeader(Origin(HttpOrigin("https://www.beeline.sg")))
+      .addHeader(akka.http.scaladsl.model.headers.`Access-Control-Request-Headers`())
+      .addHeader(akka.http.scaladsl.model.headers.`Access-Control-Request-Method`(HttpMethods.GET)) ~>
+      testService ~> check {
+      val allowOrigin = header[`Access-Control-Allow-Origin`].get
+      assert { allowOrigin.range matches HttpOrigin("https://www.beeline.sg") }
     }
   }
 }
