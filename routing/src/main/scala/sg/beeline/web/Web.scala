@@ -2,24 +2,19 @@ package sg.beeline.web
 
 import java.util.{NoSuchElementException, UUID}
 
-import akka.http.scaladsl.model.{HttpCharsets, HttpEntity, MediaType, StatusCodes}
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, ExceptionHandler}
-import akka.pattern.ask
-import sg.beeline.JobQueueActor
-import sg.beeline.JobQueueActor.{InitRequest, PollResult, ResultPendingException}
-import sg.beeline.io.{DataSource, Import}
-import sg.beeline.jobs.RouteActor
+import sg.beeline.io.DataSource
+import sg.beeline.jobs.{JobQueue, RouteActor}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{Geo, Util, kdtreeQuery}
-import _root_.io.circe._
-import akka.http.scaladsl.marshalling.PredefinedToEntityMarshallers
-import akka.http.scaladsl.server.directives.ParameterDirectives.ParamMagnet
-import akka.http.scaladsl.unmarshalling.{PredefinedFromEntityUnmarshallers, PredefinedFromStringUnmarshallers, Unmarshaller}
+import akka.http.scaladsl.unmarshalling.Unmarshaller
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 case class SuggestRequest(startLat: Double,
                           startLng: Double,
@@ -60,7 +55,8 @@ class IntelligentRoutingService(dataSource: DataSource,
   val routingActor = system.actorOf(Props({
     new RouteActor(dataSource, _ => suggestionsSource)
   }), "intelligent-routing")
-  val jobQueueActor = system.actorOf(Props(new JobQueueActor(routingActor)), "job-queue")
+  val jobQueue = new JobQueue[SuggestRequest, List[Route]](
+    routingActor, 10 minutes,5 minutes)
 
   val myRoute = cors() {
     path("bus_stops") {
@@ -161,30 +157,6 @@ class IntelligentRoutingService(dataSource: DataSource,
         }
       }
     } ~
-    path("routes" / "propose") {
-      get {
-        parameters(
-          'startLat.as[Double],
-          'startLng.as[Double],
-          'endLat.as[Double],
-          'endLng.as[Double],
-          'time.as[Double],
-          'settings.as[BeelineRecreateSettings]
-        ).as(SuggestRequest) { suggestRequest =>
-          complete {
-            implicit val timeout = new akka.util.Timeout(300e3.toLong,
-              java.util.concurrent.TimeUnit.MILLISECONDS)
-
-            (routingActor ? suggestRequest)
-              .mapTo[Try[List[Route]]]
-              .map(_.map(_.asJson))
-          }
-        } ~
-        {
-          complete(StatusCodes.BadRequest)
-        }
-      }
-    } ~
     path("routing" / "begin") {
       get {
         parameters(
@@ -196,10 +168,7 @@ class IntelligentRoutingService(dataSource: DataSource,
           'settings.as[BeelineRecreateSettings]
         ).as(SuggestRequest) { suggestRequest =>
           complete {
-            implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
-
-            (jobQueueActor ? InitRequest(suggestRequest))
-              .mapTo[String]
+            jobQueue.enqueueJob(suggestRequest).toString
           }
         }
       }
@@ -208,19 +177,30 @@ class IntelligentRoutingService(dataSource: DataSource,
       get {
         parameters(
           'uuid.as[String]
-        ) { uuid =>
+        ) { uuidStr =>
           implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
-          handleExceptions(ExceptionHandler {
-            case e: NoSuchElementException =>
-              complete((StatusCodes.BadRequest, "The job was not found"))
-            case e: ResultPendingException =>
-              complete((StatusCodes.Accepted, "The job is still pending"))
-          }) {
-            complete {
-              (jobQueueActor ? PollResult(UUID.fromString(uuid)))
-                .mapTo[Try[Try[List[Route]]]]
-                .map(_.flatten.map(_.asJson))
-            }
+
+          val uuidTry = Try { UUID.fromString(uuidStr) }
+
+          import sg.beeline.jobs.JobResultActor._
+
+          uuidTry match {
+            case Failure(_) => complete(StatusCodes.BadRequest)
+            case Success(uuid) =>
+              onSuccess(jobQueue.getStatus(uuid)) {
+                case JobQueued() =>
+                  complete((StatusCodes.Accepted, "The job is still queued"))
+                case JobRunning() =>
+                  complete((StatusCodes.Accepted, "The job is still running"))
+                case JobNotFound() =>
+                  complete(StatusCodes.NotFound)
+                case JobFailed(exc) =>
+                  complete((
+                    StatusCodes.InternalServerError,
+                    s"The job errored with: ${exc.getMessage}"))
+                case JobSucceeded(res) =>
+                  complete(res.asJson)
+              }
           }
         }
       }
