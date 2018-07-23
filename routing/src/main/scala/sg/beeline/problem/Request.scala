@@ -25,23 +25,6 @@ trait Request {
   lazy val startWGS = Util.toWGS(start)
   lazy val endWGS = Util.toWGS(end)
 
-  // Everything relating to distance here is in metres, and points here is in (lat, lon)
-  lazy val distanceFromNearestMrt : Double = {
-    val distances = dataSource.mrtStations.map(mrtStation => Util.computeDistance(mrtStation.coordinates, startWGS))
-    val minDist = distances.foldLeft(Double.PositiveInfinity)(min(_,_))
-    minDist
-  }
-
-  def getWeightByDistanceToMrt(maxDistanceFromMrt : Double, minProbabilityAtMrt : Double) : Double = {
-    val correspondingWeight = {
-      if (distanceFromNearestMrt <= maxDistanceFromMrt)
-        weight * minProbabilityAtMrt
-      else
-        weight
-    }
-    correspondingWeight
-  }
-
   override def toString: String = (Util.toWGS(start), Util.toWGS(end), time).toString
 }
 

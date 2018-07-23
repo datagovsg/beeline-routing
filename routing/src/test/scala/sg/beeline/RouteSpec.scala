@@ -22,8 +22,6 @@ class RouteSpec extends FlatSpec with Matchers {
     }
   }
   val testDataSource = new DataSource {
-    override def mrtStations: Seq[MrtStation] = throw new UnsupportedOperationException
-
     override def busStops: Seq[BusStop] = ZeroDistance.busStops
 
     override def distanceFunction(a: BusStop, b: BusStop): Double = ZeroDistance.distance(a, b)

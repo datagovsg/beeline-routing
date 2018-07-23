@@ -1,6 +1,6 @@
 package sg.beeline.io
 
-import sg.beeline.problem.{BusStop, MrtStation, Suggestion}
+import sg.beeline.problem.{BusStop, Suggestion}
 import sg.beeline.util.{ExpiringCache, Util}
 
 import scala.concurrent.Await
@@ -21,7 +21,6 @@ case class BusStopSchema(Latitude: Double, Longitude: Double, Heading: Option[Do
 trait DataSource {
   def busStops: Seq[BusStop]
   def distanceFunction(a: BusStop, b: BusStop): Double
-  def mrtStations: Seq[MrtStation]
 
   lazy val busStopsByIndex = Map(
     busStops.map(b => (b.index, b)) : _*
@@ -50,27 +49,6 @@ object Import extends DataSource {
           b.Heading.getOrElse(Double.NaN),
           b.Description,
           b.RoadName,
-          i
-        )
-      })
-  }
-
-  override lazy val mrtStations = {
-    implicit val busStopSchemaDecoder = _root_.io.circe.generic
-      .semiauto.deriveDecoder[BusStopSchema]
-
-    val jsonData = _root_.io.circe.parser.decode[List[BusStopSchema]](
-      Source.fromFile("mrt-stations.json").mkString
-    ).right.get
-
-    jsonData
-      .zipWithIndex
-      .map({
-        case(v, i) => new MrtStation(
-          (v.Longitude, v.Latitude),
-          v.Heading.getOrElse(Double.NaN),
-          v.Description,
-          v.RoadName,
           i
         )
       })

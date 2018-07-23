@@ -24,14 +24,6 @@ case class BusStop(
     s"BusStop(${coordinates._2},${coordinates._1}) ${description}"
 }
 
-case class MrtStation(coordinates: Util.Point, heading: Double, description: String, roadName: String, index: Int) {
-  // Save the index for caching!
-  val xy = Util.toSVY(coordinates)
-
-  override def toString =
-    s"MrtStation(${coordinates._2},${coordinates._1}) ${description}"
-}
-
 case class Suggestion(id: Int, start: Util.Point, end: Util.Point, actualTime: Double, weight : Int = 1) {
   val time = actualTime
 

@@ -4,7 +4,7 @@ import java.util.UUID
 
 import org.scalatest.FunSuite
 import sg.beeline.io.DataSource
-import sg.beeline.problem.{BusStop, MrtStation, Suggestion}
+import sg.beeline.problem.{BusStop, Suggestion}
 import sg.beeline.web.IntelligentRoutingService
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
@@ -35,8 +35,6 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   }
 
   val testDataSource = new DataSource {
-    override val mrtStations: Seq[MrtStation] = Array[MrtStation]()
-
     override val busStops: Seq[BusStop] = {
       // Make a rough square grid, 200m apart
       (0 until 50).flatMap(i =>

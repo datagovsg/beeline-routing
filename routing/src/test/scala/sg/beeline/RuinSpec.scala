@@ -29,7 +29,6 @@ class RuinSpec extends FlatSpec with Matchers {
   val requests = (starts zip ends).zipWithIndex.map({case ((s,e), i) => Suggestion(i, s, e, TIME)})
 
   val testDataSource = new DataSource {
-    override def mrtStations: Seq[MrtStation] = throw new UnsupportedOperationException
     override def busStops: Seq[BusStop] = myBusStops
     override def distanceFunction(a: BusStop, b: BusStop): Double =
       kdtreeQuery.squaredDistance(a.xy, b.xy) / 11 / 60
