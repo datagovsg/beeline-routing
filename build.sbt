@@ -9,7 +9,7 @@ enablePlugins(JavaServerAppPackaging)
 
 val commonSettings = Seq(
   resolvers += DefaultMavenRepository,
-  scalaVersion := "2.11.11",
+  scalaVersion := "2.12.6",
   version := "1.0"
 )
 
@@ -30,7 +30,7 @@ lazy val routing = (project in file("routing"))
     libraryDependencies ++= Seq(
       "io.jeo" % "jeo" % "0.7",
       "com.graphhopper" % "graphhopper" % "0.7.0",
-      "com.thesamet" %% "kdtree" % "1.0.4",
+      "com.thesamet" %% "kdtree" % "1.0.5",
       "org.scalactic" %% "scalactic" % "3.0.0",
       scalatest,
       "org.postgresql" % "postgresql" % "42.1.3",
@@ -39,7 +39,6 @@ lazy val routing = (project in file("routing"))
       "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
       "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
       "com.typesafe.akka"   %% "akka-stream" % "2.5.13",
-      "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5",
 
       // for CORS support
       "ch.megard" %% "akka-http-cors" % "0.3.0",
