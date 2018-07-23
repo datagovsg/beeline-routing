@@ -264,8 +264,8 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   test("CORS settings work") {
     Options("/bus_stops/1/2/3")
       .addHeader(Origin(HttpOrigin("https://www.beeline.sg")))
-      .addHeader(akka.http.scaladsl.model.headers.`Access-Control-Request-Headers`())
-      .addHeader(akka.http.scaladsl.model.headers.`Access-Control-Request-Method`(HttpMethods.GET)) ~>
+      .addHeader(`Access-Control-Request-Headers`())
+      .addHeader(`Access-Control-Request-Method`(HttpMethods.GET)) ~>
       testService ~> check {
       val allowOrigin = header[`Access-Control-Allow-Origin`].get
       assert { allowOrigin.range matches HttpOrigin("https://www.beeline.sg") }
