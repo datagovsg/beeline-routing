@@ -24,10 +24,10 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   var END_CLUSTER_RADIUS = settings.endClusterRadius
 
   // KD trees
-  val startStopTree = KDTreeMap.fromSeq(
+  lazy val startStopTree = KDTreeMap.fromSeq(
     requests.map({ r => (r.start, r) }).toSeq
   )
-  val endStopTree = KDTreeMap.fromSeq(
+  lazy val endStopTree = KDTreeMap.fromSeq(
     requests.map({ r => (r.end, r) }).toSeq
   )
 
@@ -60,8 +60,8 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     val requestsView = requests.view
 
     val map = requestsView.par.map(request => {
-      val compatibleRequests = startStopTree.queryBall(request.start, START_CLUSTER_RADIUS).map(_._2).intersect(
-        endStopTree.queryBall(request.end, END_CLUSTER_RADIUS).map(_._2)
+      val compatibleRequests = startStopTree.queryBall(request.start, START_CLUSTER_RADIUS).map(_._2).toSet.intersect(
+        endStopTree.queryBall(request.end, END_CLUSTER_RADIUS).map(_._2).toSet
       )
         .filter(other => isCompatible(request, other)).toSet
 
@@ -437,15 +437,8 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     val ods = odCombis(request)
 
     val compatibleRequests = {
-      val startStopTree = KDTreeMap.fromSeq(
-        requests.map({ r => (r.start, r) }).toSeq
-      )
-      val endStopTree = KDTreeMap.fromSeq(
-        requests.map({ r => (r.end, r) }).toSeq
-      )
-
-      startStopTree.queryBall(request.start, START_CLUSTER_RADIUS).map(_._2).intersect(
-        endStopTree.queryBall(request.end, END_CLUSTER_RADIUS).map(_._2)
+      requests.filter(
+        settings.requestsFilter(request)
       )
         .filter(other => isCompatible(request, other)).toSet
     }
