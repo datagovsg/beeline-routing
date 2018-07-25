@@ -1,6 +1,7 @@
 package sg.beeline.ruinrecreate
 
 import com.thesamet.spatial.KDTreeMap
+import sg.beeline.problem.Request
 import sg.beeline.util.Util.Point
 import sg.beeline.util.kdtreeQuery
 

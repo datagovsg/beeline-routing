@@ -16,7 +16,7 @@ object SuggestionJsonEncoder extends Encoder[Suggestion] {
 }
 
 object RequestJsonEncoder extends Encoder[Request] {
-  override def apply(request: RoutingProblem.Request) =
+  override def apply(request: Request) =
     Json.obj(
       "start" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(request.start))),
       "end" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(request.end))),

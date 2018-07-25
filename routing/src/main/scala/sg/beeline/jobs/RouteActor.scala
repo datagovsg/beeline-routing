@@ -28,14 +28,13 @@ class RouteActor(dataSource: DataSource, suggestionSource: String => Seq[Suggest
 
       beelineRecreate.generatePotentialRoutesFromRequest(
         new Request.RequestFromSuggestion(
-          beelineProblem,
           Suggestion(
             -999, // Some ID that would not occur naturally in the database
             Util.toSVY((sLng, sLat)),
             Util.toSVY((eLng, eLat)),
             time
           ),
-          8 * 3600e3,
+          beelineProblem,
           dataSource
         )
       ).toList

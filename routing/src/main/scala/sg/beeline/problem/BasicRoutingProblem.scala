@@ -21,7 +21,7 @@ class BasicRoutingProblem(val suggestions: Seq[Suggestion],
   )
 
   val requests : Seq[Request] = suggestions.map(sugg =>
-    new Request.RequestFromSuggestion(this, sugg, overrideRouteTime.getOrElse(sugg.time), dataSource))
+    new Request.RequestFromSuggestion(sugg, this, dataSource))
     .filter(_.startStops.nonEmpty)
     .filter(_.endStops.nonEmpty)
 
