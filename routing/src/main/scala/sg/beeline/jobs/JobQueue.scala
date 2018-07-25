@@ -26,7 +26,7 @@ class JobQueue[JobSpec, ResultType](actorRef: ActorRef,
 
     jobResultActor ! AddJob(uuid)
 
-    val future = actorRef ? (uuid, a)
+    val future = actorRef ? a
 
     future.onComplete { tryResult =>
       tryResult match {
