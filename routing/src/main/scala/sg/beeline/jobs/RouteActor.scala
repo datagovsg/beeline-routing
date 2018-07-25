@@ -3,7 +3,7 @@ package sg.beeline.jobs
 import akka.actor.Actor
 import sg.beeline.io.{DataSource, Import}
 import sg.beeline.problem._
-import sg.beeline.ruinrecreate.{BasicRoutingAlgorithm, BeelineRecreate}
+import sg.beeline.ruinrecreate.{BasicRoutingAlgorithm, BeelineRecreate, BeelineSuggestRoute}
 import sg.beeline.util.Util
 import sg.beeline.web.SuggestRequest
 
@@ -21,10 +21,11 @@ class RouteActor(dataSource: DataSource, suggestionSource: String => Seq[Suggest
         )
       }
 
-      val beelineRecreate = new BeelineRecreate(
+      val beelineRecreate = new BeelineSuggestRoute(
         beelineProblem,
-        beelineProblem.requests
-      )(settings)
+        beelineProblem.requests,
+        settings
+      )
 
       beelineRecreate.generatePotentialRoutesFromRequest(
         new Request.RequestFromSuggestion(

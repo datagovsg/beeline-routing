@@ -1,19 +1,16 @@
 package sg.beeline.ruinrecreate
 
-import com.thesamet.spatial.KDTreeMap
 import sg.beeline.problem._
-import sg.beeline.util.kdtreeQuery.KDTreeMapBall
-import sg.beeline.util.{WeightedRandomShuffle, kdtreeQuery}
+import sg.beeline.util.WeightedRandomShuffle
 
 import scala.annotation.tailrec
-import scala.collection.immutable.HashMap
-import scala.util.Random
 
-class BeelineSuggestRoute(routingProblem : RoutingProblem, requests: Traversable[Request])
-                         (implicit settings : BeelineRecreateSettings = BeelineRecreateSettings.default) {
-  var MAX_DETOUR_MINUTES = settings.maxDetourMinutes
-  var START_CLUSTER_RADIUS = settings.startClusterRadius
-  var END_CLUSTER_RADIUS = settings.endClusterRadius
+class BeelineSuggestRoute(routingProblem : RoutingProblem,
+                          requests: Traversable[Request],
+                          settings: BeelineRecreateSettings = BeelineRecreateSettings.default) {
+  val MAX_DETOUR_MINUTES = settings.maxDetourMinutes
+  val START_CLUSTER_RADIUS = settings.startClusterRadius
+  val END_CLUSTER_RADIUS = settings.endClusterRadius
 
   private def isCompatible(r1: Request, r2: Request): Boolean = {
     odCombis(r1).exists({
