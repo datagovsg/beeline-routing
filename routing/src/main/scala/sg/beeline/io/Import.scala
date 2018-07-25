@@ -115,20 +115,21 @@ object Import extends DataSource {
        |            ST_Y(alight) AS alight_lat,
        |            email,
        |            time,
+       |            "daysOfWeek",
        |            "createdAt"
        |        FROM suggestions
        |        ORDER BY board, alight, time, email
        |
        """.stripMargin('|')
-          .as[(Long, Int, Double, Double, Double, Double, String, Long, java.sql.Timestamp)]
+          .as[(Long, Int, Double, Double, Double, Double, String, Long, Int, java.sql.Timestamp)]
           .map[Seq[Suggestion]]({ results =>
             genericWrapArray(results.view.map({
-              case (travelTime, id, boardLng, boardLat, alightLng, alightLat, email, time, createdAt) =>
+              case (travelTime, id, boardLng, boardLat, alightLng, alightLat, email, time, daysOfWeek, createdAt) =>
                 Suggestion(
                   id=id,
                   start=Util.toSVY((boardLng, boardLat)),
                   end=Util.toSVY((alightLng, alightLat)),
-                  actualTime=time
+                  time=time
                 )
             }).toArray)
           })

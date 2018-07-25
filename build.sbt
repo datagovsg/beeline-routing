@@ -49,7 +49,7 @@ lazy val routing = (project in file("routing"))
 
       "io.circe" %% "circe-literal" % "0.8.0",
       "io.circe" %% "circe-parser" % "0.8.0",
-      "io.circe" %% "circe-generic" % "0.8.0"
+      "io.circe" %% "circe-generic-extras" % "0.8.0" // -generic-extras allows for default values
     )
   )
 

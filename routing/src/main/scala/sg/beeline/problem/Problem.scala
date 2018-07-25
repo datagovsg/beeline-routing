@@ -24,11 +24,9 @@ case class BusStop(
     s"BusStop(${coordinates._2},${coordinates._1}) ${description}"
 }
 
-case class Suggestion(id: Int, start: Util.Point, end: Util.Point, actualTime: Double, weight : Int = 1) {
-  val time = actualTime
-
-  def startLngLat = Util.toWGS(start)
-  def endLngLat = Util.toWGS(end)
+case class Suggestion(id: Int, start: Util.Point, end: Util.Point, time: Double, weight : Int = 1) {
+  lazy val startLngLat = Util.toWGS(start)
+  lazy val endLngLat = Util.toWGS(end)
 
   override def toString =
     s"Suggestion(${start._1}, ${start._2}) to (${end._1}, ${end._2}) @${time}"

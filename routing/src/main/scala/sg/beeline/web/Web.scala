@@ -11,6 +11,8 @@ import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{Geo, Util, kdtreeQuery}
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
+import io.circe.generic.extras.Configuration
+import sg.beeline.util.Util.Point
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
@@ -21,11 +23,13 @@ case class SuggestRequest(startLat: Double,
                           endLat: Double,
                           endLng: Double,
                           time: Double,
-                          settings: BeelineRecreateSettings)
+                          settings: BeelineRecreateSettings) {
+}
 case class LatLng(lat : Double, lng : Double)
 
 trait JsonSupport extends JsonMarshallers {
-  import _root_.io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
+  import _root_.io.circe.generic.extras.semiauto.{deriveDecoder, deriveEncoder}
+  implicit val jsonConfig: Configuration =_root_.io.circe.generic.extras.Configuration.default.withDefaults
 
   implicit val latLngEncoder = deriveEncoder[LatLng]
   implicit val busStopEncoder = BusStopEncoder

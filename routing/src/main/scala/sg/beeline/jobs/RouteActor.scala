@@ -17,7 +17,6 @@ class RouteActor(dataSource: DataSource, suggestionSource: String => Seq[Suggest
           suggestions,
           startWalkingDistance = settings.startWalkingDistance,
           endWalkingDistance = settings.endWalkingDistance,
-          overrideRouteTime = Some(8 * 3600e3),
           dataSource
         )
       }

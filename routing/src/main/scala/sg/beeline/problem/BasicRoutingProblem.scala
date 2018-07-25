@@ -9,7 +9,6 @@ import sg.beeline.util.{Util, kdtreeQuery}
 class BasicRoutingProblem(val suggestions: Seq[Suggestion],
                           val startWalkingDistance : Double = 300.0,
                           val endWalkingDistance : Double = 300.0,
-                          val overrideRouteTime: Option[Double] = None,
                           val dataSource: DataSource)
   extends RoutingProblem {
 

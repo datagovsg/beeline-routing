@@ -11,16 +11,16 @@ object SuggestionJsonEncoder extends Encoder[Suggestion] {
       "id" -> Json.fromInt(suggestion.id),
       "start" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(suggestion.start))),
       "end" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(suggestion.end))),
-      "time" -> Json.fromDouble(suggestion.actualTime).get
+      "time" -> Json.fromDouble(suggestion.time).get
     )
 }
 
 object RequestJsonEncoder extends Encoder[Request] {
-  override def apply(request: Request) =
+  override def apply(request: RoutingProblem.Request) =
     Json.obj(
       "start" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(request.start))),
       "end" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(request.end))),
-      "time" -> Json.fromDouble(request.actualTime).get
+      "time" -> Json.fromDouble(request.time).get
     )
 }
 
