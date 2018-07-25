@@ -78,7 +78,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
               30 + scala.util.Random.nextDouble() * 20,
               30 + scala.util.Random.nextDouble() * 20)
 
-            Suggestion(index, Util.toSVY(randStart), Util.toSVY(randEnd), hour * 3600 * 1000, 1)
+            Suggestion(index, Util.toSVY(randStart), Util.toSVY(randEnd), hour * 3600 * 1000L, 1)
           }
         })
       })

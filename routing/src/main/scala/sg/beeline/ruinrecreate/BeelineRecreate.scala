@@ -74,7 +74,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
     map
   }
 
-  def odCombis(request: Request) = {
+  private def odCombis(request: Request) = {
     for (i <- request.startStops; j <- request.endStops) yield (i, j)
   }
 
