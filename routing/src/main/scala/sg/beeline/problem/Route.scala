@@ -33,7 +33,7 @@ class Route(val routingProblem: RoutingProblem,
             val time: Double)
 {
 
-  val activities = _activities.toIndexedSeq
+  val activities = genericWrapArray(_activities.toArray)
 
   // Cost between two points. Accepts options. Returns 0 if either is None
   def distCost(optLoc1: Option[BusStop], optLoc2: Option[BusStop]) = Route.distCost(routingProblem)(optLoc1, optLoc2)
@@ -87,7 +87,7 @@ class Route(val routingProblem: RoutingProblem,
     (minTimes, maxTimes)
   }
 
-  val activitiesWithTimes = (activities, minPossibleTimes, maxPossibleTimes).zipped.toIndexedSeq
+  val activitiesWithTimes = genericWrapArray((activities, minPossibleTimes, maxPossibleTimes).zipped.toArray)
 
   // Prepare a mapping from
   // request -> stops before dropoff
@@ -324,7 +324,7 @@ class Route(val routingProblem: RoutingProblem,
                             ip1 : (Activity, Activity),
                             ip2: (Activity, Activity)) = {
     if (ip1 == ip2) {
-      IndexedSeq(ip1._1, a1, a2, ip1._2)
+      List(ip1._1, a1, a2, ip1._2)
     }
     else {
       val indexOfFirst = activities.indexOf(ip1._1)
@@ -333,9 +333,11 @@ class Route(val routingProblem: RoutingProblem,
       require(activities(indexOfFirst + 1) == ip1._2)
       require(activities(indexOfLast - 1) == ip2._1)
 
-      IndexedSeq(ip1._1, a1) ++
-      activities.slice(indexOfFirst + 1, indexOfLast) ++
-      IndexedSeq(a2, ip2._2)
+      List.concat(
+        Array(ip1._1, a1),
+        activities.slice(indexOfFirst + 1, indexOfLast),
+        Array(a2, ip2._2)
+      )
     }
   }
 
