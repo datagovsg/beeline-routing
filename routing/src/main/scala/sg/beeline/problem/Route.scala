@@ -1,6 +1,7 @@
 package sg.beeline.problem
 
 import sg.beeline.problem.Route.groupSuccessive
+import sg.beeline.util.ListInsertionPointOps
 
 import scala.annotation.tailrec
 
@@ -33,7 +34,7 @@ class Route(val routingProblem: RoutingProblem,
             val time: Double)
 {
 
-  val activities = genericWrapArray(_activities.toArray)
+  val activities = _activities.toList
 
   // Cost between two points. Accepts options. Returns 0 if either is None
   def distCost(optLoc1: Option[BusStop], optLoc2: Option[BusStop]) = Route.distCost(routingProblem)(optLoc1, optLoc2)
@@ -46,38 +47,50 @@ class Route(val routingProblem: RoutingProblem,
 
   /* Compute the maximum possible service time */
   val (minPossibleTimes, maxPossibleTimes) = {
-    val len = activities.size
-    val minTimes = Array.ofDim[Double](len)
-    val maxTimes = Array.ofDim[Double](len)
 
-    minTimes(0) = activities(0).minTime
-    maxTimes(len - 1) = activities(len - 1).maxTime
+    val minTimes = (Option.empty :: activities.map(s => Option(s)))
+      .sliding(2)
+      .foldLeft( (List.newBuilder[Double], 0.0) ) {
+        case ((builder, _), List(None, Some(item))) => // first item
+          builder += item.minTime
 
-    for (i <- 1 until len) {
-      val lastMinTime = minTimes(i - 1)
-      val lastActivity = activities(i - 1)
-      val currentActivity = activities(i)
+          (builder, item.minTime)
 
-      val timeFromPrevious = lastMinTime + startTimeDifference(lastActivity, currentActivity)
+        case ((builder, lastMinTime), List(Some(prevItem), Some(item))) =>
 
-      minTimes(i) = Math.max(timeFromPrevious, currentActivity.minTime)
-    }
+          val timeFromPrevious = lastMinTime + startTimeDifference(prevItem, item)
+          val minTime = Math.max(timeFromPrevious, item.minTime)
 
-    for (i <- (len - 2) to 0 by -1) {
-      val nextMaxTime = maxTimes(i + 1)
-      val nextActivity = activities(i + 1)
-      val currentActivity = activities(i)
+          builder += minTime
 
-      val timeFromNext = nextMaxTime - startTimeDifference(currentActivity, nextActivity)
+          (builder, minTime)
+      }
+      ._1.result
 
-      maxTimes(i) = Math.min(timeFromNext, currentActivity.maxTime)
-    }
+    val maxTimes = (Option.empty :: activities.map(s => Option(s)).reverse)
+      .sliding(2)
+      .foldLeft( (List.newBuilder[Double], 0.0) ) {
+        case ((builder, _), List(None, Some(item))) => // last activity
+          builder += item.maxTime
+
+          (builder, item.maxTime)
+
+        case ((builder, nextMaxTime), List(Some(nextItem), Some(item))) =>
+
+          val timeToNext = nextMaxTime - startTimeDifference(item, nextItem)
+          val maxTime = Math.min(timeToNext, item.maxTime)
+
+          builder += maxTime
+
+          (builder, maxTime)
+      }
+      ._1.result.reverse
 
     def cond = minTimes.zip(maxTimes).forall({case (min, max) => min <= max})
     if (!cond) {
       println(activities.mkString("\n # "))
-      println(activities.sliding(2).map({ case IndexedSeq(a,b) =>
-        (a, b, distCost(a.location, b.location), startTimeDifference(a,b)) }).mkString("\n ? "))
+      println(activities.sliding(2).map({ case List(a, b) =>
+        (a, b, distCost(a.location, b.location), startTimeDifference(a, b)) }).mkString("\n ? "))
 
       println(minTimes.toList)
       println(maxTimes.toList)
@@ -87,7 +100,7 @@ class Route(val routingProblem: RoutingProblem,
     (minTimes, maxTimes)
   }
 
-  val activitiesWithTimes = genericWrapArray((activities, minPossibleTimes, maxPossibleTimes).zipped.toArray)
+  val activitiesWithTimes = (activities, minPossibleTimes, maxPossibleTimes).zipped.toList
 
   // Prepare a mapping from
   // request -> stops before dropoff
@@ -175,7 +188,7 @@ class Route(val routingProblem: RoutingProblem,
                             endTime: Double
                           ) = {
 
-    val activityList = _insertedSubsequence(a1, a2, ip1, ip2)
+    val activityList = new ListInsertionPointOps(activities).insertedSubsequence(a1, a2, ip1, ip2)
 
     // Ensure each intermediate activity is feasible
     // M_2 <= m1 + t(a, 2) <= N_2
@@ -316,55 +329,10 @@ class Route(val routingProblem: RoutingProblem,
     }
   }
 
-
-  // For insertion x,y,(a1, a2),(b1,b2) returns a1 -> x -> a2 -> ... -> b1 -> b2
-
-  def _insertedSubsequence(a1: Activity,
-                            a2: Activity,
-                            ip1 : (Activity, Activity),
-                            ip2: (Activity, Activity)) = {
-    if (ip1 == ip2) {
-      List(ip1._1, a1, a2, ip1._2)
-    }
-    else {
-      val indexOfFirst = activities.indexOf(ip1._1)
-      val indexOfLast  = activities.indexOf(ip2._2)
-
-      require(activities(indexOfFirst + 1) == ip1._2)
-      require(activities(indexOfLast - 1) == ip2._1)
-
-      List.concat(
-        Array(ip1._1, a1),
-        activities.slice(indexOfFirst + 1, indexOfLast),
-        Array(a2, ip2._2)
-      )
-    }
-  }
-
-  def _insert(a1: Activity,
-              a2: Activity,
-              ip1 : (Activity, Activity),
-              ip2: (Activity, Activity)) = {
-
-    def tryInsert(a: Activity, acc: List[Activity]) = acc match {
-      case b :: tail =>
-        if ((a, b) == ip1 && (a, b) == ip2)
-          a :: a1 :: a2 :: b :: tail
-        else if ((a, b) == ip1)
-          a :: a1 :: b :: tail
-        else if ((a, b) == ip2)
-          a :: a2 :: b :: tail
-        else
-          a :: b :: tail
-      case Nil => a :: Nil
-    }
-    activities.foldRight(List[Activity]())(tryInsert)
-  }
-
   def insert(a1: Activity, a2: Activity, ip1: (Activity, Activity), ip2: (Activity, Activity)) =
     new Route(
       routingProblem,
-      _insert(a1, a2, ip1, ip2),
+      new ListInsertionPointOps(activities).insert(a1, a2, ip1, ip2),
       time)
 
   /**
@@ -486,7 +454,7 @@ class Route(val routingProblem: RoutingProblem,
     })
       .groupBy(_._1)
 
-    val newActivities = stopActivities.toIndexedSeq.zipWithIndex.flatMap({
+    val newActivities = stopActivities.zipWithIndex.flatMap({
       case ((stop, p_stopActivities), index) =>
         if (index == stopIndex)
           Seq()
@@ -498,7 +466,10 @@ class Route(val routingProblem: RoutingProblem,
         }
     })
 
-    val newRoute = new Route(routingProblem, StartActivity() +: newActivities :+ EndActivity(), time)
+    val newRoute = new Route(
+      routingProblem,
+      Seq.concat(List(StartActivity()), newActivities, List(EndActivity())),
+      time)
 
     require(newRoute.stopsWithIndices.length < this.stopsWithIndices.length)
     require(newRoute.activities.length == this.activities.length)

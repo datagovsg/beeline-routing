@@ -108,7 +108,6 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
   }
 
   private def growRoute(request : Request, od : (BusStop, BusStop), requests: List[Request]) = {
-    // val shuffled = Random.shuffle(requests)
     val shuffled = WeightedRandomShuffle.shuffle(requests, requests.view.map(r => r.weight.toDouble))
       .toList
 
