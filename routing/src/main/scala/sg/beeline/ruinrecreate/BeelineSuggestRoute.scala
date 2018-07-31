@@ -4,10 +4,13 @@ import sg.beeline.problem._
 import sg.beeline.util.WeightedRandomShuffle
 
 import scala.annotation.tailrec
+import scala.collection.parallel.ExecutionContextTaskSupport
+import scala.concurrent.ExecutionContext
 
 class BeelineSuggestRoute(routingProblem : RoutingProblem,
                           requests: Traversable[Request],
-                          settings: BeelineRecreateSettings = BeelineRecreateSettings.default) {
+                          settings: BeelineRecreateSettings = BeelineRecreateSettings.default)
+                         (implicit val executionContext: ExecutionContext) {
   val MAX_DETOUR_MINUTES = settings.maxDetourMinutes
   val START_CLUSTER_RADIUS = settings.startClusterRadius
   val END_CLUSTER_RADIUS = settings.endClusterRadius
@@ -79,17 +82,20 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
         routingProblem.distance(od._1, od._2) - routingProblem.distance(topOd._1, topOd._2) < 60000
       }
     )
-
-    val feasibleTop50Routes = feasibleTop50Ods.par.flatMap(od => {
-      (0 until 10)
-        .flatMap(i => try {
-          val r = growRoute(request, od, compatibleRequests.toList)
-          println(s"Route generated from ${ compatibleRequests.size } requests")
-          Some(r)
-        } catch {
-          case e : Exception => e.printStackTrace(); None
-        })
-    })
+    val feasibleTop50Routes = {
+      val p = feasibleTop50Ods.par
+      p.tasksupport = new ExecutionContextTaskSupport(executionContext)
+      p
+    }.flatMap({od =>
+        (0 until 10)
+          .flatMap(i => try {
+            val r = growRoute(request, od, compatibleRequests.toList)
+            println(s"Route generated from ${ compatibleRequests.size } requests")
+            Some(r)
+          } catch {
+            case e : Exception => e.printStackTrace(); None
+          })
+      })
 
     // Prepend candidateRoute to uniqueRoutes if it is different from all the routes in uniqueRoutes
     def buildNext(uniqueRoutes : List[Route], candidateRoute : Route) = {
