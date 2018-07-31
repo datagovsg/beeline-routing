@@ -9,10 +9,12 @@ class RouteSpec extends FlatSpec with Matchers {
   object ZeroDistance extends RoutingProblem {
     val busStops = Array(
       BusStop((103.8, 1.38), 0, "BS1", "BS Road", 0),
-      BusStop((103.8, 1.38), 1, "BS1", "BS Road", 1)
+      BusStop((103.81, 1.39), 1, "BS2", "BS Road", 1)
     )
 
-    override def distance(a : BusStop, b: BusStop) = 0
+    override def distance(a : BusStop, b: BusStop) =
+      if (a == b) 0
+      else 1500
 
     override def nearBusStopsStart(p : (Double, Double)) = ZeroDistance.busStops
     override def nearBusStopsEnd(p : (Double, Double)) = ZeroDistance.busStops
@@ -60,6 +62,46 @@ class RouteSpec extends FlatSpec with Matchers {
     route.maxPossibleTimes(2) should be (7000)
     route.maxPossibleTimes(3) should be (7000)
     route.maxPossibleTimes(4) should be (7000)
+
+    assert {
+      route.stops == List(
+        ZeroDistance.busStops(0)
+      )
+    }
+  }
+
+  "Route" should "reflect min/max times correctly (2)" in {
+    val problem = ZeroDistance
+
+    val activities = List(
+      new StartActivity,
+      new TestActivity(problem, ZeroDistance.busStops(0), 1000, 15000, 0, 0),
+      new TestActivity(problem, ZeroDistance.busStops(1), 2000, 14000, 0, 0),
+      new TestActivity(problem, ZeroDistance.busStops(0), 3000, 13000, 0, 0),
+      new TestActivity(problem, ZeroDistance.busStops(1), 4000, 12000, 0, 0),
+      new EndActivity
+    )
+
+    val route = new Route(problem, activities, 0)
+
+    route.minPossibleTimes(1) should be (1000)
+    route.minPossibleTimes(2) should be (2500)
+    route.minPossibleTimes(3) should be (4000)
+    route.minPossibleTimes(4) should be (5500)
+
+    route.maxPossibleTimes(1) should be (7500)
+    route.maxPossibleTimes(2) should be (9000)
+    route.maxPossibleTimes(3) should be (10500)
+    route.maxPossibleTimes(4) should be (12000)
+
+    assert {
+      route.stops == List(
+        ZeroDistance.busStops(0),
+        ZeroDistance.busStops(1),
+        ZeroDistance.busStops(0),
+        ZeroDistance.busStops(1)
+      )
+    }
   }
 
   "Route" should "insert activities correctly" in {

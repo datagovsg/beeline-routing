@@ -73,15 +73,15 @@ class Route(val routingProblem: RoutingProblem,
       ._1.result.reverse
 
     def cond = minTimes.zip(maxTimes).forall({case (min, max) => min <= max})
-    if (!cond) {
+    require(cond, {
       println(activities.mkString("\n # "))
       println(activities.sliding(2).map({ case List(a, b) =>
         (a, b, distCost(a.location, b.location), startTimeDifference(a, b)) }).mkString("\n ? "))
 
       println(minTimes.toList)
       println(maxTimes.toList)
-    }
-    require(cond)
+      "Some stops are infeasible"
+    })
 
     (minTimes, maxTimes)
   }
@@ -96,12 +96,12 @@ class Route(val routingProblem: RoutingProblem,
   // request -> pickup location, dropoff location
 
   // stop index -> stop
-  class FulfillmentInfo(
-                        val stopsWithIndices: Array[BusStop],
-                        val pickupStopIndex: Int,
-                        val dropoffStopIndex: Int,
-                        val travelTime: Double
-                        ) {
+  case class FulfillmentInfo(
+                              stopsWithIndices: Array[BusStop],
+                              pickupStopIndex: Int,
+                              dropoffStopIndex: Int,
+                              travelTime: Double
+                            ) {
     def stopsBeforeDropoff = stopsWithIndices.view(0, dropoffStopIndex)
     def stopsAfterPickup = stopsWithIndices.view(pickupStopIndex + 1, stopsWithIndices.length)
     def stopIndicesBeforeDropoff = 0 until dropoffStopIndex
@@ -110,37 +110,42 @@ class Route(val routingProblem: RoutingProblem,
     def dropoffLocation = stopsWithIndices(dropoffStopIndex)
   }
 
+  /**
+    * Multiple successive activities can take place in the same location.
+    * If in the same location, that becomes a "stop"
+    */
   lazy val (requestsInfo, stopActivities, stopsWithIndices) = {
     val stopActivitiesWithTimes = new ListOps(activitiesWithTimes.filter(
-      x => x._1.location.nonEmpty)).groupSuccessive(_._1.location.orNull)
+      x => x._1.location.nonEmpty)).groupSuccessive(_._1.location.get)
     val byLocation = stopActivitiesWithTimes.zipWithIndex
 
     val stopsWithIndices = byLocation.map({
-      case ((location, activities), stopIndex) => location
+      case ((location, _), stopIndex) => location
     }).toArray
 
     val activityWithPickupIndex = byLocation.flatMap({
-      case ((location, activities), stopIndex) => activities.flatMap({
-        case (Pickup(request, _), minTime, maxTime) => Some((request, (location, stopIndex, minTime, maxTime)))
+      case ((location, activitiesAtLocation), stopIndex) => activitiesAtLocation.flatMap({
+        case (Pickup(request, _), minTime, maxTime) => Some(request -> (location, stopIndex, minTime, maxTime))
         case _ => None
       })
     }).toMap
     val activityWithDropoffIndex = byLocation.flatMap({
-      case ((location, activities), stopIndex) => activities.flatMap({
-        case (Dropoff(request, _), minTime, maxTime) => Some((request, (location, stopIndex, minTime, maxTime)))
+      case ((location, activitiesAtLocation), stopIndex) => activitiesAtLocation.flatMap({
+        case (Dropoff(request, _), minTime, maxTime) => Some(request -> (location, stopIndex, minTime, maxTime))
         case _ => None
       })
     }).toMap
 
     val requests = activityWithDropoffIndex.keys
     val requestsWithFulfillmentInfo = requests.map(r => {
-      val pickup = activityWithPickupIndex(r)
-      val dropoff = activityWithDropoffIndex(r)
+      val (pickupLocation, pickupStopIndex, pickupMinTime, pickupMaxTime) = activityWithPickupIndex(r)
+      val (dropoffLocation, dropoffStopIndex, dropoffMinTime, dropoffMaxTime) = activityWithDropoffIndex(r)
 
-      (r, new FulfillmentInfo(stopsWithIndices,
-        pickup._2,
-        dropoff._2,
-        dropoff._4 - pickup._4))
+      r -> FulfillmentInfo(
+        stopsWithIndices,
+        pickupStopIndex,
+        dropoffStopIndex,
+        dropoffMaxTime - pickupMaxTime)
     }).toMap
 
     (requestsWithFulfillmentInfo,
@@ -158,7 +163,11 @@ class Route(val routingProblem: RoutingProblem,
     val (a1, m1, n1) = activity1
     val (a2, m2, n2) = activity2
 
-    val activities2 = a1 +: activities :+ a2
+    val activities2 = List.concat(
+      List(a1),
+      activities,
+      List(a2)
+    )
 
     activities2.sliding(2).map({
       case Seq(a, b) => startTimeDifference(a, b)
