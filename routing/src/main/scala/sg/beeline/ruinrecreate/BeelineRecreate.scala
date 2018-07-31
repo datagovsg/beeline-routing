@@ -9,6 +9,8 @@ import kdtreeQuery.KDTreeMapBall
 
 import scala.annotation.tailrec
 import scala.collection.immutable.HashMap
+import scala.collection.parallel.{ExecutionContextTaskSupport, ParIterableLike}
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Request])
@@ -57,9 +59,9 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
   // Generate all the possible requests
   // Get a map of requests -> compatible requests
   lazy val relatedRequests = {
-    val requestsView = requests.view
+    val requestsView = requests
 
-    val map = requestsView.par.map(request => {
+    val map = requests.map(request => {
       val compatibleRequests = startStopTree.queryBall(request.start, START_CLUSTER_RADIUS).map(_._2).toSet.intersect(
         endStopTree.queryBall(request.end, END_CLUSTER_RADIUS).map(_._2).toSet
       )
@@ -115,10 +117,10 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
 
   def tryCreateRoute(problem: RoutingProblem)(request: Request) = {
     // Construct new route
-    val randomPickup = new Pickup(request, request.startStops({
+    val randomPickup = Pickup(request, request.startStops({
       Random.nextInt(request.startStops.size)
     }))
-    val randomDropoff = new Dropoff(request, request.endStops({
+    val randomDropoff = Dropoff(request, request.endStops({
       Random.nextInt(request.endStops.size)
     }))
 
@@ -192,28 +194,28 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
         lazy val best = {
           // For all requests, compute the regret
           val requestStops = unservedRequests
-          val insertionCosts = routeOdMap.par.flatMap({
-            case (route, compatibleSet) =>
-              val feasibleRequests = requestStops.intersect(compatibleSet)
+          val insertionCosts = routeOdMap.flatMap({
+              case (route, compatibleSet) =>
+                val feasibleRequests = requestStops.intersect(compatibleSet)
 
-              if (feasibleRequests.isEmpty)
-                None
-              else
-                Some({
-                  val regrets = feasibleRequests.map(req => (route, req, getRegret(route, req)))
+                if (feasibleRequests.isEmpty)
+                  None
+                else
+                  Some({
+                    val regrets = feasibleRequests.map(req => (route, req, getRegret(route, req)))
 
-                  /* Update the cache! */
-                  {
-                    val update = regrets.map { case (_, request, regret) => (request, regret) }
+                    /* Update the cache! */
+                    {
+                      val update = regrets.map { case (_, request, regret) => (request, regret) }
 
-                    costCacheMutex.synchronized({
-                      costCache = costCache + (route -> (costCache.getOrElse(route, new HashMap) ++ update))
-                    })
-                  }
+                      costCacheMutex.synchronized({
+                        costCache = costCache + (route -> (costCache.getOrElse(route, new HashMap) ++ update))
+                      })
+                    }
 
-                  regrets.minBy(_._3._1)
-                })
-          })
+                    regrets.minBy(_._3._1)
+                  })
+            })
 
           if (insertionCosts.isEmpty)
             None
