@@ -55,12 +55,12 @@ class IntelligentRoutingService(dataSource: DataSource,
 
   import ExecutionContext.Implicits.global
   implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
-  implicit val system = ActorSystem()
+  val system = ActorSystem()
   val routingActor = system.actorOf(Props({
     new RouteActor(dataSource, _ => suggestionsSource)
   }), "intelligent-routing")
   val jobQueue = new JobQueue[SuggestRequest, List[Route]](
-    routingActor, 10 minutes,5 minutes)
+    routingActor, 10 minutes,5 minutes, actorSystem = Some(system))
 
   val myRoute = cors() {
     path("bus_stops") {

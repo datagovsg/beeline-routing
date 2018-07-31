@@ -15,9 +15,10 @@ import scala.util.{Failure, Success}
 
 class JobQueue[JobSpec, ResultType](actorRef: ActorRef,
                                     validityDuration: FiniteDuration,
-                                    timeoutDuration: FiniteDuration)
+                                    timeoutDuration: FiniteDuration,
+                                    actorSystem: Option[ActorSystem] = None)
                                    (implicit executionContext: ExecutionContext) {
-  val system = ActorSystem()
+  val system = actorSystem.getOrElse(ActorSystem())
   val jobResultActor = system.actorOf(Props[JobResultActor[ResultType]])
 
   def enqueueJob(a: JobSpec): UUID = {
