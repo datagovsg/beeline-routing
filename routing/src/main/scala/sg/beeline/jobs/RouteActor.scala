@@ -14,10 +14,7 @@ import scala.concurrent.ExecutionContext
 class RouteActor(dataSource: DataSource, suggestionSource: String => Seq[Suggestion]) extends Actor {
   // If we don't set this, Scalatest hangs when running multiple threads
   implicit val executionContext = ExecutionContext.fromExecutor(
-    new ForkJoinPool(
-      scala.math.max(
-        3,
-        Runtime.getRuntime.availableProcessors)))
+    new ForkJoinPool(Runtime.getRuntime.availableProcessors))
 
   private def routeFromRequest(suggestRequest: SuggestRequest) = suggestRequest match {
     case SuggestRequest(sLat, sLng, eLat, eLng, time, settings) =>
