@@ -1,7 +1,6 @@
 package sg.beeline.problem
 
-import sg.beeline.problem.Route.groupSuccessive
-import sg.beeline.util.ListInsertionPointOps
+import sg.beeline.util.{ListInsertionPointOps, ListOps}
 
 import scala.annotation.tailrec
 
@@ -14,19 +13,6 @@ object Route {
       case (Some(l1), Some(l2)) => routingProblem.distance(l1, l2) // Distance is already in seconds
       case _ => 0.0
     }
-
-  // FIXME: fix the tail recursion bit
-  def groupSuccessive[A, B]
-  (t : Traversable[A])(fn : A => B) : List[(B, Traversable[A])] = {
-    if (t.isEmpty)
-      List()
-    else {
-      val first = fn(t.head)
-      val (same, different) = t.span(x => fn(x) == first)
-
-      (first, same) :: groupSuccessive(different)(fn)
-    }
-  }
 }
 
 class Route(val routingProblem: RoutingProblem,
@@ -125,8 +111,8 @@ class Route(val routingProblem: RoutingProblem,
   }
 
   lazy val (requestsInfo, stopActivities, stopsWithIndices) = {
-    val stopActivitiesWithTimes = groupSuccessive(activitiesWithTimes.filter(
-      x => x._1.location.nonEmpty))(_._1.location.orNull)
+    val stopActivitiesWithTimes = new ListOps(activitiesWithTimes.filter(
+      x => x._1.location.nonEmpty)).groupSuccessive(_._1.location.orNull)
     val byLocation = stopActivitiesWithTimes.zipWithIndex
 
     val stopsWithIndices = byLocation.map({
@@ -179,7 +165,7 @@ class Route(val routingProblem: RoutingProblem,
     }).sum - startTimeDifference(a1, a2)
   }
 
-  def _isInsertionFeasible(
+  private def _isInsertionFeasible(
                             startTime: Double,
                             a1: Activity,
                             a2: Activity,
