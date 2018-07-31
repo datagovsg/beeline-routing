@@ -1,4 +1,4 @@
-val scalatest = "org.scalatest" %% "scalatest" % "3.0.0" % "test"
+val scalatest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
 def scalaSources(base: File): PathFinder = (base / "src") ** "*.scala"
 //
@@ -50,7 +50,8 @@ lazy val routing = (project in file("routing"))
       "io.circe" %% "circe-literal" % "0.8.0",
       "io.circe" %% "circe-parser" % "0.8.0",
       "io.circe" %% "circe-generic-extras" % "0.8.0" // -generic-extras allows for default values
-    )
+    ),
+    parallelExecution in test := false
   )
 
 lazy val root = (project in file("."))
