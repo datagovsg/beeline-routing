@@ -134,7 +134,7 @@ object Import extends DataSource {
             }).toArray)
           })
 
-    Await.result(db.run(suggestions), 60 seconds)
+    Await.result(db.run(suggestions), 120 seconds)
   }
   def getLiveRequests = liveRequestsCache.apply
 }
