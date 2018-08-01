@@ -115,7 +115,7 @@ object Import extends DataSource {
        |            ST_Y(alight) AS alight_lat,
        |            email,
        |            time,
-       |            "daysOfWeek",
+       |            "daysMask",
        |            "createdAt"
        |        FROM suggestions
        |        ORDER BY board, alight, time, email
