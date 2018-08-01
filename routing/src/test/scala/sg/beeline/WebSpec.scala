@@ -11,9 +11,9 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes, Uri}
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
-import sg.beeline.util.{Util}
+import sg.beeline.util.Util
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -158,7 +158,8 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
         Get(Uri("/routing/poll").withQuery(Uri.Query("uuid" -> response))) ~> testService ~>
           check {
             if (status == StatusCodes.Accepted) {
-              val delayed = akka.pattern.after(5 second, using = system.scheduler)(Future(()))
+              val delayed = akka.pattern.after(1 second, using = system.scheduler)(
+                Future(()))(ExecutionContext.Implicits.global)
               delayed.flatMap(_ => tryUntilResult())
             } else if (status == StatusCodes.OK) {
               val s = responseAs[String]
