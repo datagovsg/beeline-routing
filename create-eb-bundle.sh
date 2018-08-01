@@ -22,5 +22,5 @@ zip bundle.zip distances_cache.dat.gz
 zip bundle.zip Procfile
 
 zip bundle.zip onemap/bus-stops-headings.json
-zip bundle.zip onemap/mrt-stations.json /app
+# zip bundle.zip onemap/mrt-stations.json /app
 zip bundle.zip ./config.properties
