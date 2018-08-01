@@ -154,13 +154,15 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
 
       assert { uuidTry.isSuccess }
 
-      def tryUntilResult(): Future[String] = {
-        Get(Uri("/routing/poll").withQuery(Uri.Query("uuid" -> response))) ~> testService ~>
+      def tryUntilResult(n: Int = 1): Future[String] = {
+        Get(Uri("/routing/poll").withQuery(Uri.Query("uuid" -> response))) ~>
+          testService ~>
           check {
+            println(s"Polling for the ${n}th time ${status.intValue()}")
             if (status == StatusCodes.Accepted) {
               val delayed = akka.pattern.after(1 second, using = system.scheduler)(
                 Future(()))(ExecutionContext.Implicits.global)
-              delayed.flatMap(_ => tryUntilResult())
+              delayed.flatMap(_ => tryUntilResult(n + 1))
             } else if (status == StatusCodes.OK) {
               val s = responseAs[String]
               Future(s)
