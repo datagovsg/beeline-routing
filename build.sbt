@@ -30,29 +30,50 @@ lazy val routing = (project in file("routing"))
       "org.scalactic" %% "scalactic" % "3.0.0" % Test,
       scalatest,
       "org.postgresql" % "postgresql" % "42.1.3",
-      "com.typesafe.akka"   %% "akka-http" % "10.1.0",
-      "com.typesafe.akka"   %%  "akka-http-testkit"  % "10.1.0" % "test",
       "com.typesafe.akka"   %%  "akka-actor"    % "2.5.13",
       "com.typesafe.akka"   %%  "akka-testkit"  % "2.5.13"   % "test",
       "com.typesafe.akka"   %% "akka-stream" % "2.5.13",
 
+
       // for AWS
       "com.amazonaws" % "aws-java-sdk-lambda" % "1.11.385",
+
+      "io.circe" %% "circe-literal" % "0.9.3",
+      "io.circe" %% "circe-parser" % "0.9.3",
+      "io.circe" %% "circe-generic-extras" % "0.9.3"
+    ),
+    parallelExecution in test := false
+  )
+
+lazy val routingWeb = (project in file("routing-web"))
+  .settings(
+    commonSettings,
+    name := "routing-web",
+    libraryDependencies ++= Seq(
+      scalatest,
+      "org.scalactic" %% "scalactic" % "3.0.0",
+
+      "com.typesafe.akka"   %% "akka-http" % "10.1.0",
+      "com.typesafe.akka"   %%  "akka-http-testkit"  % "10.1.0" % "test",
 
       // for CORS support
       "ch.megard" %% "akka-http-cors" % "0.3.0",
 
+      "io.circe" %% "circe-literal" % "0.9.3",
+      "io.circe" %% "circe-parser" % "0.9.3",
+      // -generic-extras allows for default values
+      "io.circe" %% "circe-generic-extras" % "0.9.3",
+
+      "com.pauldijou" %% "jwt-circe" % "0.17.0",
+
       // for database support
       "com.typesafe.slick" %% "slick" % "3.2.1",
-      "com.typesafe.slick" %% "slick-hikaricp" % "3.2.1",
-
-      "io.circe" %% "circe-literal" % "0.9.1",
-      "io.circe" %% "circe-parser" % "0.9.1",
-      "io.circe" %% "circe-generic-extras" % "0.9.1" // -generic-extras allows for default values
+      "com.typesafe.slick" %% "slick-hikaricp" % "3.2.1"
     ),
-    mainClass in run := Some("sg.beeline.BeelineRoutingApp"),
-    parallelExecution in test := false
+    mainClass := Some("sg.beeline.web.RoutingApp"),
+    test in assembly := {}
   )
+  .dependsOn(routing)
 
 lazy val routingLambda = (project in file("routing-lambda"))
   .dependsOn(routing)
@@ -66,7 +87,7 @@ lazy val routingLambda = (project in file("routing-lambda"))
   )
 
 lazy val root = (project in file("."))
-  .aggregate(fuzzyClustering, routing, routingLambda)
+  .aggregate(fuzzyClustering, routingWeb, routingLambda)
   .settings(
     commonSettings,
     name := "beeline-routing",
@@ -74,4 +95,4 @@ lazy val root = (project in file("."))
   )
 
 fork in run := true
-
+cancelable in Global := true

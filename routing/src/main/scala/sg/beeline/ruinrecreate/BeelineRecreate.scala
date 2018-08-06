@@ -1,16 +1,12 @@
 package sg.beeline.ruinrecreate
 
 import com.thesamet.spatial.KDTreeMap
-import sg.beeline._
-import sg.beeline.io.Import
 import sg.beeline.problem._
-import sg.beeline.util.{WeightedRandomShuffle, kdtreeQuery}
+import sg.beeline.util.kdtreeQuery
 import kdtreeQuery.KDTreeMapBall
 
 import scala.annotation.tailrec
 import scala.collection.immutable.HashMap
-import scala.collection.parallel.{ExecutionContextTaskSupport, ParIterableLike}
-import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Request])
@@ -194,7 +190,7 @@ class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Req
         lazy val best = {
           // For all requests, compute the regret
           val requestStops = unservedRequests
-          val insertionCosts = routeOdMap.flatMap({
+          val insertionCosts = routeOdMap.par.flatMap({
               case (route, compatibleSet) =>
                 val feasibleRequests = requestStops.intersect(compatibleSet)
 

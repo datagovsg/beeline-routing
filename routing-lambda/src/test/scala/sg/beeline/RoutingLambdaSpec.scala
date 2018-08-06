@@ -6,7 +6,7 @@ import _root_.io.circe.Json
 import _root_.io.circe.literal._
 import _root_.io.circe.syntax._
 import org.scalatest._
-import sg.beeline.io.Import
+import sg.beeline.io.BuiltIn
 import sg.beeline.lambda.SuggestRouteHandler
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.AWSLambdaSuggestRouteServiceProxy._
@@ -21,7 +21,7 @@ class RoutingLambdaSpec extends FunSuite {
 
   val problem = new BasicRoutingProblem(
     List(),
-    dataSource = Import,
+    dataSource = BuiltIn,
     settings = BeelineRecreateSettings.default)
 
   test("Route encoder works with empty Activity classes") {
@@ -71,14 +71,14 @@ class RoutingLambdaSpec extends FunSuite {
     val destinationBusStop = BusStop((20499.24174394127, 38342.890397198564), 101, "Destination", "Hello Lane", 3)
 
     val basicRequest1 = new BasicRequest(
-      problem, (40778.2186070438, 39589.155309929425), (29899.68739611096, 29292.2330929787), 8.5 * 3600e3, 1, Import, 2)
+      problem, (40778.2186070438, 39589.155309929425), (29899.68739611096, 29292.2330929787), 8.5 * 3600e3, 1, BuiltIn, 2)
     val requestLambda = Await.result(TestSuggestRouteServiceProxy.executeLambda(
       BeelineRecreateSettings.default,
       basicRequest1,
       (originBusStop, destinationBusStop),
       List(
         new BasicRequest(
-          problem, (21421.649051572367, 32062.31453230393), (25959.98999086392, 33974.19460209075), 8.5 * 3600e3, 1, Import, 2
+          problem, (21421.649051572367, 32062.31453230393), (25959.98999086392, 33974.19460209075), 8.5 * 3600e3, 1, BuiltIn, 2
         )
       )
     ), Duration.Inf)

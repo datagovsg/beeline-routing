@@ -5,82 +5,14 @@ import sg.beeline.util.{ExpiringCache, Util}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.io.Source
 
-
-case class BusStopSchema(Latitude: Double, Longitude: Double, Heading: Option[Double], Description: String, RoadName: String)
-
-/**
- * Override `busStops`, `distanceFunction` and `mrtStations`.
- *
- * `distanceFunction` and `busStops` are placed together because
- * they may be tightly coupled (e.g. the same `distanceFunction`
- * may not be able to handle bus stops from a different
- * data source.
- */
-trait DataSource {
-  def busStops: Seq[BusStop]
-  def distanceFunction(a: BusStop, b: BusStop): Double
-
-  lazy val busStopsByIndex = Map(
-    busStops.map(b => (b.index, b)) : _*
-  )
-}
-
-object Import extends DataSource {
-
-  override def distanceFunction(a: BusStop, b: BusStop) =
-    distanceMatrix(a.index)(b.index)
-
-  override lazy val busStops = {
-    implicit val busStopSchemaDecoder = _root_.io.circe.generic
-      .semiauto.deriveDecoder[BusStopSchema]
-
-    val jsonData = _root_.io.circe.parser.decode[List[BusStopSchema]](
-      Source.fromInputStream(
-        this.getClass.getResourceAsStream("/bus-stops-headings.json")
-      ).mkString
-    ).right.get
-
-    jsonData
-      .zipWithIndex
-      .filter(s => s._1.Longitude != 0 && s._1.Latitude != 0)
-      .map({
-        case (b, i) => BusStop(
-          (b.Longitude, b.Latitude),
-          b.Heading.getOrElse(Double.NaN),
-          b.Description,
-          b.RoadName,
-          i
-        )
-      })
-  }
-
-  lazy val distanceMatrix = {
-    val ois = new java.io.ObjectInputStream(
-      new java.util.zip.GZIPInputStream(
-        this.getClass.getResourceAsStream("/distances_cache.dat.gz")))
-
-    /* FIXME Hack: Slow down all timings by 50% to account for peak
-      hour bad traffic
-     */
-    val arr = ois.readObject().asInstanceOf[Array[Array[Double]]]
-    arr.foreach { row =>
-      row.indices.foreach { i =>
-        row(i) = row(i) * 1.5
-      }
-    }
-
-    ois.close()
-    arr
-  }
-
+object Import {
   // Return the number of seconds since midnight
   def convertTime(timeString: String) =
     timeString.substring(0,2).toLong * 3600000 +
-    timeString.substring(2,4).toLong * 60000
+      timeString.substring(2,4).toLong * 60000
 
-  private val liveRequestsCache : ExpiringCache[Seq[Suggestion]] = ExpiringCache(10.minutes) {
+  private val liveRequestsCache : ExpiringCache[Seq[Suggestion]] = ExpiringCache(10 minutes) {
     import slick.jdbc.PostgresProfile.api._
 
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -107,34 +39,34 @@ object Import extends DataSource {
     )
     val session = db.createSession()
     val suggestions = sql"""
-       |        SELECT
-       |            DISTINCT ON (board, alight, time, email)
-       |            "travelTime",
-       |            id,
-       |            ST_X(board) AS board_lng,
-       |            ST_Y(board) AS board_lat,
-       |            ST_X(alight) AS alight_lng,
-       |            ST_Y(alight) AS alight_lat,
-       |            email,
-       |            time,
-       |            "daysMask",
-       |            "createdAt"
-       |        FROM suggestions
-       |        ORDER BY board, alight, time, email
-       |
+                           |        SELECT
+                           |            DISTINCT ON (board, alight, time, email)
+                           |            "travelTime",
+                           |            id,
+                           |            ST_X(board) AS board_lng,
+                           |            ST_Y(board) AS board_lat,
+                           |            ST_X(alight) AS alight_lng,
+                           |            ST_Y(alight) AS alight_lat,
+                           |            email,
+                           |            time,
+                           |            "daysMask",
+                           |            "createdAt"
+                           |        FROM suggestions
+                           |        ORDER BY board, alight, time, email
+                           |
        """.stripMargin('|')
-          .as[(Long, Int, Double, Double, Double, Double, String, Long, Int, java.sql.Timestamp)]
-          .map[Seq[Suggestion]]({ results =>
-            genericWrapArray(results.view.map({
-              case (travelTime, id, boardLng, boardLat, alightLng, alightLat, email, time, daysOfWeek, createdAt) =>
-                Suggestion(
-                  id=id,
-                  start=Util.toSVY((boardLng, boardLat)),
-                  end=Util.toSVY((alightLng, alightLat)),
-                  time=time
-                )
-            }).toArray)
-          })
+      .as[(Long, Int, Double, Double, Double, Double, String, Long, Int, java.sql.Timestamp)]
+      .map[Seq[Suggestion]]({ results =>
+      genericWrapArray(results.view.map({
+        case (travelTime, id, boardLng, boardLat, alightLng, alightLat, email, time, daysOfWeek, createdAt) =>
+          Suggestion(
+            id=id,
+            start=Util.toSVY((boardLng, boardLat)),
+            end=Util.toSVY((alightLng, alightLat)),
+            time=time
+          )
+      }).toArray)
+    })
 
     Await.result(db.run(suggestions), 60 seconds)
   }

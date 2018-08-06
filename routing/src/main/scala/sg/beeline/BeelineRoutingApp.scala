@@ -3,10 +3,9 @@ package sg.beeline
 import java.io.{FileOutputStream, ObjectOutputStream}
 import java.util.zip.GZIPOutputStream
 
-import sg.beeline.io.Import
+import sg.beeline.io.BuiltIn
 import sg.beeline.problem.BusStop
 import sg.beeline.util.Geo
-import sg.beeline.web.IntelligentRoutingService
 
 object BeelineRoutingApp extends App {
   if (args.length == 0 || args(0) == "web") {
@@ -24,7 +23,7 @@ object BeelineRoutingApp extends App {
   else require(false)
 
   def cache() {
-    val busStops = Import.busStops
+    val busStops = BuiltIn.busStops
 
     val distanceMatrix = {
       val m = Array.ofDim[Double](busStops.size, busStops.size)
@@ -60,27 +59,12 @@ object BeelineRoutingApp extends App {
   }
 
   def web() {
-    import akka.actor._
-    import akka.stream.ActorMaterializer
-    import akka.http.scaladsl.Http
-
-    implicit val system = ActorSystem()
-    implicit val materializer = ActorMaterializer()
-    implicit val executionContext = system.dispatcher
-
-    Geo.initialize()
-
-    val bindingFuture = Http().bindAndHandle(
-      new IntelligentRoutingService(Import, Import.getLiveRequests).myRoute,
-      "0.0.0.0",
-      scala.util.Properties.envOrElse("PORT", "8080").toInt
-    )
   }
 
   def estimate(): Unit = {
-    val busStops = Import.busStops
+    val busStops = BuiltIn.busStops
     // Distance cache
-    val distanceMatrix = Import.distanceMatrix
+    val distanceMatrix = BuiltIn.distanceMatrix
     //
     def travelTime(stops : BusStop*) = {
       val timeMs = stops.sliding(2).map({

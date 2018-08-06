@@ -6,7 +6,7 @@ import io.circe.Decoder.Result
 import io.circe.{Decoder, Encoder, HCursor, Json}
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.jawn.parseByteBuffer
-import sg.beeline.io.Import
+import sg.beeline.io.BuiltIn
 import sg.beeline.problem.Request.{RequestFromSuggestion, RequestOverrideTime}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineSuggestRouteService.{OD, SuggestRouteInput}
@@ -118,7 +118,7 @@ class SettingsDependentDecoders(settings: BeelineRecreateSettings) {
   val problem = new BasicRoutingProblem(
     List(),
     settings = settings,
-    dataSource = Import
+    dataSource = BuiltIn
   )
 
   /* Decoders */
@@ -128,7 +128,7 @@ class SettingsDependentDecoders(settings: BeelineRecreateSettings) {
     override def apply(c: HCursor): Result[Request] =
       for {
         suggestion <- c.as[Suggestion]
-      } yield new RequestFromSuggestion(suggestion, problem, Import)
+      } yield new RequestFromSuggestion(suggestion, problem, BuiltIn)
   }
 
   implicit val activityDecoder = new Decoder[Activity] {

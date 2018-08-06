@@ -3,7 +3,7 @@ package sg.beeline.jobs
 import java.util.concurrent.ForkJoinPool
 
 import akka.actor.Actor
-import sg.beeline.io.{DataSource, Import}
+import sg.beeline.io.{DataSource, BuiltIn}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.{BasicRoutingAlgorithm, BeelineRecreate, BeelineSuggestRoute}
 import sg.beeline.util.Util

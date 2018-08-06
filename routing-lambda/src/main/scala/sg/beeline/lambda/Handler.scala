@@ -7,7 +7,7 @@ import com.amazonaws.services.lambda.runtime.Context
 import io.circe.Decoder.Result
 import io.circe.{Decoder, HCursor}
 import io.github.mkotsur.aws.handler.{CanDecode, CanEncode, Lambda}
-import sg.beeline.io.Import
+import sg.beeline.io.BuiltIn
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRoute, BeelineSuggestRouteSerdes, SettingsDependentDecoders}
 
 import scala.util.Try
@@ -37,7 +37,7 @@ object SuggestRouteHandler extends Lambda[SuggestRouteInput, Route]()(common.can
 
     val problem = new BasicRoutingProblem(
       settings = inp.settings,
-      dataSource = Import,
+      dataSource = BuiltIn,
       suggestions = List()
     )
 

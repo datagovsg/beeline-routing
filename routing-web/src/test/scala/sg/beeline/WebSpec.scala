@@ -2,24 +2,29 @@ package sg.beeline
 
 import java.util.UUID
 
+import akka.http.scaladsl.model.{HttpMethods, StatusCodes, Uri}
+import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
+import akka.http.scaladsl.server._
+import akka.http.scaladsl.model.headers._
 import org.scalatest.FunSuite
 import sg.beeline.io.DataSource
 import sg.beeline.problem.{BusStop, Suggestion}
-import sg.beeline.web.IntelligentRoutingService
-import akka.http.scaladsl.server._
-import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
-import akka.http.scaladsl.model.headers._
-import akka.http.scaladsl.model.{HttpMethods, StatusCodes, Uri}
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.Util
+import sg.beeline.web.{E2EAuthSettings, IntelligentRoutingService}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 /**
  * Test that we are returning... at least the expected formats?
  */
 class WebSpec extends FunSuite with ScalatestRouteTest {
+
+  implicit val testE2EAuthSettings = new E2EAuthSettings {
+    override def googleMapsApiKey: String = ""
+    override def authVerificationKey: String = ""
+  }
 
   final private def gridToLngLat(i: Double, j: Double) = {
     val x = 250 * i

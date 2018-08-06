@@ -1,21 +1,28 @@
 package sg.beeline.web
 
+import java.time._
 import java.util.{NoSuchElementException, UUID}
 
-import akka.http.scaladsl.model.StatusCodes
+import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.{Directives, ExceptionHandler}
 import sg.beeline.io.DataSource
 import sg.beeline.jobs.{JobQueue, RouteActor}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
-import sg.beeline.util.{Geo, Util, kdtreeQuery}
+import sg.beeline.util.{ExpiringCache, Geo, Util, kdtreeQuery}
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
+import io.circe.{Decoder, Json}
 import io.circe.generic.extras.Configuration
 import sg.beeline.util.Util.Point
+import sg.beeline.web.Auth.User
 
+import scala.annotation.tailrec
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 case class SuggestRequest(startLat: Double,
@@ -44,18 +51,21 @@ trait JsonSupport extends JsonMarshallers {
       case Right(t) => t
       case Left(e) => throw e
     })
+
+  implicit val suggestRequestDecoder = deriveDecoder[SuggestRequest]
 }
 
 // this trait defines our service behavior independently from the service actor
 class IntelligentRoutingService(dataSource: DataSource,
                                 suggestionsSource: Seq[Suggestion])
+                               (implicit val system: ActorSystem,
+                                val authSettings: E2EAuthSettings)
   extends Directives with JsonSupport {
   import akka.actor._
   import _root_.io.circe.syntax._
 
   import ExecutionContext.Implicits.global
   implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
-  val system = ActorSystem()
   val routingActor = system.actorOf(Props({
     new RouteActor(dataSource, _ => suggestionsSource)
   }), "intelligent-routing")
@@ -208,6 +218,8 @@ class IntelligentRoutingService(dataSource: DataSource,
           }
         }
       }
-    }
+    } ~
+    new E2ESuggestion(routingActor).e2eRoutes
   }
+
 }
