@@ -12,7 +12,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import io.circe.Json
-import sg.beeline.problem.{Dropoff, Pickup, Route, Suggestion}
+import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{ExpiringCache, Util}
 import sg.beeline.util.Util.Point
@@ -230,21 +230,27 @@ extends JsonSupport {
                             googleMapsTimings: List[Int],
                             route: Route): Future[Unit] = {
 
-    val submission: Json = Json.arr((route.stopActivities, googleMapsTimings).zipped.map {
-      case ((stop, activities), time) =>
-        Json.obj(
-          "lat" -> Json.fromDoubleOrNull(stop.coordinates._2),
-          "lng" -> Json.fromDoubleOrNull(stop.coordinates._1),
-          "time" -> Json.fromInt(time),
-          "busStopIndex" -> Json.fromInt(stop.index),
-          "description" -> Json.fromString(stop.description),
-          "numBoard" -> Json.fromInt(activities.count(_.isInstanceOf[Pickup])),
-          "numAlight" -> Json.fromInt(activities.count(_.isInstanceOf[Dropoff]))
-        )
-    } : _*)
+    val stopToStopIdFut = syncBusStops(route)
 
     for {
-      entity <- Marshal(submission).to[RequestEntity]
+      stopToStopId <- stopToStopIdFut
+      entity <- {
+        val submission = Json.arr((route.stopActivities, googleMapsTimings).zipped.map {
+          case ((stop, activities), time) =>
+            Json.obj(
+              "lat" -> Json.fromDoubleOrNull(stop.coordinates._2),
+              "lng" -> Json.fromDoubleOrNull(stop.coordinates._1),
+              "time" -> Json.fromInt(time),
+              "busStopIndex" -> Json.fromInt(stop.index),
+              "stopId" -> Json.fromInt(stopToStopId(stop)),
+              "description" -> Json.fromString(stop.description),
+              "numBoard" -> Json.fromInt(activities.count(_.isInstanceOf[Pickup])),
+              "numAlight" -> Json.fromInt(activities.count(_.isInstanceOf[Dropoff]))
+            )
+        } : _*)
+
+        Marshal(submission).to[RequestEntity]
+      }
       response <- http.singleRequest(
         HttpRequest(
           uri=Uri(s"${authSettings.beelineServer}/suggestions/${suggestionId}/route")
@@ -255,6 +261,51 @@ extends JsonSupport {
     } yield response match {
       case HttpResponse(StatusCodes.OK, _, _, _) => Success(())
       case r => Failure(new RuntimeException(s"Posting of suggested route returned ${r.status.value}"))
+    }
+  }
+
+  private def syncBusStops(route: Route): Future[Map[BusStop, Int]] = {
+    case class DBGeometry(coordinates: Array[Double])
+    case class BusStopDB(
+                        coordinates: DBGeometry,
+                        description: String,
+                        id: Int
+                        )
+
+    def dist(busStopDB: BusStopDB) = {
+      import sg.beeline.util.kdtreeQuery.squaredDistance
+      val xy = Util.toSVY((busStopDB.coordinates.coordinates(0), busStopDB.coordinates.coordinates(1)))
+
+      { stop: BusStop => squaredDistance(stop.xy, xy) }
+    }
+
+    for {
+      allBusStopsResponse <- http.singleRequest(HttpRequest(
+        uri=s"${authSettings.beelineServer}/stops"
+      ))
+      allBusStops <- Unmarshal(allBusStopsResponse._3).to[List[BusStopDB]]
+    } yield {
+      val distanceToBestMatchingStop = route.stops.map({ stop =>
+        allBusStops.map(stopInDB => (stop, stopInDB, dist(stopInDB)(stop)))
+          .minBy(_._3)
+      })
+
+      // Create the stops
+      val stopCreationFuture = Future.traverse(distanceToBestMatchingStop)({ case (stop, dbStop, dist) =>
+        if (dist < 20)
+          Future(dbStop.id)
+        else
+          // create the stop
+        for {
+          postResponse <- http.singleRequest(HttpRequest(
+              uri=s"${authSettings.beelineServer}/stops",
+              method=HttpMethods.POST
+            ).withEntity({
+              // fck
+            }))
+          newStop <- Marshal(postResponse._3).to[BusStopDB]
+        } yield stop -> newStop.id
+      }).map(_.toMap)
     }
   }
 }
