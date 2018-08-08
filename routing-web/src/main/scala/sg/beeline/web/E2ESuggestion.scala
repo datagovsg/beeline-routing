@@ -41,6 +41,7 @@ class E2ESuggestion(routingActor: ActorRef)
                     authSettings: E2EAuthSettings)
 extends JsonSupport {
   implicit val materializer = ActorMaterializer()
+  import objectJsonMarshallers._
 
   val http = Http()
 
