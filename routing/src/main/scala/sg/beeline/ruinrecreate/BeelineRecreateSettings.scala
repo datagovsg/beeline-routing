@@ -20,7 +20,7 @@ case class BeelineRecreateSettings(
 
   def requestsFilter(seedRequest: Request): Request => Boolean = {
     (r: Request) =>
-      (r.time - seedRequest.time).abs < timeAllowance &&
+      (r.time - seedRequest.time).abs <= timeAllowance &&
         kdtreeQuery.squaredDistance(seedRequest.start, r.start) < startClusterRadius * startClusterRadius &&
         kdtreeQuery.squaredDistance(seedRequest.end, r.end) < endClusterRadius * endClusterRadius
   }
