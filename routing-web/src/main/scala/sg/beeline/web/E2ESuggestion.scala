@@ -63,8 +63,9 @@ extends JsonSupport {
                       val bestRoute = routes.maxBy(_.requestsInfo.size)
 
                       for {
+                        workingDay <- getNextWorkingDay()
                         googleMapsTimings <- {
-                          getGoogleMapsTimings(bestRoute, suggestRequest.time.toInt)
+                          getGoogleMapsTimings(bestRoute, workingDay.toLocalDate, suggestRequest.time.toInt)
                         }
                         result <- pushToServer(
                           suggestionId,
@@ -105,10 +106,8 @@ extends JsonSupport {
                                  recreateSettings: BeelineRecreateSettings): Future[SuggestRequest] = {
     for {
       resp <- http.singleRequest(HttpRequest(
-        uri = s"${authSettings.beelineServer}/suggestions/${suggestionId}"
-      ).withHeaders(List(
-        new RawHeader("Authorization", authorization)
-      )))
+        uri = s"${authSettings.beelineServer}/suggestions/${suggestionId}",
+        headers = List(new RawHeader("Authorization", authorization))))
       json <- Unmarshal(resp._3).to[Json]
     } yield {
       val cur = json.hcursor
@@ -184,7 +183,9 @@ extends JsonSupport {
     ExpiringCache(1 hour)(fetchNextWorkingDay)
   }
 
-  private def getP2PGoogleMapsTravelTime(from: Point, to: Point, arrivalTime: Int): Future[Int] = {
+  private def getP2PGoogleMapsTravelTime(from: Point, to: Point,
+                                         workingDay: LocalDate,
+                                         arrivalTime: Int): Future[Int] = {
     case class QDuration(value: Int)
     case class QLeg(duration: QDuration)
     case class QRoute(legs: List[QLeg])
@@ -199,29 +200,38 @@ extends JsonSupport {
             "origin" -> s"${from._2},${from._1}",
             "destination" -> s"${to._2},${to._1}",
             "mode" -> "driving",
-            "arrival_time" -> arrivalTime.toString,
+            "arrival_time" ->
+              // Singapore time
+              ZonedDateTime.of(workingDay, LocalTime.ofSecondOfDay(arrivalTime / 1000), ZoneId.of("Asia/Singapore"))
+                .toEpochSecond
+                .toString,
             "key" -> authSettings.googleMapsApiKey
           ))
       ))
       s <- Unmarshal(response._3).to[Json]
     } yield {
+      // Google API provides times in seconds
+      // We convert them to milliseconds for consistency
       val qresult = s.as[QResult].right.get
       qresult.routes.head.legs.map(_.duration.value).sum
     }
   }
 
-  private def getGoogleMapsTimings(route: Route, arrivalTime: Int): Future[List[Int]] = {
+  private def getGoogleMapsTimings(route: Route, workingDate: LocalDate, arrivalTime: Int): Future[List[Int]] = {
     // obtain a list of stops
     // assume a dwell time of 1 minute at each stop
-    val stops = route.stops.sliding(2).foldRight( Future((List[Int](), arrivalTime)) )({
+    val stops = route.stops.sliding(2).foldRight( Future(List[Int](arrivalTime)) )({
       case (List(from, to), prev) =>
         for {
-          (travelTimes, nextArrivalTime) <- prev
-          travelTime <- getP2PGoogleMapsTravelTime(from.coordinates, to.coordinates, nextArrivalTime)
-        } yield (travelTime :: travelTimes, nextArrivalTime - 60000 - travelTime) // 1-minute dwell time imputed...
+          arrivalTimes <- prev
+          travelTime <- getP2PGoogleMapsTravelTime(from.coordinates, to.coordinates, workingDate, arrivalTimes.head)
+        } yield {
+          val arrivalTime = arrivalTimes.head - 60000 - travelTime
+          arrivalTime :: arrivalTimes
+        } // 1-minute dwell time imputed...
     })
 
-    stops.map { _._1 }
+    stops
   }
 
   private def pushToServer(
@@ -253,15 +263,33 @@ extends JsonSupport {
       }
       response <- http.singleRequest(
         HttpRequest(
-          uri=Uri(s"${authSettings.beelineServer}/suggestions/${suggestionId}/route")
+          uri=Uri(s"${authSettings.beelineServer}/suggestions/${suggestionId}/suggested_route"),
+          headers = List(new RawHeader("Authorization", authorization)),
+          method = HttpMethods.POST,
+          entity = entity
         )
-          .withHeaders(new RawHeader("Authorization", authorization))
-          .withEntity(entity)
       )
     } yield response match {
       case HttpResponse(StatusCodes.OK, _, _, _) => Success(())
       case r => Failure(new RuntimeException(s"Posting of suggested route returned ${r.status.value}"))
     }
+  }
+
+  private def superadminHeader() = {
+    val token = JwtCirce.encode(JwtClaim(
+        content = """
+              |{
+              |  "role": "superadmin",
+              |  "email": "routing@beeline.sg",
+              |  "emailVerified": true
+              |}
+            """.stripMargin,
+        expiration = Some(System.currentTimeMillis / 1000 + 60)
+      ),
+      authSettings.authVerificationKey,
+      JwtAlgorithm.HS256
+    )
+    new RawHeader("Authorization", s"Bearer $token")
   }
 
   private def syncBusStops(route: Route): Future[Map[BusStop, Int]] = {
@@ -272,6 +300,8 @@ extends JsonSupport {
                         id: Int
                         )
 
+    import _root_.io.circe.generic.extras.auto._
+
     def dist(busStopDB: BusStopDB) = {
       import sg.beeline.util.kdtreeQuery.squaredDistance
       val xy = Util.toSVY((busStopDB.coordinates.coordinates(0), busStopDB.coordinates.coordinates(1)))
@@ -281,31 +311,48 @@ extends JsonSupport {
 
     for {
       allBusStopsResponse <- http.singleRequest(HttpRequest(
-        uri=s"${authSettings.beelineServer}/stops"
+        uri = s"${authSettings.beelineServer}/stops"
       ))
       allBusStops <- Unmarshal(allBusStopsResponse._3).to[List[BusStopDB]]
-    } yield {
-      val distanceToBestMatchingStop = route.stops.map({ stop =>
-        allBusStops.map(stopInDB => (stop, stopInDB, dist(stopInDB)(stop)))
-          .minBy(_._3)
-      })
+      stopsToIdMap <- {
+        val distanceToBestMatchingStop = route.stops.map({ stop =>
+          allBusStops.map(stopInDB => (stop, stopInDB, dist(stopInDB)(stop)))
+            .minBy(_._3)
+        })
 
-      // Create the stops
-      val stopCreationFuture = Future.traverse(distanceToBestMatchingStop)({ case (stop, dbStop, dist) =>
-        if (dist < 20)
-          Future(dbStop.id)
-        else
-          // create the stop
-        for {
-          postResponse <- http.singleRequest(HttpRequest(
-              uri=s"${authSettings.beelineServer}/stops",
-              method=HttpMethods.POST
-            ).withEntity({
-              // fck
-            }))
-          newStop <- Marshal(postResponse._3).to[BusStopDB]
-        } yield stop -> newStop.id
-      }).map(_.toMap)
-    }
+        // Create the stops
+        val stopCreationFuture = Future.traverse(distanceToBestMatchingStop)({ case (stop, dbStop, dist) =>
+          if (dist < 20)
+            Future(stop -> dbStop.id)
+          else
+            // create the stop
+            for {
+              postData <- {
+                val json = Json.obj(
+                  "road" -> Json.fromString(""),
+                  "description" -> Json.fromString(stop.description + " (created by routing)"),
+                  "postcode" -> Json.Null,
+                  "label" -> stop.stopCode.map(Json.fromString).getOrElse(Json.Null),
+                  "coordinates" -> Json.obj(
+                    "type" -> Json.fromString("Point"),
+                    "coordinates" -> Json.arr(
+                      List(stop.coordinates._1, stop.coordinates._2).map(Json.fromDoubleOrNull): _*)
+                  )
+                )
+                Marshal(json).to[RequestEntity]
+              }
+              postResponse <- http.singleRequest(HttpRequest(
+                uri = s"${authSettings.beelineServer}/stops",
+                method = HttpMethods.POST,
+                entity = postData,
+                headers = List(superadminHeader())
+              ))
+              newStop <- Unmarshal(postResponse._3).to[BusStopDB]
+            } yield stop -> newStop.id
+        })
+
+        stopCreationFuture.map(_.toMap)
+      }
+    } yield stopsToIdMap
   }
 }

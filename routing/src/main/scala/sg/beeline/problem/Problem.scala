@@ -16,7 +16,8 @@ case class BusStop(
   heading: Double,
   description: String,
   roadName: String,
-  index: Int) {
+  index: Int,
+  stopCode: Option[String] = None) {
   // Save the index for caching!
   lazy val xy = Util.toSVY(coordinates)
 

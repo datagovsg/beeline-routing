@@ -9,6 +9,10 @@ object BuiltIn extends DataSource {
     distanceMatrix(a.index)(b.index)
 
   override lazy val busStops = {
+    case class BusStopSchema(Latitude: Double, Longitude: Double,
+                             Heading: Option[Double], Description: String, RoadName: String,
+                             BusStopCode: Option[String])
+
     implicit val busStopSchemaDecoder = _root_.io.circe.generic
       .semiauto.deriveDecoder[BusStopSchema]
 
@@ -27,7 +31,8 @@ object BuiltIn extends DataSource {
           b.Heading.getOrElse(Double.NaN),
           b.Description,
           b.RoadName,
-          i
+          i,
+          b.BusStopCode
         )
       })
   }

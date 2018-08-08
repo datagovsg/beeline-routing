@@ -24,6 +24,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   implicit val testE2EAuthSettings = new E2EAuthSettings {
     override def googleMapsApiKey: String = ""
     override def authVerificationKey: String = ""
+    override def beelineServer: String = ""
   }
 
   final private def gridToLngLat(i: Double, j: Double) = {

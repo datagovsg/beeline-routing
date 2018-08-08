@@ -1,9 +1,9 @@
 package sg.beeline.web
 
-import akka.http.scaladsl.marshalling.PredefinedToEntityMarshallers
-import akka.http.scaladsl.model.{HttpCharsets, HttpEntity, MediaType}
+import akka.http.scaladsl.marshalling.{Marshaller, PredefinedToEntityMarshallers}
+import akka.http.scaladsl.model.{HttpCharsets, HttpEntity, MediaType, MessageEntity}
 import akka.http.scaladsl.unmarshalling.{PredefinedFromEntityUnmarshallers, Unmarshaller}
-import io.circe.{Decoder, Json}
+import io.circe.{Decoder, Encoder, Json}
 
 trait JsonMarshallers {
 
@@ -33,4 +33,8 @@ trait JsonMarshallers {
   // Convert any JSON entity to a T, if a Decoder[T] exists
   implicit def entityToObjectViaDecoderUnmarshaller[T](implicit decoder: Decoder[T]): Unmarshaller[HttpEntity, T] =
     entityToJsonUnmarshaller.map(_.as[T].right.get)
+
+  // Convert any T to a JSON, if a Encoder[T] exists
+  implicit def objectToEntityViaEncoderMarshaller[T](implicit encoder: Encoder[T]): Marshaller[T, MessageEntity] =
+    jsonMarshaller.compose[T] { o: T => encoder(o) }
 }

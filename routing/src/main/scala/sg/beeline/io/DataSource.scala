@@ -2,8 +2,6 @@ package sg.beeline.io
 
 import sg.beeline.problem.BusStop
 
-case class BusStopSchema(Latitude: Double, Longitude: Double, Heading: Option[Double], Description: String, RoadName: String)
-
 /**
  * Override `busStops`, `distanceFunction` and `mrtStations`.
  *
