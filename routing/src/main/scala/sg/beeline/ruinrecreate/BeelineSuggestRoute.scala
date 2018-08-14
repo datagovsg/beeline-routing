@@ -153,7 +153,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
           Dropoff(request, od._2),
           EndActivity()
         ),
-        8*3600*1000
+        request.time
       ),
       shuffled
     )
