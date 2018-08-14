@@ -43,10 +43,10 @@ class RouteSpec extends FlatSpec with Matchers {
       val st : Double, val et : Double, val dt: Double, val svct: Double)
     extends Pickup(new BasicRequest(routingProblem, (0,0), (0,0), 0, 1, testDataSource, id=counter.getCounter()), busStop) {
 
-    override def minTime = st
-    override def maxTime = et
-    override def dwellTime = dt
-    override def serviceTime = svct
+    override val minTime = st
+    override val maxTime = et
+    override val dwellTime = dt
+    override val serviceTime = svct
   }
 
   "Route" should "reflect min/max times correctly (1)" in {

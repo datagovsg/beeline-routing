@@ -12,6 +12,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import io.circe.Json
+import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim, JwtOptions}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{ExpiringCache, Util}
@@ -214,7 +215,7 @@ extends JsonSupport {
       // Google API provides times in seconds
       // We convert them to milliseconds for consistency
       val qresult = s.as[QResult].right.get
-      qresult.routes.head.legs.map(_.duration.value).sum
+      qresult.routes.head.legs.map(_.duration.value).sum * 1000
     }
   }
 

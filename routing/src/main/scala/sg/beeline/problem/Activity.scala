@@ -10,33 +10,33 @@ sealed trait Activity {
 
 case class Pickup(request : Request, _location: BusStop) extends Activity {
   /* say, one hour for pickup */
-  def minTime = request.time - 1*3600000
-  def maxTime = request.time
-  def dwellTime = 60000
-  def serviceTime = 0
-  def location = Some(_location)
+  override val minTime = request.time - 2*3600000
+  override val maxTime = request.time
+  override val dwellTime = 60000
+  override val serviceTime = 0
+  override val location = Some(_location)
 }
 
 case class Dropoff(request : Request, _location: BusStop) extends Activity {
-  def minTime = request.time - 15 * 60000
-  def maxTime = request.time
-  def dwellTime = 60000
-  def serviceTime = 0
-  def location = Some(_location)
+  override val minTime = request.time - 15 * 60000
+  override val maxTime = request.time
+  override val dwellTime = 60000
+  override val serviceTime = 0
+  override val location = Some(_location)
 }
 
 case class StartActivity() extends Activity {
-  def minTime = 0.0
-  def maxTime = Double.PositiveInfinity
-  def dwellTime = 0
-  def serviceTime = 0
-  def location = None
+  override val minTime = 0.0
+  override val maxTime = Double.PositiveInfinity
+  override val dwellTime = 0
+  override val serviceTime = 0
+  override val location = None
 }
 
 case class EndActivity() extends Activity {
-  def minTime = 0.0
-  def maxTime = Double.PositiveInfinity
-  def dwellTime = 0
-  def serviceTime = 0
-  def location = None
+  override val minTime = 0.0
+  override val maxTime = Double.PositiveInfinity
+  override val dwellTime = 0
+  override val serviceTime = 0
+  override val location = None
 }

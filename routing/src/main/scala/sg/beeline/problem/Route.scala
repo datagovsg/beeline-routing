@@ -218,11 +218,10 @@ class Route(val routingProblem: RoutingProblem,
 
   // Returns the cost, (insertion point 1), (insertion point 2) that would have been added
   def jobTryInsertion(request: Request)
-                     (implicit maxInsertionDetour : Double = 2 * 60000.0)
+                     (maxInsertionDetour : Double = 2 * 60000.0)
         : Option[(Double, Activity, Activity, (Activity, Activity), (Activity, Activity))] = {
-
-    val pickupActivities = request.startStops.map(stop => new Pickup(request, stop))
-    val dropoffActivities = request.endStops.map(stop => new Dropoff(request, stop))
+    val pickupActivities = request.startStops.map(stop => Pickup(request, stop))
+    val dropoffActivities = request.endStops.map(stop => Dropoff(request, stop))
 
     if (pickupActivities.isEmpty || dropoffActivities.isEmpty) None
     else {

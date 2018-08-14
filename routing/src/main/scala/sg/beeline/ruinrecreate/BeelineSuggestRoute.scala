@@ -120,7 +120,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
       if (requests.isEmpty)
         route
       else {
-        val insertAttempt = route.jobTryInsertion(requests.head)
+        val insertAttempt = route.jobTryInsertion(requests.head)(settings.maxDetourMinutes * 60000)
 
         /* Here we should check how feasible the route is, e.g. if
         the travel time is too long for any commuter in the route.

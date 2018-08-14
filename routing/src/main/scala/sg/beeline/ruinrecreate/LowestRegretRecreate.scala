@@ -35,7 +35,7 @@ object LowestRegretRecreate extends Recreate {
   }
 
   private def computeRegret(route : Route, request : Request) : Insertion = {
-    route.jobTryInsertion(request) match {
+    route.jobTryInsertion(request)(24 * 3600 * 1000) match {
       case None => (Double.PositiveInfinity, null, null, null, null)
       case Some(insertion) => {
         insertion
