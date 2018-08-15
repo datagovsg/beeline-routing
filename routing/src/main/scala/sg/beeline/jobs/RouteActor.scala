@@ -29,24 +29,26 @@ class RouteActor(dataSource: DataSource, suggestionSource: String => Seq[Suggest
         )
       }
 
+      val seedRequest = new Request.RequestFromSuggestion(
+        Suggestion(
+          -999, // Some ID that would not occur naturally in the database
+          Util.toSVY((sLng, sLat)),
+          Util.toSVY((eLng, eLat)),
+          time
+        ),
+        beelineProblem,
+        dataSource
+      )
+
       val beelineSuggestRoute = new BeelineSuggestRoute(
         beelineProblem,
-        beelineProblem.requests,
+        beelineProblem.requests
+          .filter(suggestRequest.settings.requestsFilter(seedRequest))
+          .map(_.withTime(time)),
         settings
       )
 
-      beelineSuggestRoute.generatePotentialRoutesFromRequest(
-        new Request.RequestFromSuggestion(
-          Suggestion(
-            -999, // Some ID that would not occur naturally in the database
-            Util.toSVY((sLng, sLat)),
-            Util.toSVY((eLng, eLat)),
-            time
-          ),
-          beelineProblem,
-          dataSource
-        )
-      ).toList
+      beelineSuggestRoute.generatePotentialRoutesFromRequest(seedRequest).toList
   }
 
   def receive = {

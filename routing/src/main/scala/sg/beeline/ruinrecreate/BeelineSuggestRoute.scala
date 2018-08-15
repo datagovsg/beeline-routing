@@ -63,10 +63,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     val ods = odCombis(request)
 
     val compatibleRequests = {
-      requests.filter(
-        settings.requestsFilter(request)
-      )
-        .filter(other => isCompatible(request, other)).toSet
+      requests.filter(other => isCompatible(request, other)).toSet
     }
 
     // You can take the, say, top 5 ODs that has minimum travel

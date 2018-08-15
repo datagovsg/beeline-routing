@@ -1,6 +1,7 @@
 package sg.beeline.problem
 
 import sg.beeline.io.DataSource
+import sg.beeline.problem.Request.RequestOverrideTime
 import sg.beeline.util.Util
 import sg.beeline.util.Util.Point
 
@@ -25,6 +26,8 @@ trait Request {
   lazy val endWGS = Util.toWGS(end)
 
   override def toString: String = (Util.toWGS(start), Util.toWGS(end), time).toString
+
+  def withTime(time: Double) = new RequestOverrideTime(this, time)
 }
 
 object Request {
@@ -36,6 +39,16 @@ object Request {
     override val end: (Double, Double) = suggestion.end
     override val time: Double = suggestion.time
     override val weight: Int = suggestion.weight
+
+  }
+
+  class RequestOverrideTime(r: Request,
+                            val time: Double) extends Request {
+    override val start: (Double, Double) = r.start
+    override val end: (Double, Double) = r.end
+    override val weight: Int = r.weight
+    override val routingProblem: RoutingProblem = r.routingProblem
+    override val dataSource: DataSource = r.dataSource
   }
 }
 
