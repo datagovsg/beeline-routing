@@ -2,10 +2,6 @@ val scalatest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
 def scalaSources(base: File): PathFinder = (base / "src") ** "*.scala"
 //
-val akkaV = "2.4.19"
-val sprayV = "1.3.3"
-
-enablePlugins(JavaServerAppPackaging)
 
 val commonSettings = Seq(
   resolvers += DefaultMavenRepository,
@@ -36,8 +32,8 @@ lazy val routing = (project in file("routing"))
       "org.postgresql" % "postgresql" % "42.1.3",
       "com.typesafe.akka"   %% "akka-http" % "10.1.0",
       "com.typesafe.akka"   %%  "akka-http-testkit"  % "10.1.0" % "test",
-      "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
-      "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
+      "com.typesafe.akka"   %%  "akka-actor"    % "2.5.13",
+      "com.typesafe.akka"   %%  "akka-testkit"  % "2.5.13"   % "test",
       "com.typesafe.akka"   %% "akka-stream" % "2.5.13",
 
       // for CORS support
