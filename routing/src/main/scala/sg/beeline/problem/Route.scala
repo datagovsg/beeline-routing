@@ -55,7 +55,7 @@ class Route(val routingProblem: RoutingProblem,
 
     val maxTimes = (Option.empty :: activities.map(s => Option(s)).reverse)
       .sliding(2)
-      .foldLeft( (List.newBuilder[Double], Double.PositiveInfinity) ) {
+      .foldLeft( (List.newBuilder[Double], 0.0) ) {
         case ((builder, _), List(None, Some(item))) => // last activity
           builder += item.maxTime
 

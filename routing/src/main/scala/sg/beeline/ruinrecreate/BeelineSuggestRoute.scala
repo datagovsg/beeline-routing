@@ -5,7 +5,7 @@ import sg.beeline.util.WeightedRandomShuffle
 
 import scala.annotation.tailrec
 import scala.collection.parallel.ExecutionContextTaskSupport
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class BeelineSuggestRoute(routingProblem : RoutingProblem,
                           requests: Traversable[Request],
@@ -79,6 +79,9 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
         routingProblem.distance(od._1, od._2) - routingProblem.distance(topOd._1, topOd._2) < 60000
       }
     )
+
+    val feasibleTop50RoutesInputs = feasibleTop50Ods.flatMap(od => (0 until 10).map(_ => od))
+
     val feasibleTop50Routes = {
       val p = feasibleTop50Ods.par
       p.tasksupport = new ExecutionContextTaskSupport(executionContext)
@@ -157,3 +160,19 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
   }
 }
 
+trait BeelineSuggestRouteService {
+  def growRoute(beelineSuggestRoute: BeelineSuggestRoute,
+                request: Request,
+                requests: List[Request],
+                od: (BusStop, BusStop)): Route
+}
+
+class BeelineSuggestRouteServiceProxy {
+  import com.amazonaws.services.lambda.AWSLambdaClientBuilder
+  import com.amazonaws.services.lambda.invoke.LambdaInvokerFactory
+
+  val service = LambdaInvokerFactory.builder()
+    .lambdaClient(AWSLambdaClientBuilder.defaultClient())
+    .build(BeelineSuggestRouteService)
+
+}
