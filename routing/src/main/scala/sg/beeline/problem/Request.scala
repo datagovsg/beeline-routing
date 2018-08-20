@@ -40,9 +40,25 @@ object Request {
     override val time: Double = suggestion.time
     override val weight: Int = suggestion.weight
 
+    override def hashCode: Int =
+      List(suggestion, routingProblem, dataSource)
+          .foldLeft(1) {
+            case (hashCode, o) =>
+              hashCode * 41 + o.hashCode
+          }
+
+    override def equals(obj: scala.Any): Boolean =
+      obj match {
+        case rfs: RequestFromSuggestion =>
+          rfs.suggestion == suggestion &&
+          rfs.dataSource == dataSource &&
+          rfs.routingProblem == routingProblem
+        case _ =>
+          false
+      }
   }
 
-  class RequestOverrideTime(r: Request,
+  class RequestOverrideTime(var r: Request,
                             val time: Double) extends Request {
     override val start: (Double, Double) = r.start
     override val end: (Double, Double) = r.end
@@ -57,6 +73,7 @@ class BasicRequest(val routingProblem: RoutingProblem,
                    val end: (Double, Double),
                    val time: Double,
                    val weight: Int = 1,
-                   val dataSource: DataSource
+                   val dataSource: DataSource,
+                   val id: Int
                   ) extends Request {
 }

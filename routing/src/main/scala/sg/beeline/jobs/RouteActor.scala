@@ -20,14 +20,12 @@ class RouteActor(dataSource: DataSource, suggestionSource: String => Seq[Suggest
     case SuggestRequest(sLat, sLng, eLat, eLng, time, settings) =>
       val suggestions : Seq[Suggestion] = suggestionSource(settings.dataSource)
 
-      val beelineProblem = {
-        new BasicRoutingProblem(
-          suggestions,
-          startWalkingDistance = settings.startWalkingDistance,
-          endWalkingDistance = settings.endWalkingDistance,
-          dataSource
-        )
-      }
+      val beelineProblem = new BasicRoutingProblem(
+        suggestions,
+        startWalkingDistance = settings.startWalkingDistance,
+        endWalkingDistance = settings.endWalkingDistance,
+        dataSource
+      )
 
       val seedRequest = new Request.RequestFromSuggestion(
         Suggestion(

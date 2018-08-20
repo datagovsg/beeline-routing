@@ -37,7 +37,9 @@ object Import extends DataSource {
       .semiauto.deriveDecoder[BusStopSchema]
 
     val jsonData = _root_.io.circe.parser.decode[List[BusStopSchema]](
-      Source.fromFile("onemap/bus-stops-headings.json").mkString
+      Source.fromInputStream(
+        this.getClass.getResourceAsStream("/bus-stops-headings.json")
+      ).mkString
     ).right.get
 
     jsonData
@@ -57,7 +59,7 @@ object Import extends DataSource {
   lazy val distanceMatrix = {
     val ois = new java.io.ObjectInputStream(
       new java.util.zip.GZIPInputStream(
-        new java.io.FileInputStream("./distances_cache.dat.gz")))
+        this.getClass.getResourceAsStream("/distances_cache.dat.gz")))
 
     /* FIXME Hack: Slow down all timings by 50% to account for peak
       hour bad traffic
