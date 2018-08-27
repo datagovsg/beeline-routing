@@ -3,7 +3,7 @@
 set -eou pipefail
 
 # Ensure file exists
-JAR_FILE=./routingWeb/target/scala-2.12/routing-assembly-*.jar
+JAR_FILE=./routing-web/target/scala-2.12/routing-assembly-*.jar
 [ -f $JAR_FILE ]
 
 # Download the SG map
