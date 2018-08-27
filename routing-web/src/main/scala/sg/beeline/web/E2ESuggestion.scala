@@ -69,19 +69,17 @@ extends JsonSupport {
                         googleMapsTimings <- {
                           getGoogleMapsTimings(bestRoute, workingDay.toLocalDate, suggestRequest.time.toInt)
                         }
-                        result <- pushToServer(
-                          suggestionId,
-                          authorization,
-                          googleMapsTimings,
-                          bestRoute
-                        )
+                        result <- pushToServer(suggestionId, googleMapsTimings, bestRoute)
                       } yield result
                     }
                   }
                 } yield ()
 
                 fut onComplete {
-                  case Failure(e) => e.printStackTrace(System.err); println(fut)
+                  case Failure(e) =>
+                    notifyServerOfError(suggestionId)
+                    e.printStackTrace(System.err)
+                    println(fut)
                   case _ => ()
                 }
 
@@ -104,7 +102,7 @@ extends JsonSupport {
     */
   private def verifySuggestionId(authorization: String,
                                  suggestionId: Int,
-                                 userId: Int,
+                                 authUserId: Int,
                                  recreateSettings: BeelineRecreateSettings): Future[SuggestRequest] = {
     for {
       resp <- http.singleRequest(HttpRequest(
@@ -121,7 +119,9 @@ extends JsonSupport {
         alightLat <- cur.downField("alight").downField("coordinates").downN(1).as[Double]
         time <- cur.downField("time").as[Int]
         daysMask <- cur.downField("daysMask").as[Int]
-      } yield
+        userId <- cur.downField("userId").as[Int]
+      } yield {
+        require(userId == authUserId)
         SuggestRequest(
           startLat = boardLat,
           startLng = boardLng,
@@ -138,6 +138,7 @@ extends JsonSupport {
             daysOfWeek = daysMask
           )
         )
+      }
 
       suggestionEither match {
         case Right(suggestion) => suggestion
@@ -242,11 +243,30 @@ extends JsonSupport {
     stops
   }
 
-  private def pushToServer(
-                            suggestionId: Int,
-                            authorization: String,
-                            googleMapsTimings: List[Int],
-                            route: Route): Future[Unit] = {
+  private def notifyServerOfError(suggestionId: Int): Future[Unit] = {
+    import io.circe.syntax._
+
+    for {
+      entity <- {
+        Marshal(false.asJson).to[RequestEntity]
+      }
+      response <- http.singleRequest(
+        HttpRequest(
+          uri=Uri(s"${authSettings.beelineServer}/suggestions/${suggestionId}/suggested_routes"),
+          headers = List(superadminHeader()),
+          method = HttpMethods.POST,
+          entity = entity
+        )
+      )
+    } yield response match {
+      case HttpResponse(StatusCodes.OK, _, _, _) => Success(())
+      case r => Failure(new RuntimeException(s"Notification of route suggestion failure returned ${r.status.value}"))
+    }
+  }
+
+  private def pushToServer(suggestionId: Int,
+                           googleMapsTimings: List[Int],
+                           route: Route) = {
 
     val stopToStopIdFut = syncBusStops(route)
 
