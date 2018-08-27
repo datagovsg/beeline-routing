@@ -11,7 +11,7 @@ trait JsonMarshallers {
     MediaType.applicationWithFixedCharset(
       "json",
       HttpCharsets.`UTF-8`)
-  )
+    )
     .compose(
       (json: Json) => _root_.io.circe.Printer.noSpaces.pretty(json)
     )
@@ -33,7 +33,10 @@ trait JsonMarshallers {
   object objectJsonMarshallers {
     // Convert any JSON entity to a T, if a Decoder[T] exists
     implicit def entityToObjectViaDecoderUnmarshaller[T](implicit decoder: Decoder[T]): Unmarshaller[HttpEntity, T] =
-      entityToJsonUnmarshaller.map(_.as[T].right.get)
+      entityToJsonUnmarshaller.map(_.as[T] match {
+        case Right(t) => t
+        case Left(exc) => throw exc
+      })
 
     // Convert any T to a JSON, if a Encoder[T] exists
     implicit def objectToEntityViaEncoderMarshaller[T](implicit encoder: Encoder[T]): Marshaller[T, MessageEntity] =

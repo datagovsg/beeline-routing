@@ -139,7 +139,10 @@ extends JsonSupport {
           )
         )
 
-      suggestionEither.right.get
+      suggestionEither match {
+        case Right(suggestion) => suggestion
+        case Left(exc) => throw exc
+      }
     }
   }
 
@@ -214,7 +217,10 @@ extends JsonSupport {
     } yield {
       // Google API provides times in seconds
       // We convert them to milliseconds for consistency
-      val qresult = s.as[QResult].right.get
+      val qresult = s.as[QResult] match {
+        case Right(q) => q
+        case Left(exc) => throw exc
+      }
       qresult.routes.head.legs.map(_.duration.value).sum * 1000
     }
   }
@@ -265,8 +271,8 @@ extends JsonSupport {
       }
       response <- http.singleRequest(
         HttpRequest(
-          uri=Uri(s"${authSettings.beelineServer}/suggestions/${suggestionId}/suggested_route"),
-          headers = List(new RawHeader("Authorization", authorization)),
+          uri=Uri(s"${authSettings.beelineServer}/suggestions/${suggestionId}/suggested_routes"),
+          headers = List(superadminHeader()),
           method = HttpMethods.POST,
           entity = entity
         )
@@ -298,7 +304,7 @@ extends JsonSupport {
     case class DBGeometry(coordinates: Array[Double])
     case class BusStopDB(
                         coordinates: DBGeometry,
-                        description: String,
+                        description: String = "Unnamed Bus Stop",
                         id: Int
                         )
 
