@@ -27,7 +27,7 @@ lazy val routing = (project in file("routing"))
       "io.jeo" % "jeo" % "0.7",
       "com.graphhopper" % "graphhopper" % "0.7.0",
       "com.thesamet" %% "kdtree" % "1.0.5",
-      "org.scalactic" %% "scalactic" % "3.0.0",
+      "org.scalactic" %% "scalactic" % "3.0.0" % Test,
       scalatest,
       "org.postgresql" % "postgresql" % "42.1.3",
       "com.typesafe.akka"   %% "akka-http" % "10.1.0",
@@ -50,6 +50,7 @@ lazy val routing = (project in file("routing"))
       "io.circe" %% "circe-parser" % "0.9.1",
       "io.circe" %% "circe-generic-extras" % "0.9.1" // -generic-extras allows for default values
     ),
+    mainClass in run := Some("sg.beeline.BeelineRoutingApp"),
     parallelExecution in test := false
   )
 
@@ -59,7 +60,8 @@ lazy val routingLambda = (project in file("routing-lambda"))
     commonSettings,
     name := "routing-lambda",
     libraryDependencies ++= Seq(
-      "io.github.mkotsur" %% "aws-lambda-scala" % "0.0.13"
+      "io.github.mkotsur" %% "aws-lambda-scala" % "0.0.13",
+      scalatest
     )
   )
 
