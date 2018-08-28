@@ -104,8 +104,6 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
 
     println(s"Removed ${feasibleTop50Routes.size - uniqueTop50Routes.size} similar routes")
 
-//    println(uniqueTop50Routes)
-
     uniqueTop50Routes
       .groupBy(_.stops)
       .values.map(_.head)

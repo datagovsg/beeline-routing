@@ -58,7 +58,7 @@ object Request {
       }
   }
 
-  class RequestOverrideTime(var r: Request,
+  class RequestOverrideTime(val r: Request,
                             val time: Double) extends Request {
     override val start: (Double, Double) = r.start
     override val end: (Double, Double) = r.end

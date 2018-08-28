@@ -9,9 +9,7 @@ import io.circe.jawn.decodeByteBuffer
 import sg.beeline.io.Import
 import sg.beeline.problem.Request.{RequestFromSuggestion, RequestOverrideTime}
 import sg.beeline.problem._
-
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 
 object BeelineSuggestRouteService {
   case class OD(
@@ -30,6 +28,7 @@ object BeelineSuggestRouteService {
 
 trait BeelineSuggestRouteService {
   import BeelineSuggestRouteService._
+  import io.circe.syntax._
 
   val problem = new BasicRoutingProblem(
     List(),
@@ -74,7 +73,6 @@ trait BeelineSuggestRouteService {
 
   implicit val routeDecoder = new Decoder[Route] {
     override def apply(c: HCursor): Result[Route] = {
-      println(c.value)
       for {
         _activities <- c.downField("_activities").as[List[Activity]]
         time <- c.downField("time").as[Double]
@@ -89,8 +87,6 @@ trait BeelineSuggestRouteService {
   implicit val suggestionEncoder = deriveEncoder[Suggestion]
   implicit val requestFromSuggestionEncoder = new Encoder[RequestFromSuggestion] {
     override def apply(a: RequestFromSuggestion): Json = {
-      // suggestion, routingproblem, datasource
-      import io.circe.syntax._
       a.suggestion.asJson
     }
   }
@@ -99,7 +95,6 @@ trait BeelineSuggestRouteService {
     import _root_.io.circe.syntax._
 
     implicit val requestOverrideTimeEncoder = new Encoder[RequestOverrideTime] {
-      import io.circe.syntax._
       override def apply(a: RequestOverrideTime): Json = {
         a.r.asJson(requestEncoder)
           .mapObject(o => o.add("time", a.time.asJson))
@@ -140,9 +135,7 @@ trait BeelineSuggestRouteService {
   }
 
   implicit val routeEncoder = new Encoder[Route] {
-    import io.circe.syntax._
     override def apply(a: Route): Json = Json.obj(
-      // _activities : Seq[Activity]
       "_activities" -> a.activities.asJson,
       "time" -> a.time.asJson
     )
@@ -151,9 +144,6 @@ trait BeelineSuggestRouteService {
   implicit val suggestRouteInputEncoder = deriveEncoder[SuggestRouteInput]
   implicit val suggestRouteOutputEncoder = deriveEncoder[SuggestRouteOutput]
   implicit val suggestRouteOutputDecoder = deriveDecoder[SuggestRouteOutput]
-
-  import io.circe.syntax._
-  import io.circe.parser._
 
   def executeLambda(
                      request: Request,
@@ -171,7 +161,6 @@ trait BeelineSuggestRouteService {
   }
 
   def parseResult(result: InvokeResult) = decodeByteBuffer[Route](result.getPayload)
-  def parseRouteFromJson(json: Json): Result[Route] = json.as[Route]
 
   def requestWithPayload(payload: String)(implicit executionContext: ExecutionContext): Future[Json]
 
@@ -188,7 +177,6 @@ object AWSLambdaSuggestRouteServiceProxy extends BeelineSuggestRouteService {
       .withPayload(payload)
 
     Future {
-      // lambda.invokeAsync(invokeRequest).get.getPayload
       val payload = lambda.invokeAsync(invokeRequest).get
       val parsedPayload = parseResult(payload)
 

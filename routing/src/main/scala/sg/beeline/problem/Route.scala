@@ -223,9 +223,6 @@ class Route(val routingProblem: RoutingProblem,
 
     val pickupActivities = request.startStops.map(stop => new Pickup(request, stop))
     val dropoffActivities = request.endStops.map(stop => new Dropoff(request, stop))
-//
-//    println("Activities:::: ", activities)
-//    println(activitiesWithTimes)
 
     if (pickupActivities.isEmpty || dropoffActivities.isEmpty) None
     else {
