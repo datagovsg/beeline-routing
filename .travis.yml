@@ -4,7 +4,7 @@ scala:
   - 2.12.6
 
 before_install:
-  - sudo apt-get install -y python-pip
+  - sudo apt-get install -y python2.7 python-pip
 
 before_deploy:
   - sudo apt-get install -y bash zip
