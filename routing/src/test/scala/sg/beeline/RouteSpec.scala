@@ -6,6 +6,14 @@ import sg.beeline.problem._
 
 class RouteSpec extends FlatSpec with Matchers {
 
+  object counter {
+    var i = 0
+    def getCounter() = {
+      i += 1
+      i
+    }
+  }
+
   object ZeroDistance extends RoutingProblem {
     val busStops = Array(
       BusStop((103.8, 1.38), 0, "BS1", "BS Road", 0),
@@ -31,7 +39,7 @@ class RouteSpec extends FlatSpec with Matchers {
 
   class TestActivity(val routingProblem: RoutingProblem, val busStop: BusStop,
       val st : Double, val et : Double, val dt: Double, val svct: Double)
-    extends Pickup(new BasicRequest(routingProblem, (0,0), (0,0), 0, 1, testDataSource), busStop) {
+    extends Pickup(new BasicRequest(routingProblem, (0,0), (0,0), 0, 1, testDataSource, id=counter.getCounter()), busStop) {
 
     override def minTime = st
     override def maxTime = et
@@ -139,5 +147,4 @@ class RouteSpec extends FlatSpec with Matchers {
     newRoute.activities(6) should be (activities(4))
     newRoute.activities(7) should be (activities(5))
   }
-
 }

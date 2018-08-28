@@ -220,103 +220,109 @@ class Route(val routingProblem: RoutingProblem,
   def jobTryInsertion(request: Request)
                      (implicit maxInsertionDetour : Double = 2 * 60000.0)
         : Option[(Double, Activity, Activity, (Activity, Activity), (Activity, Activity))] = {
+
     val pickupActivities = request.startStops.map(stop => new Pickup(request, stop))
     val dropoffActivities = request.endStops.map(stop => new Dropoff(request, stop))
+//
+//    println("Activities:::: ", activities)
+//    println(activitiesWithTimes)
 
-    // The cost of inserting ... -> a -> x -> y -> b -> ...
-    val bestDirectInsertWithCost = activitiesWithTimes.sliding(2).map({
-      case Seq((a1, m1, n1), (a2, m2, n2)) =>
-        if (a1.location == a2.location)
-        {
-          // Optimization for same activity neighbours
-          ((a1, a2, (a1, a2), (a1,a2)), Double.PositiveInfinity)
-        }
-        else {
-          val pds = for (p <- pickupActivities; d <- dropoffActivities) yield (p, d)
-          val pdCosts = pds.map({
-            case (p, d) =>
-              if (_isInsertionFeasible(m1, p, d, (a1, a2), (a1, a2), n2))
-                insertionCost((a1, m1, n1), Seq(p, d), (a2, m2, n2))
-              else
-                Double.PositiveInfinity
-          })
-
-          /* Best over all possible (p,d) */
-          val ((bestP, bestD), bestCost) = (pds, pdCosts).zipped.minBy(_._2)
-          ((bestP, bestD, (a1, a2), (a1, a2)), bestCost)
-        }
-    })  /* Best over all possible insertion points */
-        .minBy(_._2)
-
-    val bestIndirectInsertWithCost = {
-      // TODO: If we were writing a more general routing algorithm, we need to check
-      // every combination of (a1, a2), (b1, b2) for feasibility
-      // but this would give us quadratic explosion in cost. Since we know that all
-      // requests have the same time window, we take the minimum of both and check their feasibility
-
-      val pickupCosts = activitiesWithTimes.sliding(2).map({
+    if (pickupActivities.isEmpty || dropoffActivities.isEmpty) None
+    else {
+      // The cost of inserting ... -> a -> x -> y -> b -> ...
+      val bestDirectInsertWithCost = activitiesWithTimes.sliding(2).map({
         case Seq((a1, m1, n1), (a2, m2, n2)) =>
           if (a1.location == a2.location) {
-            (Double.PositiveInfinity, a1, (a1, m1, n1), (a2, m2, n2))
-          } else {
-            val pickupCosts = pickupActivities.map(p => insertionCost((a1, m1, n1), Seq(p), (a2, m2, n2)))
-            val best = (pickupActivities, pickupCosts).zipped.minBy(_._2)
-            (best._2, best._1, (a1, m1, n1), (a2, m2, n2))
+            // Optimization for same activity neighbours
+            ((a1, a2, (a1, a2), (a1, a2)), Double.PositiveInfinity)
           }
-      })
+          else {
+            val pds = for (p <- pickupActivities; d <- dropoffActivities) yield (p, d)
+            val pdCosts = pds.map({
+              case (p, d) =>
+                if (_isInsertionFeasible(m1, p, d, (a1, a2), (a1, a2), n2))
+                  insertionCost((a1, m1, n1), Seq(p, d), (a2, m2, n2))
+                else
+                  Double.PositiveInfinity
+            })
 
-      val dropoffCosts = activitiesWithTimes.sliding(2).drop(1).map({
-        case Seq((b1, m1, n1), (b2, m2, n2)) =>
-          if (b1.location == b2.location) {
-            (Double.PositiveInfinity, b1, (b1, m1, n1), (b2, m2, n2))
-          } else {
-            val dropoffCosts = dropoffActivities.map(p => insertionCost((b1, m1, n1), Seq(p), (b2, m2, n2)))
-            val best = (dropoffActivities, dropoffCosts).zipped.minBy(_._2)
-            (best._2, best._1, (b1, m1, n1), (b2, m2, n2))
+            /* Best over all possible (p,d) */
+            val ((bestP, bestD), bestCost) = (pds, pdCosts).zipped.minBy(_._2)
+            ((bestP, bestD, (a1, a2), (a1, a2)), bestCost)
           }
-      })
+      }) /* Best over all possible insertion points */
+        .minBy(_._2)
 
-      val minSubsequentDropoffCosts = dropoffCosts.foldRight(
-        List[(Double, Activity, (Activity, Double, Double), (Activity, Double, Double))]()
-      ) {
-        case (s, Nil) => List(s)
-        case (s, head :: tail) =>
-          if (s._1 < head._1) s :: head :: tail
-          else head :: head :: tail
-      }
+      val bestIndirectInsertWithCost = {
+        // TODO: If we were writing a more general routing algorithm, we need to check
+        // every combination of (a1, a2), (b1, b2) for feasibility
+        // but this would give us quadratic explosion in cost. Since we know that all
+        // requests have the same time window, we take the minimum of both and check their feasibility
 
-      val minPD = pickupCosts.toSeq.zip(minSubsequentDropoffCosts).minBy({
-        case (p1, p2) => p1._1 + p2._1
-      })
-
-      val (timeCost, insertion) = minPD match {
-        case ((pc, pa, pa1, pa2), (dc, da, da1, da2)) => (pc + dc, (pa, da, (pa1._1, pa2._1), (da1._1, da2._1)))
-      }
-
-      val feasibility = _isInsertionFeasible(
-        minPD._1._3._2,
-        insertion._1,
-        insertion._2,
-        insertion._3, insertion._4,
-        minPD._2._4._3)
-
-      val cost = if (feasibility) timeCost else Double.PositiveInfinity
-
-      (insertion, cost)
-    }
-
-    Seq(bestDirectInsertWithCost, bestIndirectInsertWithCost)
-      .minBy(_._2) match {
-      case (x, Double.PositiveInfinity) => None
-      case (x, finiteValue) => {
-        if (finiteValue > maxInsertionDetour)
-          None
-        else
-          x match {
-            case (b,c,(d,e),(f,g)) => {
-              Some(finiteValue, b,c,(d,e),(f,g))
+        val pickupCosts = activitiesWithTimes.sliding(2).map({
+          case Seq((a1, m1, n1), (a2, m2, n2)) =>
+            if (a1.location == a2.location) {
+              (Double.PositiveInfinity, a1, (a1, m1, n1), (a2, m2, n2))
+            } else {
+              val pickupCosts = pickupActivities.map(p => insertionCost((a1, m1, n1), Seq(p), (a2, m2, n2)))
+              val best = (pickupActivities, pickupCosts).zipped.minBy(_._2)
+              (best._2, best._1, (a1, m1, n1), (a2, m2, n2))
             }
-          }
+        })
+
+        val dropoffCosts = activitiesWithTimes.sliding(2).drop(1).map({
+          case Seq((b1, m1, n1), (b2, m2, n2)) =>
+            if (b1.location == b2.location) {
+              (Double.PositiveInfinity, b1, (b1, m1, n1), (b2, m2, n2))
+            } else {
+              val dropoffCosts = dropoffActivities.map(p => insertionCost((b1, m1, n1), Seq(p), (b2, m2, n2)))
+              val best = (dropoffActivities, dropoffCosts).zipped.minBy(_._2)
+              (best._2, best._1, (b1, m1, n1), (b2, m2, n2))
+            }
+        })
+
+        val minSubsequentDropoffCosts = dropoffCosts.foldRight(
+          List[(Double, Activity, (Activity, Double, Double), (Activity, Double, Double))]()
+        ) {
+          case (s, Nil) => List(s)
+          case (s, head :: tail) =>
+            if (s._1 < head._1) s :: head :: tail
+            else head :: head :: tail
+        }
+
+        val minPD = pickupCosts.toSeq.zip(minSubsequentDropoffCosts).minBy({
+          case (p1, p2) => p1._1 + p2._1
+        })
+
+        val (timeCost, insertion) = minPD match {
+          case ((pc, pa, pa1, pa2), (dc, da, da1, da2)) => (pc + dc, (pa, da, (pa1._1, pa2._1), (da1._1, da2._1)))
+        }
+
+        val feasibility = _isInsertionFeasible(
+          minPD._1._3._2,
+          insertion._1,
+          insertion._2,
+          insertion._3, insertion._4,
+          minPD._2._4._3)
+
+        val cost = if (feasibility) timeCost else Double.PositiveInfinity
+
+        (insertion, cost)
+      }
+
+      Seq(bestDirectInsertWithCost, bestIndirectInsertWithCost)
+        .minBy(_._2) match {
+        case (x, Double.PositiveInfinity) => None
+        case (x, finiteValue) => {
+          if (finiteValue > maxInsertionDetour)
+            None
+          else
+            x match {
+              case (b, c, (d, e), (f, g)) => {
+                Some(finiteValue, b, c, (d, e), (f, g))
+              }
+            }
+        }
       }
     }
   }
