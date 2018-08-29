@@ -33,8 +33,15 @@ object BeelineSuggestRouteSerdes {
     (deriveDecoder[BeelineRecreateSettings], deriveEncoder[BeelineRecreateSettings])
 
   // Decoders
-  implicit val (busStopDecoder, busStopEncoder) =
-    (deriveDecoder[BusStop], deriveEncoder[BusStop])
+  implicit val busStopDecoder = new Decoder[BusStop] {
+    override def apply(c: HCursor): Result[BusStop] =
+      for {
+        i <- c.as[Int]
+      } yield BuiltIn.busStopsByIndex(i)
+  }
+  implicit val busStopEncoder = new Encoder[BusStop] {
+    override def apply(a: BusStop): Json = a.index.asJson
+  }
   implicit val (odDecoder, odEncoder) =
     (deriveDecoder[OD], deriveEncoder[OD])
 
