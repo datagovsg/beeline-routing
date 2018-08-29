@@ -1,22 +1,15 @@
 package sg.beeline
-import java.util.UUID
 
-import akka.http.scaladsl.model.headers._
-import akka.http.scaladsl.model.{HttpMethods, StatusCodes, Uri}
-import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import org.scalatest.FunSuite
 import sg.beeline.io.DataSource
 import sg.beeline.problem.{BasicRequest, BasicRoutingProblem, BusStop, Suggestion}
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRoute, LocalCPUSuggestRouteService}
 import sg.beeline.util.Util
-import sg.beeline.web.IntelligentRoutingService
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 /**
   * Test that we are returning... at least the expected formats?
   */
-class BeelineSuggestRouteSpec extends FunSuite with ScalatestRouteTest {
+class BeelineSuggestRouteSpec extends FunSuite {
   final private def gridToLngLat(i: Double, j: Double) = {
     val x = 250 * i
     val y = 250 * j

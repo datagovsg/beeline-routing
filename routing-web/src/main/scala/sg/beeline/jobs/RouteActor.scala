@@ -44,7 +44,7 @@ class RouteActor(dataSource: DataSource,
         beelineProblem.requests
           .filter(suggestRequest.settings.requestsFilter(seedRequest))
           .map(_.withTime(time)),
-        AWSLambdaSuggestRouteServiceProxy
+        beelineSuggestRouteService
       )
 
       beelineSuggestRoute.generatePotentialRoutesFromRequest(seedRequest).toList

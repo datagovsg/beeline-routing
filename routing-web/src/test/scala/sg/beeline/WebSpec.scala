@@ -7,10 +7,11 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.model.headers._
 import org.scalatest.FunSuite
-import sg.beeline.io.DataSource
+import sg.beeline.io.{BuiltIn, DataSource}
 import sg.beeline.problem.{BusStop, Suggestion}
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, LocalCPUSuggestRouteService}
 import sg.beeline.util.Util
+import sg.beeline.util.Util.Point
 import sg.beeline.web.{E2EAuthSettings, IntelligentRoutingService}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -27,48 +28,17 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
     override def beelineServer: String = ""
   }
 
-  final private def gridToLngLat(i: Double, j: Double) = {
-    val x = 250 * i
-    val y = 250 * j
+  def randomAroundLngLat(p: Point, distance: Double) = {
+    val svy = Util.toSVY(p)
 
-    val originLat = 1.33
-    val originLng = 103.78
-
-    val lat = originLat + (y / 6317e3).toDegrees
-    val lng = originLng + (x / 6317e3 / math.cos(originLat.toRadians)).toDegrees
-
-    (lng, lat)
+    Util.toWGS((
+      svy._1 + (scala.util.Random.nextDouble() * (2 * distance) - distance),
+      svy._2 + (scala.util.Random.nextDouble() * (2 * distance) - distance)
+    ))
   }
 
-  val testDataSource = new DataSource {
-    override val busStops: Seq[BusStop] = {
-      // Make a rough square grid, 200m apart
-      (0 until 50).flatMap(i =>
-        (0 until 50).map(j => {
-          val (lng, lat) = gridToLngLat(i, j)
-
-          BusStop(
-            coordinates = (lng, lat),
-            heading = Double.NaN,
-            description = s"Bus Stop ($i, $j)",
-            roadName = s"East $i West $j",
-            index = i * 50 + j
-          )
-        })
-      )
-    }
-
-    override def distanceFunction(a: BusStop, b: BusStop) = {
-      val (ai, aj) = (a.index / 50, a.index % 50)
-      val (bi, bj) = (b.index / 50, b.index % 50)
-
-      // Manhattan distance
-      val gridManhattanDistance = math.abs(ai - bi) + math.abs(bj - aj)
-
-      // Assume two minutes between stops
-      gridManhattanDistance * 120
-    }
-  }
+  val CBD = (103.847246, 1.285621)
+  val YEW_TEE = (103.747077, 1.395824)
 
   // Make a whole bunch of requests
   val getRequests: Seq[Suggestion] = {
@@ -77,12 +47,8 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       .flatMap({ hour =>
         (0 until 3000).map({ _ =>
           (index: Int) => {
-            val randStart = gridToLngLat(
-              scala.util.Random.nextDouble() * 20,
-              scala.util.Random.nextDouble() * 20)
-            val randEnd = gridToLngLat(
-              30 + scala.util.Random.nextDouble() * 20,
-              30 + scala.util.Random.nextDouble() * 20)
+            val randStart = randomAroundLngLat(CBD, 2000) // City
+            val randEnd = randomAroundLngLat(YEW_TEE, 2000) // Yew Tee
 
             Suggestion(index, Util.toSVY(randStart), Util.toSVY(randEnd), hour * 3600 * 1000L, 1)
           }
@@ -93,20 +59,21 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       .toArray)
   }
 
+  // FIXME: Because the Lambda ALWAYS takes data from `BuiltIn`
+  // It's not possible for us to test with a custom data source
   val testService = new IntelligentRoutingService(
-    testDataSource,
+    BuiltIn,
     getRequests,
     LocalCPUSuggestRouteService).myRoute
 
   // Some assertions on our assumptions
   require { getRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
-  require { testDataSource.busStops.zipWithIndex.forall { case (o, i) => o.index == i} }
 
   test("/bus_stops fetches all bus stops") {
     Get("/bus_stops") ~> testService ~> check {
       val jarr = _root_.io.circe.parser.parse(responseAs[String]).right.get
 
-      val currentSetOfBusStops = testDataSource.busStops.map(_.description).toSet
+      val currentSetOfBusStops = BuiltIn.busStops.map(_.description).toSet
 
       val returnedSetOfBusStops = jarr.asArray.get.map({ jbs =>
         jbs.asObject.get.toMap("description").asString.get
@@ -143,14 +110,14 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
 
         // Use a suggestion from the getRequests() --> ensure that at least this one is served
     Get(Uri("/routing/begin").withQuery(Uri.Query(
-      "startLat" -> (getRequests(0).startLngLat._2 + 0.0001).toString,
-      "startLng" -> getRequests(0).startLngLat._1.toString,
-      "endLat" -> getRequests(0).endLngLat._2.toString,
-      "endLng" -> getRequests(0).endLngLat._1.toString,
-      "time" -> getRequests(0).time.toString,
+      "startLat" -> CBD._2.toString,
+      "startLng" -> CBD._1.toString,
+      "endLat" -> YEW_TEE._2.toString,
+      "endLng" -> YEW_TEE._1.toString,
+      "time" -> (8.5 * 3600e3).toString,
       "settings" -> _root_.io.circe.Printer.noSpaces.pretty(
         BeelineRecreateSettings(
-          maxDetourMinutes = 2.0,
+          maxDetourMinutes = 3.0,
           startClusterRadius = 1500,
           startWalkingDistance = 200,
           endClusterRadius = 1500,
@@ -220,9 +187,9 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
         .toList
 
       val d = (i: Int, j: Int) =>
-        testDataSource.distanceFunction(
-          testDataSource.busStopsByIndex(i),
-          testDataSource.busStopsByIndex(j)
+        BuiltIn.distanceFunction(
+          BuiltIn.busStopsByIndex(i),
+          BuiltIn.busStopsByIndex(j)
         )
 
       assert { travelTimes == List(d(5, 10), d(10, 15), d(15, 100), d(100, 150)) }
@@ -236,10 +203,10 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       val req = getRequests(n)
 
       (
-        testDataSource.busStops.find(stop =>
+        BuiltIn.busStops.find(stop =>
           squaredDistance(stop.xy, req.start) <= 90000
         ).get.index,
-        testDataSource.busStops.find(stop =>
+        BuiltIn.busStops.find(stop =>
           squaredDistance(stop.xy, req.end) <= 90000
         ).get.index
       )

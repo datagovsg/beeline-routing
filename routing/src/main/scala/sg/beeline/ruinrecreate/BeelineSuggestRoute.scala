@@ -20,6 +20,10 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
   val START_CLUSTER_RADIUS = settings.startClusterRadius
   val END_CLUSTER_RADIUS = settings.endClusterRadius
 
+  println(s"Only ${requests.size} suggestions used")
+  println(s"Average # start stops ${requests.map(_.startStops.size).sum / requests.size.toDouble}")
+  println(s"Average # end stops ${requests.map(_.endStops.size).sum / requests.size.toDouble}")
+
   private def isCompatible(r1: Request, r2: Request): Boolean = {
     odCombis(r1).exists({
       case (o, d) =>
@@ -70,6 +74,10 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     val compatibleRequests = {
       requests.filter(other => isCompatible(request, other)).toSet
     }
+
+    println(s"${compatibleRequests.size} compatible requests")
+    println(settings)
+    println(requests.head.routingProblem.settings)
 
     // You can take the, say, top 5 ODs that has minimum travel
     // time for **this** request, and then grow routes from these 5 ODs

@@ -57,7 +57,7 @@ trait JsonSupport extends JsonMarshallers {
 
 // this trait defines our service behavior independently from the service actor
 class IntelligentRoutingService(dataSource: DataSource,
-                                suggestionsSource: Seq[Suggestion],
+                                suggestionsSource: => Seq[Suggestion],
                                 beelineSuggestRouteService: BeelineSuggestRouteService)
                                (implicit val system: ActorSystem,
                                 val authSettings: E2EAuthSettings)

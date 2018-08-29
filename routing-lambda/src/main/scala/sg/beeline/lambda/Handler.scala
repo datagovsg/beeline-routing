@@ -35,25 +35,6 @@ object SuggestRouteHandler extends Lambda[SuggestRouteInput, Route]()(common.can
     implicit val executionContext = ExecutionContext.fromExecutor(
       new ForkJoinPool(Runtime.getRuntime.availableProcessors))
 
-    val problem = new BasicRoutingProblem(
-      settings = inp.settings,
-      dataSource = BuiltIn,
-      suggestions = List()
-    )
-
-    val suggestRoute = new BeelineSuggestRoute(
-      problem,
-      inp.requests, // substitute this with suggestions
-      null /* FIXME: Ugly, but not needed here */
-    )
-
-    val oneSuggestedRouteEither = Try {
-      suggestRoute.growRoute(
-        inp.seedRequest,
-        (inp.od.origin, inp.od.destination),
-        inp.requests)
-    }.toEither
-
-    oneSuggestedRouteEither
+    executeInput(inp).toEither
   }
 }
