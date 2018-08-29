@@ -9,7 +9,7 @@ import akka.http.scaladsl.model.headers._
 import org.scalatest.FunSuite
 import sg.beeline.io.DataSource
 import sg.beeline.problem.{BusStop, Suggestion}
-import sg.beeline.ruinrecreate.BeelineRecreateSettings
+import sg.beeline.ruinrecreate.{BeelineRecreateSettings, LocalCPUSuggestRouteService}
 import sg.beeline.util.Util
 import sg.beeline.web.{E2EAuthSettings, IntelligentRoutingService}
 
@@ -93,7 +93,10 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       .toArray)
   }
 
-  val testService = new IntelligentRoutingService(testDataSource, getRequests).myRoute
+  val testService = new IntelligentRoutingService(
+    testDataSource,
+    getRequests,
+    LocalCPUSuggestRouteService).myRoute
 
   // Some assertions on our assumptions
   require { getRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
@@ -130,7 +133,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   // - Distance restriction works (all stops are within X m from a request)
   // - Cluster restriction works (all stops are within X m from centre)
   // - Implement time restriction
-  ignore ("/routing/begin returns a UUID and polling finally returns a result") {
+  test ("/routing/begin returns a UUID and polling finally returns a result") {
     import _root_.io.circe.syntax._
     import scala.concurrent.duration._
 

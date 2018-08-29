@@ -3,15 +3,17 @@ package sg.beeline.jobs
 import java.util.concurrent.ForkJoinPool
 
 import akka.actor.Actor
-import sg.beeline.io.{DataSource, BuiltIn}
+import sg.beeline.io.{BuiltIn, DataSource}
 import sg.beeline.problem._
-import sg.beeline.ruinrecreate.{BasicRoutingAlgorithm, BeelineRecreate, BeelineSuggestRoute}
+import sg.beeline.ruinrecreate._
 import sg.beeline.util.Util
 import sg.beeline.web.SuggestRequest
 
 import scala.concurrent.ExecutionContext
 
-class RouteActor(dataSource: DataSource, suggestionSource: String => Seq[Suggestion]) extends Actor {
+class RouteActor(dataSource: DataSource,
+                 suggestionSource: String => Seq[Suggestion],
+                 beelineSuggestRouteService: BeelineSuggestRouteService) extends Actor {
   // If we don't set this, Scalatest hangs when running multiple threads
   implicit val executionContext = ExecutionContext.fromExecutor(
     new ForkJoinPool(Runtime.getRuntime.availableProcessors))
@@ -41,7 +43,8 @@ class RouteActor(dataSource: DataSource, suggestionSource: String => Seq[Suggest
         beelineProblem,
         beelineProblem.requests
           .filter(suggestRequest.settings.requestsFilter(seedRequest))
-          .map(_.withTime(time))
+          .map(_.withTime(time)),
+        AWSLambdaSuggestRouteServiceProxy
       )
 
       beelineSuggestRoute.generatePotentialRoutesFromRequest(seedRequest).toList

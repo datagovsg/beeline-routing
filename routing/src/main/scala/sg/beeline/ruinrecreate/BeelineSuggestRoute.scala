@@ -12,7 +12,8 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 class BeelineSuggestRoute(routingProblem : RoutingProblem,
-                          requests: Traversable[Request])
+                          requests: Traversable[Request],
+                          beelineSuggestRouteService: BeelineSuggestRouteService)
                          (implicit val executionContext: ExecutionContext) {
   private val settings = routingProblem.settings
   val MAX_DETOUR_MINUTES = settings.maxDetourMinutes
@@ -91,7 +92,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     implicit val highlyParallelExecutionContext = ExecutionContext.fromExecutor(new ForkJoinPool(10))
 
     val feasibleTop50Routes = Await.result(Future.traverse(feasible){ case (i, od) =>
-      AWSLambdaSuggestRouteServiceProxy.executeLambda(settings, request, od, compatibleRequests.toList)
+      beelineSuggestRouteService.executeLambda(settings, request, od, compatibleRequests.toList)
     }, Duration.Inf)
 
     // Prepend candidateRoute to uniqueRoutes if it is different from all the routes in uniqueRoutes

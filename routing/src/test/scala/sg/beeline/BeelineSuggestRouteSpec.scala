@@ -1,14 +1,16 @@
 package sg.beeline
 import java.util.UUID
+
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes, Uri}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import org.scalatest.FunSuite
 import sg.beeline.io.DataSource
 import sg.beeline.problem.{BasicRequest, BasicRoutingProblem, BusStop, Suggestion}
-import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRoute}
+import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRoute, LocalCPUSuggestRouteService}
 import sg.beeline.util.Util
 import sg.beeline.web.IntelligentRoutingService
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 /**
@@ -73,7 +75,7 @@ class BeelineSuggestRouteSpec extends FunSuite with ScalatestRouteTest {
   // Some assertions on our assumptions
   require { getRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
   require { testDataSource.busStops.zipWithIndex.forall { case (o, i) => o.index == i} }
-  ignore ("BeelineSuggestRoute skips over suggestions without stops") {
+  test ("BeelineSuggestRoute skips over suggestions without stops") {
     val problem = new BasicRoutingProblem(List(), testDataSource, BeelineRecreateSettings.default)
     val bsr = new BeelineSuggestRoute(
       problem,
@@ -87,7 +89,8 @@ class BeelineSuggestRouteSpec extends FunSuite with ScalatestRouteTest {
           testDataSource,
           1
         )
-      )
+      ),
+      LocalCPUSuggestRouteService
     )
     val routes = bsr.generatePotentialRoutesFromRequest(
       new BasicRequest(

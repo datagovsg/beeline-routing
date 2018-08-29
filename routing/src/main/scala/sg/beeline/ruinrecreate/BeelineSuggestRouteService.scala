@@ -1,5 +1,7 @@
 package sg.beeline.ruinrecreate
 
+import java.util.concurrent.ForkJoinPool
+
 import com.amazonaws.services.lambda.AWSLambdaAsyncClientBuilder
 import com.amazonaws.services.lambda.model.{InvokeRequest, InvokeResult}
 import io.circe.Decoder.Result
@@ -12,6 +14,7 @@ import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineSuggestRouteService.{OD, SuggestRouteInput}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 object BeelineSuggestRouteService {
   case class OD(origin: BusStop, destination: BusStop)
@@ -192,7 +195,6 @@ object AWSLambdaSuggestRouteServiceProxy extends BeelineSuggestRouteService {
   import io.circe.syntax._
   override def requestWithPayload(payload: String)
                                  (implicit executionContext: ExecutionContext): Future[Json] = {
-
     val lambda = AWSLambdaAsyncClientBuilder.defaultClient()
 
     val invokeRequest = new InvokeRequest()
@@ -211,3 +213,38 @@ object AWSLambdaSuggestRouteServiceProxy extends BeelineSuggestRouteService {
   }
 }
 
+object LocalCPUSuggestRouteService extends BeelineSuggestRouteService {
+  override def requestWithPayload(payload: String)(implicit executionContext: ExecutionContext): Future[Json] = {
+    import io.circe.syntax._
+    import BeelineSuggestRouteSerdes.routeEncoder
+    import BeelineSuggestRouteSerdes.suggestRouteInputDecoder
+
+    Future {
+      val res = for {
+        suggestRouteInput <- io.circe.parser.decode[SuggestRouteInput](payload)
+      } yield {
+        implicit val executionContext = ExecutionContext.fromExecutor(
+          new ForkJoinPool(1))
+
+        val problem = new BasicRoutingProblem(
+          settings = suggestRouteInput.settings,
+          dataSource = BuiltIn,
+          suggestions = List()
+        )
+
+        val suggestRoute = new BeelineSuggestRoute(
+          problem,
+          suggestRouteInput.requests, // substitute this with suggestions
+          null /* FIXME: Ugly, but not needed here */
+        )
+
+        suggestRoute.growRoute(
+          suggestRouteInput.seedRequest,
+          (suggestRouteInput.od.origin, suggestRouteInput.od.destination),
+          suggestRouteInput.requests
+        ).asJson
+      }
+      res.toTry.get
+    }
+  }
+}

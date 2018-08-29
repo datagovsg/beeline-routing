@@ -11,7 +11,7 @@ import akka.http.scaladsl.server.{Directives, ExceptionHandler}
 import sg.beeline.io.DataSource
 import sg.beeline.jobs.{JobQueue, RouteActor}
 import sg.beeline.problem._
-import sg.beeline.ruinrecreate.BeelineRecreateSettings
+import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRouteService}
 import sg.beeline.util.{ExpiringCache, Geo, Util, kdtreeQuery}
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
@@ -57,7 +57,8 @@ trait JsonSupport extends JsonMarshallers {
 
 // this trait defines our service behavior independently from the service actor
 class IntelligentRoutingService(dataSource: DataSource,
-                                suggestionsSource: Seq[Suggestion])
+                                suggestionsSource: Seq[Suggestion],
+                                beelineSuggestRouteService: BeelineSuggestRouteService)
                                (implicit val system: ActorSystem,
                                 val authSettings: E2EAuthSettings)
   extends Directives with JsonSupport {
@@ -67,7 +68,10 @@ class IntelligentRoutingService(dataSource: DataSource,
   import ExecutionContext.Implicits.global
   implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
   val routingActor = system.actorOf(Props({
-    new RouteActor(dataSource, _ => suggestionsSource)
+    new RouteActor(
+      dataSource,
+      _ => suggestionsSource,
+      beelineSuggestRouteService)
   }), "intelligent-routing")
   val jobQueue = new JobQueue[SuggestRequest, List[Route]](
     routingActor, 10 minutes,5 minutes, actorSystem = Some(system))
