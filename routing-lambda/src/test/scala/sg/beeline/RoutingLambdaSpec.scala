@@ -11,7 +11,7 @@ import sg.beeline.lambda.SuggestRouteHandler
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.AWSLambdaSuggestRouteServiceProxy._
 import sg.beeline.ruinrecreate.BeelineSuggestRouteService
-import sg.beeline.ruinrecreate.BeelineSuggestRouteService.{OD, SuggestRouteInput, SuggestRouteOutput}
+import sg.beeline.ruinrecreate.BeelineSuggestRouteService.{OD, SuggestRouteInput}
 import sg.beeline.util.Util
 
 import scala.concurrent.duration.Duration

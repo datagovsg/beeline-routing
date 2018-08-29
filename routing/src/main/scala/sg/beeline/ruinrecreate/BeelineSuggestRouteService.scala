@@ -9,7 +9,7 @@ import io.circe.jawn.parseByteBuffer
 import sg.beeline.io.Import
 import sg.beeline.problem.Request.{RequestFromSuggestion, RequestOverrideTime}
 import sg.beeline.problem._
-import sg.beeline.ruinrecreate.BeelineSuggestRouteService.{OD, SuggestRouteInput, SuggestRouteOutput}
+import sg.beeline.ruinrecreate.BeelineSuggestRouteService.{OD, SuggestRouteInput}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -21,9 +21,6 @@ object BeelineSuggestRouteService {
                                 od: OD,
                                 requests: List[Request]
                               )
-  case class SuggestRouteOutput(
-                                 routes: Route
-                               )
 }
 
 object BeelineSuggestRouteSerdes {
@@ -178,8 +175,6 @@ trait BeelineSuggestRouteService {
 
     val suggestRouteInput = SuggestRouteInput(settings, request, OD(od._1, od._2), requests)
     implicit val suggestRouteInputEncoder = deriveEncoder[SuggestRouteInput]
-    implicit val suggestRouteOutputDecoder = deriveDecoder[SuggestRouteOutput]
-    implicit val suggestRouteOutputEncoder = deriveEncoder[SuggestRouteOutput]
 
     requestWithPayload(suggestRouteInput.asJson.toString)
       .map(json => json.as[Route] match {
