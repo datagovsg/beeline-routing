@@ -16,8 +16,8 @@ trait Request {
 
   def dataSource: DataSource
 
-  lazy val startStops = routingProblem.nearBusStopsStart(start).toIndexedSeq
-  lazy val endStops = routingProblem.nearBusStopsEnd(end).toIndexedSeq
+  lazy val startStops = routingProblem.nearBusStops(start, routingProblem.settings.startWalkingDistance).toIndexedSeq
+  lazy val endStops = routingProblem.nearBusStops(end, routingProblem.settings.endWalkingDistance).toIndexedSeq
 
   lazy val startStopsSet = startStops.toSet
   lazy val endStopsSet = endStops.toSet
@@ -34,7 +34,7 @@ object Request {
   class RequestFromSuggestion(
                                val suggestion: Suggestion,
                                val routingProblem : RoutingProblem,
-                                val dataSource: DataSource) extends Request {
+                               val dataSource: DataSource) extends Request {
     override val start: (Double, Double) = suggestion.start
     override val end: (Double, Double) = suggestion.end
     override val time: Double = suggestion.time

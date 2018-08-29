@@ -1,14 +1,14 @@
 package sg.beeline.problem
 
+import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.Util
 import sg.beeline.util.Util.Point
 
 trait RoutingProblem {
   def distance(a : BusStop, b : BusStop) : Double
-  def nearBusStopsStart(p: Point) : Seq[BusStop]
-  def nearBusStopsEnd(p: Point) : Seq[BusStop]
-
   def initialize: (Traversable[Route], Traversable[Request], Traversable[Request])
+  def nearBusStops(point : Point, maxDistance: Double): Seq[BusStop]
+  def settings: BeelineRecreateSettings
 }
 
 case class BusStop(

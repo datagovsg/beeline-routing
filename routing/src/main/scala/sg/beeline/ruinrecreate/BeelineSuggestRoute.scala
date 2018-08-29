@@ -91,7 +91,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     implicit val highlyParallelExecutionContext = ExecutionContext.fromExecutor(new ForkJoinPool(10))
 
     val feasibleTop50Routes = Await.result(Future.traverse(feasible){ case (i, od) =>
-      AWSLambdaSuggestRouteServiceProxy.executeLambda(request, od, compatibleRequests.toList)
+      AWSLambdaSuggestRouteServiceProxy.executeLambda(settings, request, od, compatibleRequests.toList)
     }, Duration.Inf)
 
     // Prepend candidateRoute to uniqueRoutes if it is different from all the routes in uniqueRoutes
