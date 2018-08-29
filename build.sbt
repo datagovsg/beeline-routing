@@ -27,7 +27,7 @@ lazy val routing = (project in file("routing"))
       "io.jeo" % "jeo" % "0.7",
       "com.graphhopper" % "graphhopper" % "0.7.0",
       "com.thesamet" %% "kdtree" % "1.0.5",
-      "org.scalactic" %% "scalactic" % "3.0.0",
+      "org.scalactic" %% "scalactic" % "3.0.0" % Test,
       scalatest,
       "org.postgresql" % "postgresql" % "42.1.3",
       "com.typesafe.akka"   %% "akka-http" % "10.1.0",
@@ -36,6 +36,9 @@ lazy val routing = (project in file("routing"))
       "com.typesafe.akka"   %%  "akka-testkit"  % "2.5.13"   % "test",
       "com.typesafe.akka"   %% "akka-stream" % "2.5.13",
 
+      // for AWS
+      "com.amazonaws" % "aws-java-sdk-lambda" % "1.11.385",
+
       // for CORS support
       "ch.megard" %% "akka-http-cors" % "0.3.0",
 
@@ -43,15 +46,27 @@ lazy val routing = (project in file("routing"))
       "com.typesafe.slick" %% "slick" % "3.2.1",
       "com.typesafe.slick" %% "slick-hikaricp" % "3.2.1",
 
-      "io.circe" %% "circe-literal" % "0.8.0",
-      "io.circe" %% "circe-parser" % "0.8.0",
-      "io.circe" %% "circe-generic-extras" % "0.8.0" // -generic-extras allows for default values
+      "io.circe" %% "circe-literal" % "0.9.1",
+      "io.circe" %% "circe-parser" % "0.9.1",
+      "io.circe" %% "circe-generic-extras" % "0.9.1" // -generic-extras allows for default values
     ),
+    mainClass in run := Some("sg.beeline.BeelineRoutingApp"),
     parallelExecution in test := false
   )
 
+lazy val routingLambda = (project in file("routing-lambda"))
+  .dependsOn(routing)
+  .settings(
+    commonSettings,
+    name := "routing-lambda",
+    libraryDependencies ++= Seq(
+      "io.github.mkotsur" %% "aws-lambda-scala" % "0.0.13",
+      scalatest
+    )
+  )
+
 lazy val root = (project in file("."))
-  .aggregate(fuzzyClustering, routing)
+  .aggregate(fuzzyClustering, routing, routingLambda)
   .settings(
     commonSettings,
     name := "beeline-routing",

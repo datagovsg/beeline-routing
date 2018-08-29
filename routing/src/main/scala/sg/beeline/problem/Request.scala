@@ -16,8 +16,8 @@ trait Request {
 
   def dataSource: DataSource
 
-  lazy val startStops = routingProblem.nearBusStopsStart(start).toIndexedSeq
-  lazy val endStops = routingProblem.nearBusStopsEnd(end).toIndexedSeq
+  lazy val startStops = routingProblem.nearBusStops(start, routingProblem.settings.startWalkingDistance).toIndexedSeq
+  lazy val endStops = routingProblem.nearBusStops(end, routingProblem.settings.endWalkingDistance).toIndexedSeq
 
   lazy val startStopsSet = startStops.toSet
   lazy val endStopsSet = endStops.toSet
@@ -34,15 +34,31 @@ object Request {
   class RequestFromSuggestion(
                                val suggestion: Suggestion,
                                val routingProblem : RoutingProblem,
-                                val dataSource: DataSource) extends Request {
+                               val dataSource: DataSource) extends Request {
     override val start: (Double, Double) = suggestion.start
     override val end: (Double, Double) = suggestion.end
     override val time: Double = suggestion.time
     override val weight: Int = suggestion.weight
 
+    override def hashCode: Int =
+      List(suggestion, routingProblem, dataSource)
+          .foldLeft(1) {
+            case (hashCode, o) =>
+              hashCode * 41 + o.hashCode
+          }
+
+    override def equals(obj: scala.Any): Boolean =
+      obj match {
+        case rfs: RequestFromSuggestion =>
+          rfs.suggestion == suggestion &&
+          rfs.dataSource == dataSource &&
+          rfs.routingProblem == routingProblem
+        case _ =>
+          false
+      }
   }
 
-  class RequestOverrideTime(r: Request,
+  class RequestOverrideTime(val r: Request,
                             val time: Double) extends Request {
     override val start: (Double, Double) = r.start
     override val end: (Double, Double) = r.end
@@ -57,6 +73,7 @@ class BasicRequest(val routingProblem: RoutingProblem,
                    val end: (Double, Double),
                    val time: Double,
                    val weight: Int = 1,
-                   val dataSource: DataSource
+                   val dataSource: DataSource,
+                   val id: Int
                   ) extends Request {
 }

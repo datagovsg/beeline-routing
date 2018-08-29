@@ -3,8 +3,17 @@ package sg.beeline
 import org.scalatest._
 import sg.beeline.io.DataSource
 import sg.beeline.problem._
+import sg.beeline.ruinrecreate.BeelineRecreateSettings
 
 class RouteSpec extends FlatSpec with Matchers {
+
+  object counter {
+    var i = 0
+    def getCounter() = {
+      i += 1
+      i
+    }
+  }
 
   object ZeroDistance extends RoutingProblem {
     val busStops = Array(
@@ -16,12 +25,13 @@ class RouteSpec extends FlatSpec with Matchers {
       if (a == b) 0
       else 1500
 
-    override def nearBusStopsStart(p : (Double, Double)) = ZeroDistance.busStops
-    override def nearBusStopsEnd(p : (Double, Double)) = ZeroDistance.busStops
-
     override def initialize = {
       (List(), List(), List())
     }
+
+    override def nearBusStops(point: (Double, Double), maxDistance: Double): Seq[BusStop] = busStops
+
+    override def settings: BeelineRecreateSettings = ???
   }
   val testDataSource = new DataSource {
     override def busStops: Seq[BusStop] = ZeroDistance.busStops
@@ -31,7 +41,7 @@ class RouteSpec extends FlatSpec with Matchers {
 
   class TestActivity(val routingProblem: RoutingProblem, val busStop: BusStop,
       val st : Double, val et : Double, val dt: Double, val svct: Double)
-    extends Pickup(new BasicRequest(routingProblem, (0,0), (0,0), 0, 1, testDataSource), busStop) {
+    extends Pickup(new BasicRequest(routingProblem, (0,0), (0,0), 0, 1, testDataSource, id=counter.getCounter()), busStop) {
 
     override def minTime = st
     override def maxTime = et
@@ -139,5 +149,4 @@ class RouteSpec extends FlatSpec with Matchers {
     newRoute.activities(6) should be (activities(4))
     newRoute.activities(7) should be (activities(5))
   }
-
 }

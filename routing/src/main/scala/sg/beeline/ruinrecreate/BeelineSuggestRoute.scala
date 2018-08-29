@@ -1,16 +1,20 @@
 package sg.beeline.ruinrecreate
 
+import java.util.concurrent.ForkJoinPool
+
+import io.circe.parser._
+
 import sg.beeline.problem._
 import sg.beeline.util.WeightedRandomShuffle
 
 import scala.annotation.tailrec
-import scala.collection.parallel.ExecutionContextTaskSupport
-import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class BeelineSuggestRoute(routingProblem : RoutingProblem,
-                          requests: Traversable[Request],
-                          settings: BeelineRecreateSettings = BeelineRecreateSettings.default)
+                          requests: Traversable[Request])
                          (implicit val executionContext: ExecutionContext) {
+  private val settings = routingProblem.settings
   val MAX_DETOUR_MINUTES = settings.maxDetourMinutes
   val START_CLUSTER_RADIUS = settings.startClusterRadius
   val END_CLUSTER_RADIUS = settings.endClusterRadius
@@ -75,24 +79,20 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     val feasibleTop50Ods = top5Ods.filter(
       od => {
         val topOd = top5Ods(0)
-
         routingProblem.distance(od._1, od._2) - routingProblem.distance(topOd._1, topOd._2) < 60000
       }
     )
-    val feasibleTop50Routes = {
-      val p = feasibleTop50Ods.par
-      p.tasksupport = new ExecutionContextTaskSupport(executionContext)
-      p
-    }.flatMap({od =>
-        (0 until 10)
-          .flatMap(i => try {
-            val r = growRoute(request, od, compatibleRequests.toList)
-            println(s"Route generated from ${ compatibleRequests.size } requests")
-            Some(r)
-          } catch {
-            case e : Exception => e.printStackTrace(); None
-          })
-      })
+
+    val feasible = feasibleTop50Ods.flatMap(od => {
+      (0 until 10)
+        .map(i => (i, od))
+    })
+
+    implicit val highlyParallelExecutionContext = ExecutionContext.fromExecutor(new ForkJoinPool(10))
+
+    val feasibleTop50Routes = Await.result(Future.traverse(feasible){ case (i, od) =>
+      AWSLambdaSuggestRouteServiceProxy.executeLambda(settings, request, od, compatibleRequests.toList)
+    }, Duration.Inf)
 
     // Prepend candidateRoute to uniqueRoutes if it is different from all the routes in uniqueRoutes
     def buildNext(uniqueRoutes : List[Route], candidateRoute : Route) = {
@@ -110,7 +110,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
       .toList
   }
 
-  private def growRoute(request : Request, od : (BusStop, BusStop), requests: List[Request]) = {
+  def growRoute(request : Request, od : (BusStop, BusStop), requests: List[Request]) = {
     val shuffled = WeightedRandomShuffle.shuffle(requests, requests.view.map(r => r.weight.toDouble))
       .toList
 
@@ -156,4 +156,3 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     )
   }
 }
-

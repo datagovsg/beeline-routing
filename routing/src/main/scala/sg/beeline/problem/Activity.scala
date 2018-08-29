@@ -1,6 +1,6 @@
 package sg.beeline.problem
 
-abstract class Activity {
+sealed trait Activity {
   def minTime : Double
   def maxTime : Double
   def dwellTime : Double

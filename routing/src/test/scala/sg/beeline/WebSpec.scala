@@ -124,7 +124,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   // - Distance restriction works (all stops are within X m from a request)
   // - Cluster restriction works (all stops are within X m from centre)
   // - Implement time restriction
-  test("/routing/begin returns a UUID and polling finally returns a result") {
+  ignore ("/routing/begin returns a UUID and polling finally returns a result") {
     import _root_.io.circe.syntax._
     import scala.concurrent.duration._
 
