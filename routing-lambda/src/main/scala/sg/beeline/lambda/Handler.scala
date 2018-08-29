@@ -43,8 +43,7 @@ object SuggestRouteHandler extends Lambda[SuggestRouteInput, Route]()(common.can
 
     val suggestRoute = new BeelineSuggestRoute(
       problem,
-      inp.requests, // substitute this with suggestions
-      settings = inp.settings
+      inp.requests // substitute this with suggestions
     )
 
     val feasibleTop50Routes: Either[Throwable, Route] = Try {

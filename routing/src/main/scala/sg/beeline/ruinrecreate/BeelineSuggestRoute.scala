@@ -12,9 +12,9 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 class BeelineSuggestRoute(routingProblem : RoutingProblem,
-                          requests: Traversable[Request],
-                          settings: BeelineRecreateSettings = BeelineRecreateSettings.default)
+                          requests: Traversable[Request])
                          (implicit val executionContext: ExecutionContext) {
+  private val settings = routingProblem.settings
   val MAX_DETOUR_MINUTES = settings.maxDetourMinutes
   val START_CLUSTER_RADIUS = settings.startClusterRadius
   val END_CLUSTER_RADIUS = settings.endClusterRadius

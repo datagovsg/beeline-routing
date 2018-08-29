@@ -41,8 +41,7 @@ class RouteActor(dataSource: DataSource, suggestionSource: String => Seq[Suggest
         beelineProblem,
         beelineProblem.requests
           .filter(suggestRequest.settings.requestsFilter(seedRequest))
-          .map(_.withTime(time)),
-        settings
+          .map(_.withTime(time))
       )
 
       beelineSuggestRoute.generatePotentialRoutesFromRequest(seedRequest).toList
