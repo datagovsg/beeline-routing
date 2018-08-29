@@ -10,7 +10,7 @@ import sg.beeline.io.Import
 import sg.beeline.lambda.SuggestRouteHandler
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.AWSLambdaSuggestRouteServiceProxy._
-import sg.beeline.ruinrecreate.BeelineSuggestRouteService
+import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRouteService}
 import sg.beeline.ruinrecreate.BeelineSuggestRouteService.{OD, SuggestRouteInput}
 import sg.beeline.util.Util
 
@@ -19,9 +19,13 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 
 class RoutingLambdaSpec extends FunSuite {
 
-  val problem = new BasicRoutingProblem(List(), 300.0,300.0, dataSource = Import)
+  val problem = new BasicRoutingProblem(
+    List(),
+    dataSource = Import,
+    settings = BeelineRecreateSettings.default)
 
   test("Route encoder works with empty Activity classes") {
+    import sg.beeline.ruinrecreate.BeelineSuggestRouteSerdes._
     // empty types ie. StartActivity and EndActivity
     val route = new Route(problem, List(EndActivity()),8.5e7)
     assert {
@@ -43,6 +47,7 @@ class RoutingLambdaSpec extends FunSuite {
 
     object TestSuggestRouteServiceProxy extends BeelineSuggestRouteService {
       override def requestWithPayload(payload: String)(implicit executionContext: ExecutionContext): Future[Json] = {
+        import sg.beeline.ruinrecreate.BeelineSuggestRouteSerdes._
         Future {
           val inputEither = for {
             json <- _root_.io.circe.parser.parse(payload)
@@ -59,6 +64,7 @@ class RoutingLambdaSpec extends FunSuite {
       }
     }
     implicit val executionContext = ExecutionContext.fromExecutor(new ForkJoinPool(2))
+    import sg.beeline.ruinrecreate.BeelineSuggestRouteSerdes.routeEncoder
     import _root_.io.circe.syntax._
     val toSVY = (d: Double, e: Double) => Util.toSVY((d, e)).asJson.toString
     val originBusStop = BusStop((21421.649051572367, 32062.31453230393), 100, "Origin", "Hello", 2)
@@ -66,16 +72,16 @@ class RoutingLambdaSpec extends FunSuite {
 
     val basicRequest1 = new BasicRequest(
       problem, (40778.2186070438, 39589.155309929425), (29899.68739611096, 29292.2330929787), 8.5 * 3600e3, 1, Import, 2)
-    val r = SuggestRouteInput(basicRequest1,
-      OD(originBusStop, destinationBusStop),
+    val requestLambda = Await.result(TestSuggestRouteServiceProxy.executeLambda(
+      BeelineRecreateSettings.default,
+      basicRequest1,
+      (originBusStop, destinationBusStop),
       List(
         new BasicRequest(
           problem, (21421.649051572367, 32062.31453230393), (25959.98999086392, 33974.19460209075), 8.5 * 3600e3, 1, Import, 2
         )
-      ))
-
-    val requestLambda = Await.result(TestSuggestRouteServiceProxy.requestWithPayload(
-      r.asJson.toString), Duration.Inf)
+      )
+    ), Duration.Inf)
 
     val expected = new Route(
       problem,
@@ -86,7 +92,7 @@ class RoutingLambdaSpec extends FunSuite {
         EndActivity()),
       8.5 * 3600e3)
 
-    assert (requestLambda.equals(expected.asJson))
+    assert (requestLambda.asJson.equals(expected.asJson))
 
   }
 

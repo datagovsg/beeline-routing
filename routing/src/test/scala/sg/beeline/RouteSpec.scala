@@ -3,6 +3,7 @@ package sg.beeline
 import org.scalatest._
 import sg.beeline.io.DataSource
 import sg.beeline.problem._
+import sg.beeline.ruinrecreate.BeelineRecreateSettings
 
 class RouteSpec extends FlatSpec with Matchers {
 
@@ -24,12 +25,13 @@ class RouteSpec extends FlatSpec with Matchers {
       if (a == b) 0
       else 1500
 
-    override def nearBusStopsStart(p : (Double, Double)) = ZeroDistance.busStops
-    override def nearBusStopsEnd(p : (Double, Double)) = ZeroDistance.busStops
-
     override def initialize = {
       (List(), List(), List())
     }
+
+    override def nearBusStops(point: (Double, Double), maxDistance: Double): Seq[BusStop] = busStops
+
+    override def settings: BeelineRecreateSettings = ???
   }
   val testDataSource = new DataSource {
     override def busStops: Seq[BusStop] = ZeroDistance.busStops

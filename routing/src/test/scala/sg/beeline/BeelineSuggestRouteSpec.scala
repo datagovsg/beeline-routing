@@ -74,7 +74,7 @@ class BeelineSuggestRouteSpec extends FunSuite with ScalatestRouteTest {
   require { getRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
   require { testDataSource.busStops.zipWithIndex.forall { case (o, i) => o.index == i} }
   ignore ("BeelineSuggestRoute skips over suggestions without stops") {
-    val problem = new BasicRoutingProblem(List(), 500, 500, testDataSource)
+    val problem = new BasicRoutingProblem(List(), testDataSource, BeelineRecreateSettings.default)
     val bsr = new BeelineSuggestRoute(
       problem,
       List(
@@ -87,10 +87,6 @@ class BeelineSuggestRouteSpec extends FunSuite with ScalatestRouteTest {
           testDataSource,
           1
         )
-      ),
-      new BeelineRecreateSettings(
-        startWalkingDistance = 500,
-        endWalkingDistance = 500
       )
     )
     val routes = bsr.generatePotentialRoutesFromRequest(

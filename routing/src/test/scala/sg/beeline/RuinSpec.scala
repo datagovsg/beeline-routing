@@ -34,7 +34,7 @@ class RuinSpec extends FlatSpec with Matchers {
       kdtreeQuery.squaredDistance(a.xy, b.xy) / 11 / 60
   }
 
-  val problem = new BasicRoutingProblem(requests, dataSource = testDataSource)
+  val problem = new BasicRoutingProblem(requests, dataSource = testDataSource, settings = BeelineRecreateSettings.default)
 
   val (routes, validRequests, badRequests) = problem.initialize
 
