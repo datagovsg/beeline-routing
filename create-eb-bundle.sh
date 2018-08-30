@@ -8,8 +8,8 @@ sbt routingWeb/assembly
 # Ensure file exists
 ROUTING_JAR_FILE=./routing/target/scala-2.12/routing-assembly-*.jar
 WEB_JAR_FILE=./routing-web/target/scala-2.12/routing-web-assembly-*.jar
-[ -f $ROUTING_JAR_FILE ]
-[ -f $WEB_JAR_FILE ]
+[ -f $ROUTING_JAR_FILE ] || (echo "$ROUTING_JAR_FILE does not exist" && false)
+[ -f $WEB_JAR_FILE ] || (echo "$WEB_JAR_FILE does not exist" && false)
 
 # Download the SG map
 curl https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf -o SG.pbf
