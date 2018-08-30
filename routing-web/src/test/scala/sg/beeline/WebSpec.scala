@@ -41,7 +41,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   val YEW_TEE = (103.747077, 1.395824)
 
   // Make a whole bunch of requests
-  val getRequests: Seq[Suggestion] = {
+  val getSuggestions: Seq[Suggestion] = {
     genericWrapArray(List(8.0, 8.5, 9.0, 9.5)
       .view
       .flatMap({ hour =>
@@ -63,11 +63,11 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   // It's not possible for us to test with a custom data source
   val testService = new IntelligentRoutingService(
     BuiltIn,
-    getRequests,
+    getSuggestions,
     LocalCPUSuggestRouteService).myRoute
 
   // Some assertions on our assumptions
-  require { getRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
+  require { getSuggestions.zipWithIndex.forall { case (o, i) => o.id == i} }
 
   test("/bus_stops fetches all bus stops") {
     Get("/bus_stops") ~> testService ~> check {
@@ -199,42 +199,47 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   test("/paths_requests/x/y/z returns the requests served by x --> y --> z") {
     import sg.beeline.util.kdtreeQuery.squaredDistance
 
-    val servingNth = (n: Int) => {
-      val req = getRequests(n)
-
-      (
-        BuiltIn.busStops.find(stop =>
-          squaredDistance(stop.xy, req.start) <= 90000
-        ).get.index,
-        BuiltIn.busStops.find(stop =>
-          squaredDistance(stop.xy, req.end) <= 90000
-        ).get.index
-      )
+    val DIST = 500
+    val twoSuggestions = () => {
+      scala.util.Random.shuffle(getSuggestions)
+        .flatMap { suggestion =>
+          val startBusStop = BuiltIn.busStops.find(stop =>
+            squaredDistance(stop.xy, suggestion.start) <= DIST * DIST
+          )
+          val endBusStop = BuiltIn.busStops.find(stop =>
+            squaredDistance(stop.xy, suggestion.end) <= DIST * DIST
+          )
+          for {
+            start <- startBusStop
+            end <- endBusStop
+          } yield (start.index, end.index, suggestion.id)
+        }
+        .take(2)
     }
 
-    val (w, y) = servingNth(100)
-    val (x, z) = servingNth(105)
+    val Seq((w, y, firstRequestIndex), (x, z, secondRequestIndex)) = twoSuggestions()
 
     // w -> y, x -> z
-    Get(s"/path_requests/$w/$x/$y/$z?maxDistance=300") ~> testService ~> check {
+    Get(s"/path_requests/$w/$x/$y/$z?maxDistance=$DIST") ~> testService ~> check {
       val json = _root_.io.circe.parser.parse(responseAs[String]).right.get
       val jarr = json.asArray.get
+
       val indices = jarr.map(j => j.asObject.get.toMap("id").asNumber.get.toInt.get)
         .toSet
 
-      assert { indices contains 100 }
-      assert { indices contains 105 }
+      assert { indices contains firstRequestIndex }
+      assert { indices contains secondRequestIndex }
     }
 
     // (wrong direction) y -> w , z -> x
-    Get(s"/path_requests/$y/$z/$w/$x?maxDistance=300") ~> testService ~> check {
+    Get(s"/path_requests/$y/$z/$w/$x?maxDistance=$DIST") ~> testService ~> check {
       val json = _root_.io.circe.parser.parse(responseAs[String]).right.get
       val jarr = json.asArray.get
       val indices = jarr.map(j => j.asObject.get.toMap("id").asNumber.get.toInt.get)
         .toSet
 
-      assert { !(indices contains 100) }
-      assert { !(indices contains 105) }
+      assert { !(indices contains firstRequestIndex) }
+      assert { !(indices contains secondRequestIndex) }
     }
   }
 
