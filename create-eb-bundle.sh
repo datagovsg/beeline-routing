@@ -2,7 +2,7 @@
 
 set -eou pipefail
 
-rm $(find . -path '*/target/*.jar')
+rm $(find . -path '*/target/*.jar') || true
 
 sbt routing/assembly
 sbt routingWeb/assembly
