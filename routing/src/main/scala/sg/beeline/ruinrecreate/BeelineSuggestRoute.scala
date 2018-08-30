@@ -76,8 +76,6 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     }
 
     println(s"${compatibleRequests.size} compatible requests")
-    println(settings)
-    println(requests.head.routingProblem.settings)
 
     // You can take the, say, top 5 ODs that has minimum travel
     // time for **this** request, and then grow routes from these 5 ODs
