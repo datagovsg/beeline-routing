@@ -3,11 +3,12 @@ package sg.beeline.ruinrecreate
 import java.util.concurrent.ForkJoinPool
 
 import io.circe.parser._
-
 import sg.beeline.problem._
+import sg.beeline.ruinrecreate.BeelineSuggestRouteService.{OD, SuggestRouteInput}
 import sg.beeline.util.WeightedRandomShuffle
 
 import scala.annotation.tailrec
+import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -95,11 +96,15 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
         .map(i => (i, od))
     })
 
-    implicit val highlyParallelExecutionContext = ExecutionContext.fromExecutor(new ForkJoinPool(50))
-
-    val feasibleTop50Routes = Await.result(Future.traverse(feasible){ case (i, od) =>
-      beelineSuggestRouteService.executeLambda(settings, request, od, compatibleRequests.toList)
-    }, Duration.Inf)
+    val feasibleTop50Routes = {
+      val p = feasible.par
+      p.tasksupport = new ForkJoinTaskSupport(new ForkJoinPool(10))
+      p
+    }.flatMap { case (i, od) =>
+      beelineSuggestRouteService.executeInput(
+        SuggestRouteInput(settings, request, OD(od._1, od._2), compatibleRequests.toList)
+      ).toOption
+    }
 
     // Prepend candidateRoute to uniqueRoutes if it is different from all the routes in uniqueRoutes
     def buildNext(uniqueRoutes : List[Route], candidateRoute : Route) = {
