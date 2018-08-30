@@ -13,6 +13,7 @@ trait Request {
   def end: Point
   def time: Double
   def weight : Int
+  def id: Int
 
   def dataSource: DataSource
 
@@ -39,6 +40,7 @@ object Request {
     override val end: (Double, Double) = suggestion.end
     override val time: Double = suggestion.time
     override val weight: Int = suggestion.weight
+    override val id: Int = suggestion.id
 
     override def hashCode: Int =
       List(suggestion, routingProblem, dataSource)
@@ -65,6 +67,7 @@ object Request {
     override val weight: Int = r.weight
     override val routingProblem: RoutingProblem = r.routingProblem
     override val dataSource: DataSource = r.dataSource
+    override val id: Int = r.id
   }
 }
 
