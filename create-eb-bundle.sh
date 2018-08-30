@@ -5,9 +5,6 @@ set -eou pipefail
 sbt routing/assembly
 sbt routingWeb/assembly
 
-ls routing/target/scala-2.12
-ls routing-web/target/scala-2.12
-
 # Ensure file exists
 ROUTING_JAR_FILE=./routing/target/scala-2.12/routing-assembly-1.0.jar
 WEB_JAR_FILE=./routing-web/target/scala-2.12/routing-web-assembly-1.0.jar
