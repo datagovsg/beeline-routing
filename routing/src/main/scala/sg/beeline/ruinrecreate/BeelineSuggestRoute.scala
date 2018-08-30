@@ -95,7 +95,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
         .map(i => (i, od))
     })
 
-    implicit val highlyParallelExecutionContext = ExecutionContext.fromExecutor(new ForkJoinPool(10))
+    implicit val highlyParallelExecutionContext = ExecutionContext.fromExecutor(new ForkJoinPool(50))
 
     val feasibleTop50Routes = Await.result(Future.traverse(feasible){ case (i, od) =>
       beelineSuggestRouteService.executeLambda(settings, request, od, compatibleRequests.toList)
