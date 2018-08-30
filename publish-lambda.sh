@@ -3,10 +3,12 @@ set -euo pipefail
 
 create_lambda () {
   aws lambda create-function --function-name beeline-routing-suggestions \
-	--runtime java8 \
-	--role arn:aws:iam::882000534153:role/service-role/beeline-routing \
-	--handler 'sg.beeline.lambda.SuggestRouteHandler::handle' \
-	--code '{"S3Bucket":"beeline-routing","S3Key":"routing-lambda-assembly-1.0.jar"}'
+        --runtime java8 \
+        --role arn:aws:iam::882000534153:role/service-role/beeline-routing \
+        --handler 'sg.beeline.lambda.SuggestRouteHandler::handle' \
+        --code '{"S3Bucket":"beeline-routing","S3Key":"routing-lambda-assembly-1.0.jar"}' \
+        --timeout 60 \
+        --memory-size 1024
 }
 
 sbt routingLambda/assembly
