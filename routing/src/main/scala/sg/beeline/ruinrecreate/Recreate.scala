@@ -23,7 +23,7 @@ object Recreate extends Recreate {
     val (routes, badRequests) = acc
 
     val routeCosts = routes.par
-      .map(r => r.jobTryInsertion(request))
+      .map(r => r.jobTryInsertion(request)(24 * 3600 * 1000))
 
     val routeCostsRoutes = routeCosts.zip(routes)
       .filter({case (None, _) => false case _ => true})

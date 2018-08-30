@@ -13,8 +13,6 @@ class BasicRoutingProblem(val suggestions: Seq[Suggestion],
 
   type BusStopsTree = KDTreeMap[(Double, Double), BusStop]
 
-  println(s"Problem with ${suggestions.size} suggestions")
-
   val busStopsTree : BusStopsTree = KDTreeMap.fromSeq(
     dataSource.busStops map {x => x.xy -> x}
   )
@@ -23,11 +21,6 @@ class BasicRoutingProblem(val suggestions: Seq[Suggestion],
     new Request.RequestFromSuggestion(sugg, this, dataSource))
     .filter(_.startStops.nonEmpty)
     .filter(_.endStops.nonEmpty)
-
-  println(s"Only ${suggestions.size} suggestions used")
-  println(s"Average # start stops ${requests.map(_.startStops.size).sum / requests.size.toDouble}")
-  println(s"Average # end stops ${requests.map(_.endStops.size).sum / requests.size.toDouble}")
-
 
   // The current set of routes for the current iteration
   def distance(a : BusStop, b: BusStop) : Double = dataSource.distanceFunction(a, b)

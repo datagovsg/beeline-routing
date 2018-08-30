@@ -1,20 +1,19 @@
 package sg.beeline
-import java.util.UUID
-import akka.http.scaladsl.model.headers._
-import akka.http.scaladsl.model.{HttpMethods, StatusCodes, Uri}
-import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
+
+import java.util.concurrent.ForkJoinPool
+
 import org.scalatest.FunSuite
 import sg.beeline.io.DataSource
 import sg.beeline.problem.{BasicRequest, BasicRoutingProblem, BusStop, Suggestion}
-import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRoute}
+import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRoute, LocalCPUSuggestRouteService}
 import sg.beeline.util.Util
-import sg.beeline.web.IntelligentRoutingService
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+
+import scala.concurrent.ExecutionContext
+
 /**
   * Test that we are returning... at least the expected formats?
   */
-class BeelineSuggestRouteSpec extends FunSuite with ScalatestRouteTest {
+class BeelineSuggestRouteSpec extends FunSuite {
   final private def gridToLngLat(i: Double, j: Double) = {
     val x = 250 * i
     val y = 250 * j
@@ -73,7 +72,8 @@ class BeelineSuggestRouteSpec extends FunSuite with ScalatestRouteTest {
   // Some assertions on our assumptions
   require { getRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
   require { testDataSource.busStops.zipWithIndex.forall { case (o, i) => o.index == i} }
-  ignore ("BeelineSuggestRoute skips over suggestions without stops") {
+  test ("BeelineSuggestRoute skips over suggestions without stops") {
+    implicit val execuationContext = ExecutionContext.fromExecutor(new ForkJoinPool(2))
     val problem = new BasicRoutingProblem(List(), testDataSource, BeelineRecreateSettings.default)
     val bsr = new BeelineSuggestRoute(
       problem,
@@ -87,7 +87,8 @@ class BeelineSuggestRouteSpec extends FunSuite with ScalatestRouteTest {
           testDataSource,
           1
         )
-      )
+      ),
+      LocalCPUSuggestRouteService
     )
     val routes = bsr.generatePotentialRoutesFromRequest(
       new BasicRequest(

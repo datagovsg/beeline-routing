@@ -1,17 +1,20 @@
 package sg.beeline.ruinrecreate
 
+import java.util.concurrent.ForkJoinPool
+
 import com.amazonaws.services.lambda.AWSLambdaAsyncClientBuilder
 import com.amazonaws.services.lambda.model.{InvokeRequest, InvokeResult}
 import io.circe.Decoder.Result
 import io.circe.{Decoder, Encoder, HCursor, Json}
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.jawn.parseByteBuffer
-import sg.beeline.io.Import
+import sg.beeline.io.{BuiltIn, DataSource}
 import sg.beeline.problem.Request.{RequestFromSuggestion, RequestOverrideTime}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineSuggestRouteService.{OD, SuggestRouteInput}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 object BeelineSuggestRouteService {
   case class OD(origin: BusStop, destination: BusStop)
@@ -30,8 +33,15 @@ object BeelineSuggestRouteSerdes {
     (deriveDecoder[BeelineRecreateSettings], deriveEncoder[BeelineRecreateSettings])
 
   // Decoders
-  implicit val (busStopDecoder, busStopEncoder) =
-    (deriveDecoder[BusStop], deriveEncoder[BusStop])
+  implicit val busStopDecoder = new Decoder[BusStop] {
+    override def apply(c: HCursor): Result[BusStop] =
+      for {
+        i <- c.as[Int]
+      } yield BuiltIn.busStopsByIndex(i)
+  }
+  implicit val busStopEncoder = new Encoder[BusStop] {
+    override def apply(a: BusStop): Json = a.index.asJson
+  }
   implicit val (odDecoder, odEncoder) =
     (deriveDecoder[OD], deriveEncoder[OD])
 
@@ -118,7 +128,7 @@ class SettingsDependentDecoders(settings: BeelineRecreateSettings) {
   val problem = new BasicRoutingProblem(
     List(),
     settings = settings,
-    dataSource = Import
+    dataSource = BuiltIn
   )
 
   /* Decoders */
@@ -128,7 +138,7 @@ class SettingsDependentDecoders(settings: BeelineRecreateSettings) {
     override def apply(c: HCursor): Result[Request] =
       for {
         suggestion <- c.as[Suggestion]
-      } yield new RequestFromSuggestion(suggestion, problem, Import)
+      } yield new RequestFromSuggestion(suggestion, problem, BuiltIn)
   }
 
   implicit val activityDecoder = new Decoder[Activity] {
@@ -183,16 +193,37 @@ trait BeelineSuggestRouteService {
       })
   }
 
+  def executeInput(suggestRouteInput: SuggestRouteInput)
+                  (implicit executionContext: ExecutionContext): Try[Route] = {
+    val problem = new BasicRoutingProblem(
+      settings = suggestRouteInput.settings,
+      dataSource = BuiltIn,
+      suggestions = List()
+    )
+
+    val suggestRoute = new BeelineSuggestRoute(
+      problem,
+      suggestRouteInput.requests, // substitute this with suggestions
+      null /* FIXME: Ugly, but not needed here */
+    )
+
+    Try {
+      suggestRoute.growRoute(
+        suggestRouteInput.seedRequest,
+        (suggestRouteInput.od.origin, suggestRouteInput.od.destination),
+        suggestRouteInput.requests
+      )
+    }
+  }
+
   def requestWithPayload(payload: String)
                         (implicit executionContext: ExecutionContext): Future[Json]
 
 }
 
 object AWSLambdaSuggestRouteServiceProxy extends BeelineSuggestRouteService {
-  import io.circe.syntax._
   override def requestWithPayload(payload: String)
                                  (implicit executionContext: ExecutionContext): Future[Json] = {
-
     val lambda = AWSLambdaAsyncClientBuilder.defaultClient()
 
     val invokeRequest = new InvokeRequest()
@@ -211,3 +242,24 @@ object AWSLambdaSuggestRouteServiceProxy extends BeelineSuggestRouteService {
   }
 }
 
+object LocalCPUSuggestRouteService extends BeelineSuggestRouteService {
+  override def requestWithPayload(payload: String)(implicit executionContext: ExecutionContext): Future[Json] = {
+    import io.circe.syntax._
+    import BeelineSuggestRouteSerdes.routeEncoder
+    import BeelineSuggestRouteSerdes.suggestRouteInputDecoder
+
+    Future {
+      val res = for {
+        suggestRouteInput <- io.circe.parser.decode[SuggestRouteInput](payload)
+        output <- {
+          implicit val executionContext = ExecutionContext.fromExecutor(
+            new ForkJoinPool(1))
+          executeInput(suggestRouteInput).toEither
+        }
+      } yield {
+        output.asJson
+      }
+      res.toTry.get
+    }
+  }
+}

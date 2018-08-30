@@ -1,7 +1,6 @@
 package sg.beeline
 
 import org.scalatest._
-import sg.beeline.problem.Route
 import sg.beeline.util.ListOps
 
 import scala.util.Random

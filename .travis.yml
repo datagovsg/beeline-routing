@@ -3,14 +3,15 @@ language: scala
 scala:
   - 2.12.6
 
-before_install:
-  - sudo apt-get install -y python2.7 python-pip
+script:
+  - sbt test
+  - sudo apt-get install -y bash zip
+  - bash ./create-eb-bundle.sh
 
 before_deploy:
-  - sudo apt-get install -y bash zip
-  - bash ./publish-lambda.sh
-  - sbt routing/assembly
+  - sudo apt-get install -y python2.7 python-pip
   - bash ./create-eb-bundle.sh
+  - bash ./publish-lambda.sh
 
 deploy:
   - provider: elasticbeanstalk

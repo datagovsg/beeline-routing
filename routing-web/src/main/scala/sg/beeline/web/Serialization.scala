@@ -78,13 +78,14 @@ object RouteJsonEncoder extends Encoder[Route] {
 
 object BusStopEncoder extends Encoder[BusStop] {
   override def apply(a: BusStop): Json = a match {
-    case BusStop((x, y), heading, description, roadName, index) =>
+    case BusStop((x, y), heading, description, roadName, index, stopCode) =>
       Json.obj(
         "coordinates" -> Json.arr(Json.fromDoubleOrNull(x), Json.fromDoubleOrNull(y)),
         "heading" -> Json.fromDoubleOrNull(heading),
         "description" -> Json.fromString(description),
         "roadName" -> Json.fromString(roadName),
-        "index" -> Json.fromInt(index)
+        "index" -> Json.fromInt(index),
+        "busStopCode" -> a.stopCode.map(Json.fromString).getOrElse(Json.Null)
       )
   }
 }

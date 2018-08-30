@@ -12,12 +12,17 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 class BeelineSuggestRoute(routingProblem : RoutingProblem,
-                          requests: Traversable[Request])
+                          requests: Traversable[Request],
+                          beelineSuggestRouteService: BeelineSuggestRouteService)
                          (implicit val executionContext: ExecutionContext) {
   private val settings = routingProblem.settings
   val MAX_DETOUR_MINUTES = settings.maxDetourMinutes
   val START_CLUSTER_RADIUS = settings.startClusterRadius
   val END_CLUSTER_RADIUS = settings.endClusterRadius
+
+  println(s"Only ${requests.size} suggestions used")
+  println(s"Average # start stops ${requests.map(_.startStops.size).sum / requests.size.toDouble}")
+  println(s"Average # end stops ${requests.map(_.endStops.size).sum / requests.size.toDouble}")
 
   private def isCompatible(r1: Request, r2: Request): Boolean = {
     odCombis(r1).exists({
@@ -70,6 +75,10 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
       requests.filter(other => isCompatible(request, other)).toSet
     }
 
+    println(s"${compatibleRequests.size} compatible requests")
+    println(settings)
+    println(requests.head.routingProblem.settings)
+
     // You can take the, say, top 5 ODs that has minimum travel
     // time for **this** request, and then grow routes from these 5 ODs
     val top5Ods = ods.sortBy(
@@ -91,7 +100,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     implicit val highlyParallelExecutionContext = ExecutionContext.fromExecutor(new ForkJoinPool(10))
 
     val feasibleTop50Routes = Await.result(Future.traverse(feasible){ case (i, od) =>
-      AWSLambdaSuggestRouteServiceProxy.executeLambda(settings, request, od, compatibleRequests.toList)
+      beelineSuggestRouteService.executeLambda(settings, request, od, compatibleRequests.toList)
     }, Duration.Inf)
 
     // Prepend candidateRoute to uniqueRoutes if it is different from all the routes in uniqueRoutes
@@ -120,7 +129,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
       if (requests.isEmpty)
         route
       else {
-        val insertAttempt = route.jobTryInsertion(requests.head)
+        val insertAttempt = route.jobTryInsertion(requests.head)(settings.maxDetourMinutes * 60000)
 
         /* Here we should check how feasible the route is, e.g. if
         the travel time is too long for any commuter in the route.
