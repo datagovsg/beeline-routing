@@ -2,9 +2,10 @@
 
 set -eou pipefail
 
+rm $(find . -path '*/target/*.jar')
+
 sbt routing/assembly
 sbt routingWeb/assembly
-
 
 ls routing/target/scala-2.12
 ls routing-web/target/scala-2.12
