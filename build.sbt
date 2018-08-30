@@ -42,7 +42,9 @@ lazy val routing = (project in file("routing"))
       "io.circe" %% "circe-parser" % "0.9.3",
       "io.circe" %% "circe-generic-extras" % "0.9.3"
     ),
-    parallelExecution in test := false
+    parallelExecution in test := false,
+    test in assembly := {},
+    assemblyOption in assembly := (assemblyOption in assembly).value.copy(cacheOutput = false)
   )
 
 lazy val routingWeb = (project in file("routing-web"))
@@ -71,7 +73,8 @@ lazy val routingWeb = (project in file("routing-web"))
       "com.typesafe.slick" %% "slick-hikaricp" % "3.2.1"
     ),
     mainClass := Some("sg.beeline.web.RoutingApp"),
-    test in assembly := {}
+    test in assembly := {},
+    assemblyOption in assembly := (assemblyOption in assembly).value.copy(cacheOutput = false)
   )
   .dependsOn(routing)
 
@@ -83,7 +86,9 @@ lazy val routingLambda = (project in file("routing-lambda"))
     libraryDependencies ++= Seq(
       "io.github.mkotsur" %% "aws-lambda-scala" % "0.0.13",
       scalatest
-    )
+    ),
+    test in assembly := {},
+    assemblyOption in assembly := (assemblyOption in assembly).value.copy(cacheOutput = false)
   )
 
 lazy val root = (project in file("."))
