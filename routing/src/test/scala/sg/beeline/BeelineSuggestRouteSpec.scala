@@ -1,10 +1,14 @@
 package sg.beeline
 
+import java.util.concurrent.ForkJoinPool
+
 import org.scalatest.FunSuite
 import sg.beeline.io.DataSource
 import sg.beeline.problem.{BasicRequest, BasicRoutingProblem, BusStop, Suggestion}
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRoute, LocalCPUSuggestRouteService}
 import sg.beeline.util.Util
+
+import scala.concurrent.ExecutionContext
 
 /**
   * Test that we are returning... at least the expected formats?
@@ -69,6 +73,7 @@ class BeelineSuggestRouteSpec extends FunSuite {
   require { getRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
   require { testDataSource.busStops.zipWithIndex.forall { case (o, i) => o.index == i} }
   test ("BeelineSuggestRoute skips over suggestions without stops") {
+    implicit val execuationContext = ExecutionContext.fromExecutor(new ForkJoinPool(2))
     val problem = new BasicRoutingProblem(List(), testDataSource, BeelineRecreateSettings.default)
     val bsr = new BeelineSuggestRoute(
       problem,
