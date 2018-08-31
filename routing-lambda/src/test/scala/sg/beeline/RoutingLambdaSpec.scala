@@ -24,23 +24,23 @@ class RoutingLambdaSpec extends FunSuite {
     dataSource = BuiltIn,
     settings = BeelineRecreateSettings.default)
 
-  test("Route encoder works with empty Activity classes") {
+  ignore("Route encoder works with empty Activity classes") {
     import sg.beeline.ruinrecreate.BeelineSuggestRouteSerdes._
-    // empty types ie. StartActivity and EndActivity
-    val route = new Route(problem, List(EndActivity()),8.5e7)
-    assert {
-      route.asJson.equals(
-        json"""
-        {
-          "_activities" : [
-            {
-              "type" : "end"
-            }
-          ],
-          "time" : 8.5E7
-        }
-        """)
-    }
+//    // empty types ie. StartActivity and EndActivity
+//    val route = new Route(problem, List(EndActivity()),8.5e7)
+//    assert {
+//      route.asJson.equals(
+//        json"""
+//        {
+//          "_activities" : [
+//            {
+//              "type" : "end"
+//            }
+//          ],
+//          "time" : 8.5E7
+//        }
+//        """)
+//    }
   }
 
   test("E2E test") {

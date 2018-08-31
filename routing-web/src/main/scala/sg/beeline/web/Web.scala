@@ -73,7 +73,7 @@ class IntelligentRoutingService(dataSource: DataSource,
       _ => suggestionsSource,
       beelineSuggestRouteService)
   }), "intelligent-routing")
-  val jobQueue = new JobQueue[SuggestRequest, List[Route]](
+  val jobQueue = new JobQueue[SuggestRequest, List[Route2]](
     routingActor, 10 minutes,5 minutes, actorSystem = Some(system))
 
   val myRoute = cors() {

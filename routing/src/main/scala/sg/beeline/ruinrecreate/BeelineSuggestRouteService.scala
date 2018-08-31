@@ -120,6 +120,12 @@ object BeelineSuggestRouteSerdes {
       "time" -> a.time.asJson
     )
   }
+  implicit val route2Encoder = new Encoder[Route2] {
+    override def apply(a: Route2): Json = Json.obj(
+      "pickups" -> a.pickups.asJson,
+      "dropoffs" -> a.pickups.asJson
+    )
+  }
 }
 
 class SettingsDependentDecoders(settings: BeelineRecreateSettings) {
@@ -194,7 +200,7 @@ trait BeelineSuggestRouteService {
   }
 
   def executeInput(suggestRouteInput: SuggestRouteInput)
-                  (implicit executionContext: ExecutionContext): Try[Route] = {
+                  (implicit executionContext: ExecutionContext): Try[Route2] = {
     val problem = new BasicRoutingProblem(
       settings = suggestRouteInput.settings,
       dataSource = BuiltIn,
@@ -245,7 +251,7 @@ object AWSLambdaSuggestRouteServiceProxy extends BeelineSuggestRouteService {
 object LocalCPUSuggestRouteService extends BeelineSuggestRouteService {
   override def requestWithPayload(payload: String)(implicit executionContext: ExecutionContext): Future[Json] = {
     import io.circe.syntax._
-    import BeelineSuggestRouteSerdes.routeEncoder
+    import BeelineSuggestRouteSerdes.route2Encoder
     import BeelineSuggestRouteSerdes.suggestRouteInputDecoder
 
     Future {

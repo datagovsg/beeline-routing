@@ -11,6 +11,7 @@ import scala.annotation.tailrec
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 class BeelineSuggestRoute(routingProblem : RoutingProblem,
                           requests: Traversable[Request],
@@ -69,7 +70,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     travelTime(Seq(a, c, b)) - travelTime(Seq(a, b))
   }
 
-  def generatePotentialRoutesFromRequest(request: Request): Traversable[Route] = {
+  def generatePotentialRoutesFromRequest(request: Request): Traversable[Route2] = {
     val ods = odCombis(request)
 
     val compatibleRequests = {
@@ -103,16 +104,19 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     }.flatMap { case (i, od) =>
       beelineSuggestRouteService.executeInput(
         SuggestRouteInput(settings, request, OD(od._1, od._2), compatibleRequests.toList)
-      ).toOption
+      ) match {
+        case Success(s) => Some(s)
+        case Failure(f) => f.printStackTrace(); None
+      }
     }
 
     // Prepend candidateRoute to uniqueRoutes if it is different from all the routes in uniqueRoutes
-    def buildNext(uniqueRoutes : List[Route], candidateRoute : Route) = {
-      val (similarRoutes, dissimilarRoutes) = uniqueRoutes.partition(route => RouteSimilarity.isSimilar(route, candidateRoute))
-      (candidateRoute :: similarRoutes).maxBy(_.requestsInfo.size) :: dissimilarRoutes
+    def buildNext(uniqueRoutes : List[Route2], candidateRoute : Route2) = {
+      val (similarRoutes, dissimilarRoutes) = uniqueRoutes.partition(route => RouteSimilarity.isSimilar2(route, candidateRoute))
+      (candidateRoute :: similarRoutes).maxBy(_.requests.size) :: dissimilarRoutes
     }
 
-    val uniqueTop50Routes = feasibleTop50Routes.foldLeft(List[Route]())(buildNext)
+    val uniqueTop50Routes = feasibleTop50Routes.foldLeft(List[Route2]())(buildNext)
 
     println(s"Removed ${feasibleTop50Routes.size - uniqueTop50Routes.size} similar routes")
 
@@ -128,41 +132,24 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
 
     // Try to insert until a max of.... 10?
     @tailrec
-    def grow(route : Route, requests : List[Request]) : Route = {
+    def grow(route : Route2, requests : List[Request]) : Route2 = {
       if (requests.isEmpty)
         route
       else {
-        val insertAttempt = route.jobTryInsertion(requests.head)(settings.maxDetourMinutes * 60000)
-
-        /* Here we should check how feasible the route is, e.g. if
-        the travel time is too long for any commuter in the route.
-        If so stop the recursion at this point.
-         */
-        insertAttempt match {
-          case None =>
-            grow(route, requests.tail)
-          case Some(insertionJob) =>
-            val (a,b,c,d,e) = insertionJob
-            val newRoute = route.insert(b,c,d,e)
-
-            if (newRoute.maxDetour > 15 * 60000)
-              grow(route, requests.tail)
-            else
-              grow(route.insert(b,c,d,e), requests.tail)
-        }
+        grow(
+          route.jobTryInsertion(requests.head).getOrElse(route),
+          requests.tail
+        )
       }
     }
 
     grow(
-      new Route(
+      new Route2(
         routingProblem,
-        IndexedSeq(
-          StartActivity(),
-          Pickup(request, od._1),
-          Dropoff(request, od._2),
-          EndActivity()
-        ),
-        request.time
+        settings.maxDetourMinutes
+      )(
+        Array((od._1, List(request))),
+        Array((od._2, List(request)))
       ),
       shuffled
     )

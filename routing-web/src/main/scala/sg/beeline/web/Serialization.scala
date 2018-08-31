@@ -24,7 +24,7 @@ object RequestJsonEncoder extends Encoder[Request] {
     )
 }
 
-object RouteJsonEncoder extends Encoder[Route] {
+object RouteJsonEncoder extends Encoder[Route2] {
   // This case class is only used for serialization
   case class Stop(busStop : BusStop, numBoard : Int, numAlight: Int) {}
 
@@ -33,45 +33,31 @@ object RouteJsonEncoder extends Encoder[Route] {
     "lng" -> Json.fromDouble(d._1).get
   )
 
-  override def apply(route: Route) : Json = {
-    val positions = route.activitiesWithTimes.flatMap({
-      case (Pickup(r, l), minTime, maxTime) => Some((Stop(l, 1, 0), minTime, maxTime))
-      case (Dropoff(r, l), minTime, maxTime) => Some((Stop(l, 0, 1), minTime, maxTime))
-      case _ => None
-    }).foldRight(
-      List[(Stop, Double, Double)]()
-    ) { // Remove consecutive runs
-      case ((Stop(loc, a, b), minTime, maxTime), Nil) =>
-        (Stop(loc, a, b), minTime, maxTime) :: Nil
-      case ((Stop(loc1, a1, b1), minTime1, maxTime1), (Stop(loc2, a2, b2), minTime2, maxTime2)::tail) =>
-        if (loc1 == loc2)
-          (Stop(loc1, a1 + a2, b1 + b2), minTime1, maxTime1) ::tail
-        else
-          (Stop(loc1, a1, b1), minTime1, maxTime1) :: (Stop(loc2, a2, b2), minTime2, maxTime2) :: tail
-    }
-
-    val positionsJson = positions.map({ case (Stop(bs, board, alight), minTime, maxTime) =>
-      Json.fromFields(
-        latLng(bs.coordinates) ++
-          List(
-            "description" -> Json.fromString(bs.description),
-            "numBoard" -> Json.fromInt(board),
-            "numAlight" -> Json.fromInt(alight),
-            "index" -> Json.fromInt(bs.index),
-            "minTime" -> Json.fromDouble(minTime).get,
-            "maxTime" -> Json.fromDouble(maxTime).get
-          )
-      )
-    })
-
-    val requestsJson = route.activities
-      .flatMap({ case Pickup(request, loc) => Some(request) case _ => None})
-      .map(request => RequestJsonEncoder(request))
-      .toList
+  override def apply(route: Route2) : Json = {
+    import io.circe.syntax._
+    implicit val requestEncoder = RequestJsonEncoder
 
     Json.obj(
-      "stops" -> Json.arr(positionsJson:_*),
-      "requests" -> Json.arr(requestsJson:_*)
+      "stops" -> (
+        route.pickups.map { case (busStop, requests) => Json.obj(
+          "description" -> busStop.description.asJson,
+          "numBoard" -> requests.size.asJson,
+          "numAlight" -> 0.asJson,
+          "index" -> busStop.index.asJson,
+        )} ++
+          route.dropoffs.map { case (busStop, requests) => Json.obj(
+            "description" -> busStop.description.asJson,
+            "numAlight" -> requests.size.asJson,
+            "numBoard" -> 0.asJson,
+            "index" -> busStop.index.asJson,
+          )}
+        )
+        .zip(route.times(route.requests.head.time)) // FIXME: save the time on the route...
+        .map({ case (json, time) =>
+          json.mapObject(o => o.add("maxTime", time.asJson).add("minTime", time.asJson))
+        })
+        .asJson,
+      "requests" -> route.requests.asJson
     )
   }
 }
