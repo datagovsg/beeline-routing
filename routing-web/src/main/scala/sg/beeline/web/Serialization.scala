@@ -41,12 +41,16 @@ object RouteJsonEncoder extends Encoder[Route2] {
       "stops" -> (
         route.pickups.map { case (busStop, requests) => Json.obj(
           "description" -> busStop.description.asJson,
+          "lat" -> busStop.coordinates._2.asJson,
+          "lng" -> busStop.coordinates._1.asJson,
           "numBoard" -> requests.size.asJson,
           "numAlight" -> 0.asJson,
           "index" -> busStop.index.asJson,
         )} ++
           route.dropoffs.map { case (busStop, requests) => Json.obj(
             "description" -> busStop.description.asJson,
+            "lat" -> busStop.coordinates._2.asJson,
+            "lng" -> busStop.coordinates._1.asJson,
             "numAlight" -> requests.size.asJson,
             "numBoard" -> 0.asJson,
             "index" -> busStop.index.asJson,

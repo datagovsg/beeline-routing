@@ -58,6 +58,15 @@ class Route2(val routingProblem: RoutingProblem,
 
     val currentBaseCost = travelCosts(List(pickups.head._1, dropoffs.last._1))
     val currentTravelCost = travelCosts(pickups.view.map(_._1) ++ dropoffs.view.map(_._1))
+
+    // For some strange reason, this assertion can sometimes fail
+    // Must be a bug in graphhopper shortest path search?
+//    if (currentTravelCost < currentBaseCost) {
+//      println(pickups.map(_._1) ++ dropoffs.map(_._1))
+//      println((currentTravelCost - currentBaseCost) / 3600e3)
+//      require(false)
+//    }
+
     val currentDetour = currentTravelCost - currentBaseCost
     val remainingBudget = detourBudget - currentDetour
 
@@ -69,7 +78,7 @@ class Route2(val routingProblem: RoutingProblem,
         sunkCost = travelCosts(Array(pickups(insertBefore - 1)._1, pickups(insertBefore)._1))
         newCost = travelCosts(Array(pickups(insertBefore - 1)._1, start, pickups(insertBefore)._1))
       } yield (
-        sunkCost - newCost,
+        newCost - sunkCost,
         () => arrayConcat(
           pickups.slice(0, insertBefore),
           Array((start, List(request))),
@@ -83,7 +92,7 @@ class Route2(val routingProblem: RoutingProblem,
       sunkCost = travelCosts(Array(dropoffs(insertBefore - 1)._1, dropoffs(insertBefore)._1))
       newCost = travelCosts(Array(dropoffs(insertBefore - 1)._1, end, dropoffs(insertBefore)._1))
     } yield (
-      sunkCost - newCost,
+      newCost - sunkCost,
       () => arrayConcat(
         dropoffs.slice(0, insertBefore),
         Array((end, List(request))),
@@ -200,7 +209,7 @@ class Route2(val routingProblem: RoutingProblem,
               travelCosts(Array(start, dropoffs.last._1))
           } yield (
             detour,
-            () => Array((start, List(request))) ++ pickups
+            () => arrayConcat(List((start, List(request))), pickups)
           )
         },
         { // after last pickup stop
@@ -211,7 +220,7 @@ class Route2(val routingProblem: RoutingProblem,
               travelCosts(Array(pickups.last._1, dropoffs.head._1))
           } yield (
             currentDetour + detour,
-            () => Array((start, List(request))) ++ pickups
+            () => arrayConcat(pickups, List((start, List(request))))
           )
         }
       ).flatten
@@ -223,6 +232,7 @@ class Route2(val routingProblem: RoutingProblem,
 
       (pickupSpecialCases.iterator ++ insertPickupCosts.map { case (change, f) => (currentDetour + change, f) })
         .safeMinBy(_._1)
+        .filter(_._1 <= detourBudget)
         .map { case (_, fn) =>
             new Route2(routingProblem, detourBudget)(fn(), updatedDropoffs.get)
         }
@@ -254,6 +264,7 @@ class Route2(val routingProblem: RoutingProblem,
 
       (dropoffSpecialCases.iterator ++ insertDropoffCosts.map { case (change, f) => (currentDetour + change, f) })
         .safeMinBy(_._1)
+        .filter(_._1 <= detourBudget)
         .map { case (_, fn) =>
           new Route2(routingProblem, detourBudget)(updatedPickups.get, fn())
         }
@@ -298,10 +309,10 @@ class Route2(val routingProblem: RoutingProblem,
   lazy val requests = (pickups.flatMap(_._2))
 
   def times(endTime: Double) = {
-    val travelTimes = (pickups.view.map(_._1) ++ dropoffs.view.map(_._1))
+    (pickups.view.map(_._1) ++ dropoffs.view.map(_._1))
       .sliding(2)
       .foldRight( List(endTime) ) { case (Seq(a, b), time) =>
-          travelCosts(Seq(a, b)) :: time
+        (time.head - travelCosts(Seq(a, b))) :: time
       }
       .toList
   }

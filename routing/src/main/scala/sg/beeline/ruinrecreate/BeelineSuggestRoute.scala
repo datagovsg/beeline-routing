@@ -112,7 +112,8 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
 
     // Prepend candidateRoute to uniqueRoutes if it is different from all the routes in uniqueRoutes
     def buildNext(uniqueRoutes : List[Route2], candidateRoute : Route2) = {
-      val (similarRoutes, dissimilarRoutes) = uniqueRoutes.partition(route => RouteSimilarity.isSimilar2(route, candidateRoute))
+      val (similarRoutes, dissimilarRoutes) =
+        uniqueRoutes.partition(route => RouteSimilarity.isSimilar2(route, candidateRoute, 0.8))
       (candidateRoute :: similarRoutes).maxBy(_.requests.size) :: dissimilarRoutes
     }
 
