@@ -13,6 +13,7 @@ case class BeelineRecreateSettings(
                                    endWalkingDistance : Int = 400,
 
                                    timeAllowance: Long = 1800 * 1000L, // Half an hour
+                                   similarityLimit: Float = 0.3f,
                                    daysOfWeek: Int = 31, // 0b0011111 = Mon-Fri
 
                                    dataSource : String = "suggestions"

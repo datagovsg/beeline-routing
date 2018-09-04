@@ -20,17 +20,17 @@ package object common {
   import io.github.mkotsur.aws.handler.Lambda.{canDecodeAll, canEncodeAll}
 
   implicit val suggestRouteInputDecoder = BeelineSuggestRouteSerdes.suggestRouteInputDecoder
-  implicit val routeEncoder = BeelineSuggestRouteSerdes.routeEncoder
+  implicit val route2Encoder = BeelineSuggestRouteSerdes.route2Encoder
 
   val canDecodeSuggestRoute = implicitly[CanDecode[SuggestRouteInput]]
-  val canEncodeSuggestRoute = implicitly[CanEncode[Route]]
+  val canEncodeSuggestRoute = implicitly[CanEncode[Route2]]
 }
 
-object SuggestRouteHandler extends Lambda[SuggestRouteInput, Route]()(common.canDecodeSuggestRoute,
+object SuggestRouteHandler extends Lambda[SuggestRouteInput, Route2]()(common.canDecodeSuggestRoute,
   common.canEncodeSuggestRoute) {
 
   override def handle(inp: SuggestRouteInput, context: Context)
-  : Either[Throwable, Route] = {
+  : Either[Throwable, Route2] = {
 
     implicit val executionContext = ExecutionContext.fromExecutor(
       new ForkJoinPool(Runtime.getRuntime.availableProcessors))

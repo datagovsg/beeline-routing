@@ -73,7 +73,7 @@ class BeelineSuggestRouteSpec extends FunSuite {
   require { getRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
   require { testDataSource.busStops.zipWithIndex.forall { case (o, i) => o.index == i} }
   test ("BeelineSuggestRoute skips over suggestions without stops") {
-    implicit val execuationContext = ExecutionContext.fromExecutor(new ForkJoinPool(2))
+    implicit val executionContext = ExecutionContext.fromExecutor(new ForkJoinPool(2))
     val problem = new BasicRoutingProblem(List(), testDataSource, BeelineRecreateSettings.default)
     val bsr = new BeelineSuggestRoute(
       problem,
@@ -101,6 +101,6 @@ class BeelineSuggestRouteSpec extends FunSuite {
         2
       )
     )
-    assert { routes.nonEmpty && routes.forall { route => route.activities.length == 4 } }
+    assert { routes.nonEmpty && routes.forall { route => route.pickups.length + route.dropoffs.length == 2 } }
   }
 }

@@ -117,7 +117,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       "time" -> (8.5 * 3600e3).toString,
       "settings" -> _root_.io.circe.Printer.noSpaces.pretty(
         BeelineRecreateSettings(
-          maxDetourMinutes = 3.0,
+          maxDetourMinutes = 10.0,
           startClusterRadius = 1500,
           startWalkingDistance = 200,
           endClusterRadius = 1500,
@@ -152,7 +152,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
         val jarr = json.asArray.get
 
         // Need nonempty to verify
-        assert { jarr.size > 4 }
+        assert { jarr.size >= 2 }
 
         jarr.foreach({ json =>
           val m = json.asObject.get.toMap
