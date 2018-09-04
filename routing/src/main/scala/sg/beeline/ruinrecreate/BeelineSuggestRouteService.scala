@@ -123,7 +123,8 @@ object BeelineSuggestRouteSerdes {
   implicit val route2Encoder = new Encoder[Route2] {
     override def apply(a: Route2): Json = Json.obj(
       "pickups" -> a.pickups.asJson,
-      "dropoffs" -> a.pickups.asJson
+      "dropoffs" -> a.pickups.asJson,
+      "detourBudget" -> a.detourBudget.asJson
     )
   }
 }
@@ -172,6 +173,15 @@ class SettingsDependentDecoders(settings: BeelineRecreateSettings) {
       } yield new Route(problem, _activities, time)
     }
   }
+  implicit val route2Decoder = new Decoder[Route2] {
+    override def apply(c: HCursor): Result[Route2] = {
+      for {
+        dropoffs <- c.get[IndexedSeq[(BusStop, List[Request])]]("dropoffs")
+        pickups <- c.get[IndexedSeq[(BusStop, List[Request])]]("pickups")
+        detourBudget <- c.get[Int]("detourBudget")
+      } yield new Route2(problem, detourBudget)(pickups, dropoffs)
+    }
+  }
   implicit val (settingsDecoder, settingsEncoder) =
     (deriveDecoder[BeelineRecreateSettings], deriveEncoder[BeelineRecreateSettings])
 }
@@ -182,7 +192,7 @@ trait BeelineSuggestRouteService {
                    request: Request,
                    od: (BusStop, BusStop),
                    requests: List[Request])
-                    (implicit executionContext: ExecutionContext): Future[Route] = {
+                    (implicit executionContext: ExecutionContext): Future[Route2] = {
     import io.circe.syntax._
     import BeelineSuggestRouteService._
     import BeelineSuggestRouteSerdes._
@@ -193,7 +203,7 @@ trait BeelineSuggestRouteService {
     implicit val suggestRouteInputEncoder = deriveEncoder[SuggestRouteInput]
 
     requestWithPayload(suggestRouteInput.asJson.toString)
-      .map(json => json.as[Route] match {
+      .map(json => json.as[Route2] match {
         case Right(route) => route
         case Left(exc) => throw exc
       })

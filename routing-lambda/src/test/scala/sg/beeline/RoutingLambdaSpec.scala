@@ -56,15 +56,12 @@ class RoutingLambdaSpec extends FunSuite {
 
           } yield suggestRouteOutput.asJson
 
-          inputEither match {
-            case Right(v) => v
-            case Left(exc) => throw exc
-          }
+          inputEither.toTry.get
         }
       }
     }
     implicit val executionContext = ExecutionContext.fromExecutor(new ForkJoinPool(2))
-    import sg.beeline.ruinrecreate.BeelineSuggestRouteSerdes.routeEncoder
+    import sg.beeline.ruinrecreate.BeelineSuggestRouteSerdes.route2Encoder
     import _root_.io.circe.syntax._
     val toSVY = (d: Double, e: Double) => Util.toSVY((d, e)).asJson.toString
     val originBusStop = BusStop((21421.649051572367, 32062.31453230393), 100, "Origin", "Hello", 2)
@@ -72,9 +69,12 @@ class RoutingLambdaSpec extends FunSuite {
 
     val basicRequest1 = new BasicRequest(
       problem, (40778.2186070438, 39589.155309929425), (29899.68739611096, 29292.2330929787), 8.5 * 3600e3, 1, BuiltIn, 2)
+    val seedRequest = new BasicRequest(
+      problem, (21421.649051572367, 32062.31453230393), (25959.98999086392, 33974.19460209075), 8.5 * 3600e3, 1, BuiltIn, 2
+    )
     val requestLambda = Await.result(TestSuggestRouteServiceProxy.executeLambda(
       BeelineRecreateSettings.default,
-      basicRequest1,
+      seedRequest,
       (originBusStop, destinationBusStop),
       List(
         new BasicRequest(
@@ -83,14 +83,9 @@ class RoutingLambdaSpec extends FunSuite {
       )
     ), Duration.Inf)
 
-    val expected = new Route(
-      problem,
-      List(
-        StartActivity(),
-        Pickup(basicRequest1, originBusStop),
-        Dropoff(basicRequest1, destinationBusStop),
-        EndActivity()),
-      8.5 * 3600e3)
+    val expected = new Route2(problem, BeelineRecreateSettings.default.maxDetourMinutes * 60e3)(
+      Array((originBusStop, List(seedRequest))),
+      Array((destinationBusStop, List(seedRequest))))
 
     assert (requestLambda.asJson.equals(expected.asJson))
 

@@ -147,7 +147,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     grow(
       new Route2(
         routingProblem,
-        settings.maxDetourMinutes
+        settings.maxDetourMinutes * 60e3
       )(
         Array((od._1, List(request))),
         Array((od._2, List(request)))
