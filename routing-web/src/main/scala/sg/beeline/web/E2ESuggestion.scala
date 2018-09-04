@@ -57,12 +57,12 @@ extends JsonSupport {
 
                 val fut = for {
                   suggestRequest <- verifySuggestionId(authorization, suggestionId, userId, recreateSettings)
-                  routes <- (routingActor ? suggestRequest).mapTo[List[Route]]
+                  routes <- (routingActor ? suggestRequest).mapTo[List[Route2]]
                   _ <- {
                     if (routes.isEmpty) {
                       Future.unit // FIXME: push to server the empty result
                     } else {
-                      val bestRoute = routes.maxBy(_.requestsInfo.size)
+                      val bestRoute = routes.maxBy(_.requests.size)
 
                       for {
                         workingDay <- getNextWorkingDay()
@@ -226,7 +226,7 @@ extends JsonSupport {
     }
   }
 
-  private def getGoogleMapsTimings(route: Route, workingDate: LocalDate, arrivalTime: Int): Future[List[Int]] = {
+  private def getGoogleMapsTimings(route: Route2, workingDate: LocalDate, arrivalTime: Int): Future[List[Int]] = {
     // obtain a list of stops
     // assume a dwell time of 1 minute at each stop
     val stops = route.stops.sliding(2).foldRight( Future(List[Int](arrivalTime)) )({
@@ -266,25 +266,44 @@ extends JsonSupport {
 
   private def pushToServer(suggestionId: Int,
                            googleMapsTimings: List[Int],
-                           route: Route) = {
+                           route: Route2) = {
 
     val stopToStopIdFut = syncBusStops(route)
 
     for {
       stopToStopId <- stopToStopIdFut
       entity <- {
-        val submission = Json.arr((route.stopActivities, googleMapsTimings).zipped.map {
-          case ((stop, activities), time) =>
-            Json.obj(
-              "lat" -> Json.fromDoubleOrNull(stop.coordinates._2),
-              "lng" -> Json.fromDoubleOrNull(stop.coordinates._1),
-              "time" -> Json.fromInt(time),
-              "busStopIndex" -> Json.fromInt(stop.index),
-              "stopId" -> Json.fromInt(stopToStopId(stop)),
-              "description" -> Json.fromString(stop.description),
-              "numBoard" -> Json.fromInt(activities.count(_.isInstanceOf[Pickup])),
-              "numAlight" -> Json.fromInt(activities.count(_.isInstanceOf[Dropoff]))
-            )
+        import io.circe.syntax._
+
+        val pickups = route.pickups.map { case (stop, requests) =>
+          val numRequests = requests.size
+          Json.obj(
+            "lat" -> Json.fromDoubleOrNull(stop.coordinates._2),
+            "lng" -> Json.fromDoubleOrNull(stop.coordinates._1),
+            "busStopIndex" -> Json.fromInt(stop.index),
+            "stopId" -> Json.fromInt(stopToStopId(stop)),
+            "description" -> stop.description.asJson,
+            "numBoard" -> numRequests.asJson,
+            "numAlight" -> 0.asJson
+          )
+        }
+
+        val dropoffs = route.dropoffs.map { case (stop, requests) =>
+          val numRequests = requests.size
+          Json.obj(
+            "lat" -> Json.fromDoubleOrNull(stop.coordinates._2),
+            "lng" -> Json.fromDoubleOrNull(stop.coordinates._1),
+            "busStopIndex" -> Json.fromInt(stop.index),
+            "stopId" -> Json.fromInt(stopToStopId(stop)),
+            "description" -> stop.description.asJson,
+            "numBoard" -> 0.asJson,
+            "numAlight" -> numRequests.asJson
+          )
+        }
+
+        val submission = Json.arr((pickups ++ dropoffs, googleMapsTimings).zipped.map {
+          case (stopJson, time) =>
+            stopJson.mapObject(_.add("time", time.asJson))
         } : _*)
 
         Marshal(submission).to[RequestEntity]
@@ -320,7 +339,7 @@ extends JsonSupport {
     new RawHeader("Authorization", s"Bearer $token")
   }
 
-  private def syncBusStops(route: Route): Future[Map[BusStop, Int]] = {
+  private def syncBusStops(route: Route2): Future[Map[BusStop, Int]] = {
     case class DBGeometry(coordinates: Array[Double])
     case class BusStopDB(
                         coordinates: DBGeometry,
