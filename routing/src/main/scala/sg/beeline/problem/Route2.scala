@@ -1,5 +1,6 @@
 package sg.beeline.problem
 
+import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{ListInsertionPointOps, ListOps}
 
 import scala.annotation.tailrec
@@ -13,8 +14,7 @@ import scala.reflect.ClassTag
 // - a list of dropoff stops
 // - pickup stops will always come before the dropoff stops
 // - time of request is irrelevant
-class Route2(val routingProblem: RoutingProblem,
-             val detourBudget: Double)
+class Route2(val routingProblem: RoutingProblem)
             (val pickups: IndexedSeq[(BusStop, List[Request])],
              val dropoffs: IndexedSeq[(BusStop, List[Request])])
 {
@@ -30,7 +30,8 @@ class Route2(val routingProblem: RoutingProblem,
     * @param request
     * @return
     */
-  def tryInsertingStops(request: Request): Option[Route2] = {
+  def tryInsertingStops(request: Request)(implicit beelineRecreateSettings: BeelineRecreateSettings): Option[Route2] = {
+    val detourBudget = beelineRecreateSettings.maxDetourMinutes * 60e3
     val matchingPickupIndex = pickups.indexWhere(request.startStopsSet contains _._1)
     val matchingDropoffIndex = dropoffs.indexWhere(request.endStopsSet contains _._1)
 
@@ -197,7 +198,7 @@ class Route2(val routingProblem: RoutingProblem,
     ).flatten.safeMinBy(_._1)
 
     if (updatedPickups.nonEmpty && updatedDropoffs.nonEmpty) {
-      Some(new Route2(routingProblem, detourBudget)(updatedPickups.get, updatedDropoffs.get))
+      Some(new Route2(routingProblem)(updatedPickups.get, updatedDropoffs.get))
     } else if (updatedPickups.isEmpty && updatedDropoffs.nonEmpty) {
       // 2x special cases -- at the start, at the end
       val pickupSpecialCases: Array[(Double, () => SingleSet)] = Array(
@@ -234,7 +235,7 @@ class Route2(val routingProblem: RoutingProblem,
         .safeMinBy(_._1)
         .filter(_._1 <= detourBudget)
         .map { case (_, fn) =>
-            new Route2(routingProblem, detourBudget)(fn(), updatedDropoffs.get)
+            new Route2(routingProblem)(fn(), updatedDropoffs.get)
         }
     } else if (updatedPickups.nonEmpty && updatedDropoffs.isEmpty) {
       val dropoffSpecialCases = Array(
@@ -266,7 +267,7 @@ class Route2(val routingProblem: RoutingProblem,
         .safeMinBy(_._1)
         .filter(_._1 <= detourBudget)
         .map { case (_, fn) =>
-          new Route2(routingProblem, detourBudget)(updatedPickups.get, fn())
+          new Route2(routingProblem)(updatedPickups.get, fn())
         }
     } else { // if (updatedPickups.isEmpty && updatedDropoffs.isEmpty) { // cannot use any existing stops
       val bestInsertCase = for {
@@ -285,13 +286,13 @@ class Route2(val routingProblem: RoutingProblem,
         .reduceOption( (a, b) => List(a, b).minBy(_._1) )
         .map { case (_, fn) =>
             val (newPickups, newDropoffs) = fn()
-            new Route2(routingProblem, detourBudget)(newPickups, newDropoffs)
+            new Route2(routingProblem)(newPickups, newDropoffs)
         }
     }
   }
 
   // Returns the cost, (insertion point 1), (insertion point 2) that would have been added
-  def jobTryInsertion(request: Request)
+  def jobTryInsertion(request: Request)(implicit beelineRecreateSettings: BeelineRecreateSettings)
         : Option[Route2] = {
     val pickupStops = request.startStops
     val dropoffStops = request.endStops
@@ -323,7 +324,6 @@ class Route2(val routingProblem: RoutingProblem,
   override def equals(other : Any) : Boolean = other match {
     case otherRoute : Route2 =>
       routingProblem == otherRoute.routingProblem &&
-        detourBudget == otherRoute.detourBudget &&
         pickups.sameElements(otherRoute.pickups) &&
         dropoffs.sameElements(otherRoute.dropoffs)
     case _ => false
@@ -331,7 +331,6 @@ class Route2(val routingProblem: RoutingProblem,
 
   override def hashCode =
     routingProblem.hashCode +
-      detourBudget.hashCode +
       pickups.hashCode +
       dropoffs.hashCode
 

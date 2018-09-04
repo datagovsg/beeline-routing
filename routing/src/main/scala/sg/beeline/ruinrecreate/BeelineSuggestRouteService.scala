@@ -124,7 +124,6 @@ object BeelineSuggestRouteSerdes {
     override def apply(a: Route2): Json = Json.obj(
       "pickups" -> a.pickups.asJson,
       "dropoffs" -> a.pickups.asJson,
-      "detourBudget" -> a.detourBudget.asJson
     )
   }
 }
@@ -178,8 +177,7 @@ class SettingsDependentDecoders(settings: BeelineRecreateSettings) {
       for {
         dropoffs <- c.get[IndexedSeq[(BusStop, List[Request])]]("dropoffs")
         pickups <- c.get[IndexedSeq[(BusStop, List[Request])]]("pickups")
-        detourBudget <- c.get[Int]("detourBudget")
-      } yield new Route2(problem, detourBudget)(pickups, dropoffs)
+      } yield new Route2(problem)(pickups, dropoffs)
     }
   }
   implicit val (settingsDecoder, settingsEncoder) =

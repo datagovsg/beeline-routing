@@ -9,7 +9,6 @@ import org.scalatest._
 import sg.beeline.io.BuiltIn
 import sg.beeline.lambda.SuggestRouteHandler
 import sg.beeline.problem._
-import sg.beeline.ruinrecreate.AWSLambdaSuggestRouteServiceProxy._
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRouteService}
 import sg.beeline.ruinrecreate.BeelineSuggestRouteService.{OD, SuggestRouteInput}
 import sg.beeline.util.Util
@@ -83,12 +82,10 @@ class RoutingLambdaSpec extends FunSuite {
       )
     ), Duration.Inf)
 
-    val expected = new Route2(problem, BeelineRecreateSettings.default.maxDetourMinutes * 60e3)(
+    val expected = new Route2(problem)(
       Array((originBusStop, List(seedRequest))),
       Array((destinationBusStop, List(seedRequest))))
 
     assert (requestLambda.asJson.equals(expected.asJson))
-
   }
-
 }

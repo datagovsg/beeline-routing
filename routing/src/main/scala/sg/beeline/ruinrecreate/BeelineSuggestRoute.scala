@@ -138,7 +138,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
         route
       else {
         grow(
-          route.jobTryInsertion(requests.head).getOrElse(route),
+          route.jobTryInsertion(requests.head)(settings).getOrElse(route),
           requests.tail
         )
       }
@@ -146,8 +146,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
 
     grow(
       new Route2(
-        routingProblem,
-        settings.maxDetourMinutes * 60e3
+        routingProblem
       )(
         Array((od._1, List(request))),
         Array((od._2, List(request)))
