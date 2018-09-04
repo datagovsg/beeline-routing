@@ -306,7 +306,10 @@ class Route2(val routingProblem: RoutingProblem,
     Useful for deduplicating routes
    */
   lazy val stops = (pickups.iterator ++ dropoffs.iterator).map(_._1).toList
-  lazy val requests = (pickups.flatMap(_._2))
+  lazy val requests = {
+    require { pickups.flatMap(_._2).toSet == dropoffs.flatMap(_._2).toSet }
+    (pickups.flatMap(_._2))
+  }
 
   def times(endTime: Double) = {
     (pickups.view.map(_._1) ++ dropoffs.view.map(_._1))
