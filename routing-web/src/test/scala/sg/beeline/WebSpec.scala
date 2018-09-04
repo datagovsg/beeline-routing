@@ -117,7 +117,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       "time" -> (8.5 * 3600e3).toString,
       "settings" -> _root_.io.circe.Printer.noSpaces.pretty(
         BeelineRecreateSettings(
-          maxDetourMinutes = 3.0,
+          maxDetourMinutes = 10.0,
           startClusterRadius = 1500,
           startWalkingDistance = 200,
           endClusterRadius = 1500,
