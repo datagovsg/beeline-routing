@@ -152,7 +152,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
         val jarr = json.asArray.get
 
         // Need nonempty to verify
-        assert { jarr.size > 4 }
+        assert { jarr.size >= 2 }
 
         jarr.foreach({ json =>
           val m = json.asObject.get.toMap
