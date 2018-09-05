@@ -258,6 +258,7 @@ extends JsonSupport {
           entity = entity
         )
       )
+      _ = response._3.discardBytes()
     } yield response match {
       case HttpResponse(StatusCodes.OK, _, _, _) => Success(())
       case r => Failure(new RuntimeException(s"Notification of route suggestion failure returned ${r.status.value}"))
