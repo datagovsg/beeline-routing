@@ -60,7 +60,7 @@ extends JsonSupport {
                   routes <- (routingActor ? suggestRequest).mapTo[List[Route2]]
                   _ <- {
                     if (routes.isEmpty) {
-                      Future.unit // FIXME: push to server the empty result
+                      Future.failed(new RuntimeException("No suitable routes were found"))
                     } else {
                       val bestRoute = routes.maxBy(_.requests.size)
 
