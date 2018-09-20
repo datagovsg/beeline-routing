@@ -20,8 +20,9 @@ class Route2(val routingProblem: RoutingProblem)
 {
   def travelCosts(s: Iterable[BusStop]) = {
     s.sliding(2).map { case Seq(a, b) =>
-      require(a != b)
-      routingProblem.distance(a, b) + 60000
+      // require(a != b)
+      if (a == b) 1000000000 // don't throw an error -- but make this choice highly undesirable
+      else routingProblem.distance(a, b) + 60000
     }.sum
   }
 
