@@ -18,6 +18,7 @@ import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{ExpiringCache, Util}
 import sg.beeline.util.Util.Point
 import sg.beeline.web.Auth.User
+import sg.beeline.web.MapsAPIQuery.MapsQueryResult
 
 import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,12 +40,14 @@ class E2ESuggestion(routingActor: ActorRef)
                    (implicit system: ActorSystem,
                     executionContext: ExecutionContext,
                     timeout: Timeout,
-                    authSettings: E2EAuthSettings)
-extends JsonSupport {
+                    authSettings: E2EAuthSettings) {
   implicit val materializer = ActorMaterializer()
+  import JsonMarshallers._
+  import BeelineJsonMarshallers._
   import objectJsonMarshallers._
 
   val http = Http()
+  val mapsAPIQuery = new MapsAPIQuery(http, materializer, executionContext)
 
   val e2eRoutes =
     path("suggestions" / IntNumber / "update") { suggestionId =>
@@ -66,10 +69,10 @@ extends JsonSupport {
 
                       for {
                         workingDay <- getNextWorkingDay()
-                        googleMapsTimings <- {
-                          getGoogleMapsTimings(bestRoute, workingDay.toLocalDate, suggestRequest.time.toInt)
+                        (googleMapsTimings, paths) <- {
+                          getGoogleMapsTimingsAndPaths(bestRoute, workingDay.toLocalDate, suggestRequest.time.toInt)
                         }
-                        result <- pushToServer(suggestionId, googleMapsTimings, bestRoute)
+                        result <- pushToServer(suggestionId, googleMapsTimings, paths, bestRoute)
                       } yield result
                     }
                   }
@@ -189,58 +192,36 @@ extends JsonSupport {
     ExpiringCache(1 hour)(fetchNextWorkingDay)
   }
 
-  private def getP2PGoogleMapsTravelTime(from: Point, to: Point,
-                                         workingDay: LocalDate,
-                                         arrivalTime: Int): Future[Int] = {
-    case class QDuration(value: Int)
-    case class QLeg(duration: QDuration)
-    case class QRoute(legs: List[QLeg])
-    case class QResult(routes: List[QRoute])
-
-    import _root_.io.circe.generic.extras.auto._
-
-    for {
-      response <- http.singleRequest(HttpRequest(
-        uri=Uri("https://maps.googleapis.com/maps/api/directions/json")
-          .withQuery(Uri.Query(
-            "origin" -> s"${from._2},${from._1}",
-            "destination" -> s"${to._2},${to._1}",
-            "mode" -> "driving",
-            "arrival_time" ->
-              // Singapore time
-              ZonedDateTime.of(workingDay, LocalTime.ofSecondOfDay(arrivalTime / 1000), ZoneId.of("Asia/Singapore"))
-                .toEpochSecond
-                .toString,
-            "key" -> authSettings.googleMapsApiKey
-          ))
-      ))
-      s <- Unmarshal(response._3).to[Json]
-    } yield {
-      // Google API provides times in seconds
-      // We convert them to milliseconds for consistency
-      val qresult = s.as[QResult] match {
-        case Right(q) => q
-        case Left(exc) => throw exc
-      }
-      qresult.routes.head.legs.map(_.duration.value).sum * 1000
-    }
-  }
-
-  private def getGoogleMapsTimings(route: Route2, workingDate: LocalDate, arrivalTime: Int): Future[List[Int]] = {
+  private def getGoogleMapsTimingsAndPaths(route: Route2, workingDate: LocalDate, arrivalTime: Int)
+  : Future[(List[Int], List[Option[String]])] = {
     // obtain a list of stops
     // assume a dwell time of 1 minute at each stop
-    val stops = route.stops.sliding(2).foldRight( Future(List[Int](arrivalTime)) )({
+    case class Intermediate(arrivalTime: Int,
+                            mapsQueryResult: Option[MapsQueryResult] = None)
+
+    val arrivalTimesAndPaths = route.stops.sliding(2).foldRight( Future(Intermediate(arrivalTime) :: Nil) )({
       case (List(from, to), prev) =>
         for {
-          arrivalTimes <- prev
-          travelTime <- getP2PGoogleMapsTravelTime(from.coordinates, to.coordinates, workingDate, arrivalTimes.head)
+          acc <- prev
+          Intermediate(lastArrivalTime, _) :: _ = acc
+          mapsQueryResult <-
+            mapsAPIQuery.getP2PGoogleMapsTravelTime(
+              from.coordinates, to.coordinates,
+              workingDate, lastArrivalTime,
+              authSettings.googleMapsApiKey)
         } yield {
-          val arrivalTime = arrivalTimes.head - 60000 - travelTime
-          arrivalTime :: arrivalTimes
-        } // 1-minute dwell time imputed...
+          // 1-minute dwell time imputed...
+          val nextArrivalTime = lastArrivalTime - 60000 - mapsQueryResult.travelTime
+          Intermediate(lastArrivalTime, Some(mapsQueryResult)) :: acc
+        }
     })
 
-    stops
+    arrivalTimesAndPaths.map { immList =>
+      val travelTimes = immList.map(_.arrivalTime)
+      val paths = immList.map(_.mapsQueryResult.flatMap(_.encodedPath))
+
+      (travelTimes, paths)
+    }
   }
 
   private def notifyServerOfError(suggestionId: Int): Future[Unit] = {
@@ -267,6 +248,7 @@ extends JsonSupport {
 
   private def pushToServer(suggestionId: Int,
                            googleMapsTimings: List[Int],
+                           paths: List[Option[String]],
                            route: Route2) = {
 
     val stopToStopIdFut = syncBusStops(route)
@@ -285,7 +267,7 @@ extends JsonSupport {
             "stopId" -> Json.fromInt(stopToStopId(stop)),
             "description" -> stop.description.asJson,
             "numBoard" -> numRequests.asJson,
-            "numAlight" -> 0.asJson
+            "numAlight" -> 0.asJson,
           )
         }
 
@@ -302,9 +284,12 @@ extends JsonSupport {
           )
         }
 
-        val submission = Json.arr((pickups ++ dropoffs, googleMapsTimings).zipped.map {
-          case (stopJson, time) =>
-            stopJson.mapObject(_.add("time", time.asJson))
+        val submission = Json.arr((pickups ++ dropoffs, googleMapsTimings, paths).zipped.map {
+          case (stopJson, time, path) =>
+            stopJson.mapObject(_
+              .add("time", time.asJson)
+              .add("pathToNext", path.asJson)
+            )
         } : _*)
 
         Marshal(submission).to[RequestEntity]

@@ -5,7 +5,7 @@ import akka.http.scaladsl.model.{HttpCharsets, HttpEntity, MediaType, MessageEnt
 import akka.http.scaladsl.unmarshalling.{PredefinedFromEntityUnmarshallers, Unmarshaller}
 import io.circe.{Decoder, Encoder, Json}
 
-trait JsonMarshallers {
+object JsonMarshallers {
 
   implicit val jsonMarshaller = PredefinedToEntityMarshallers.stringMarshaller(
     MediaType.applicationWithFixedCharset(

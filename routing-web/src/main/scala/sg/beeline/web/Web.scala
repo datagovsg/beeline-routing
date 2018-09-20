@@ -34,8 +34,10 @@ case class SuggestRequest(startLat: Double,
 }
 case class LatLng(lat : Double, lng : Double)
 
-trait JsonSupport extends JsonMarshallers {
+object BeelineJsonMarshallers {
   import _root_.io.circe.generic.extras.semiauto.{deriveDecoder, deriveEncoder}
+  import JsonMarshallers._
+
   implicit val jsonConfig: Configuration =_root_.io.circe.generic.extras.Configuration.default.withDefaults
 
   implicit val latLngEncoder = deriveEncoder[LatLng]
@@ -61,11 +63,14 @@ class IntelligentRoutingService(dataSource: DataSource,
                                 beelineSuggestRouteService: BeelineSuggestRouteService)
                                (implicit val system: ActorSystem,
                                 val authSettings: E2EAuthSettings)
-  extends Directives with JsonSupport {
+  extends Directives {
   import akka.actor._
   import _root_.io.circe.syntax._
+  import JsonMarshallers._
+  import BeelineJsonMarshallers._
 
   import ExecutionContext.Implicits.global
+
   implicit val timeout = new akka.util.Timeout(300e3.toLong, java.util.concurrent.TimeUnit.MILLISECONDS)
   val routingActor = system.actorOf(Props({
     new RouteActor(
