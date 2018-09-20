@@ -78,8 +78,8 @@ extends JsonSupport {
                 fut onComplete {
                   case Failure(e) =>
                     notifyServerOfError(suggestionId)
+                    println(s"Successfully generated a route for ${suggestionId}")
                     e.printStackTrace(System.err)
-                    println(fut)
                   case _ => ()
                 }
 
@@ -317,8 +317,11 @@ extends JsonSupport {
           entity = entity
         )
       )
+      _ = response._3.discardBytes()
     } yield response match {
-      case HttpResponse(StatusCodes.OK, _, _, _) => Success(())
+      case HttpResponse(StatusCodes.OK, _, _, _) =>
+        println(s"Successfully generated a route for ${suggestionId}")
+        Success(())
       case r => Failure(new RuntimeException(s"Posting of suggested route returned ${r.status.value}"))
     }
   }

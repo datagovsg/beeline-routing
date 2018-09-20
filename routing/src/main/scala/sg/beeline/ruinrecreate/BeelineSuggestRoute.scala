@@ -22,10 +22,6 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
   val START_CLUSTER_RADIUS = settings.startClusterRadius
   val END_CLUSTER_RADIUS = settings.endClusterRadius
 
-  println(s"Only ${requests.size} suggestions used")
-  println(s"Average # start stops ${requests.map(_.startStops.size).sum / requests.size.toDouble}")
-  println(s"Average # end stops ${requests.map(_.endStops.size).sum / requests.size.toDouble}")
-
   private def isCompatible(r1: Request, r2: Request): Boolean = {
     odCombis(r1).exists({
       case (o, d) =>
@@ -71,6 +67,10 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
   }
 
   def generatePotentialRoutesFromRequest(request: Request): Traversable[Route2] = {
+    println(s"Only ${requests.size} suggestions used")
+    println(s"Average # start stops ${requests.map(_.startStops.size).sum / requests.size.toDouble}")
+    println(s"Average # end stops ${requests.map(_.endStops.size).sum / requests.size.toDouble}")
+
     val ods = odCombis(request)
 
     val compatibleRequests = {
