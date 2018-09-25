@@ -33,7 +33,8 @@ class MapsAPIQuery(http: HttpExt,
                                  googleMapsApiKey: String): Future[MapsQueryResult] = {
     case class QDuration(value: Int)
     case class QLeg(duration: QDuration)
-    case class QRoute(legs: List[QLeg], overview_polyline: Option[String])
+    case class QPolyline(points: String)
+    case class QRoute(legs: List[QLeg], overview_polyline: Option[QPolyline])
     case class QResult(routes: List[QRoute])
 
     import _root_.io.circe.generic.extras.auto._
@@ -59,7 +60,7 @@ class MapsAPIQuery(http: HttpExt,
       // We convert them to milliseconds for consistency
       MapsQueryResult(
         qresult.routes.head.legs.map(_.duration.value).sum * 1000,
-        qresult.routes.head.overview_polyline
+        qresult.routes.head.overview_polyline.map(_.points)
       )
     }
   }
