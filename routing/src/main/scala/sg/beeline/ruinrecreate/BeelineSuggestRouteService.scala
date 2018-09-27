@@ -123,7 +123,7 @@ object BeelineSuggestRouteSerdes {
   implicit val route2Encoder = new Encoder[Route2] {
     override def apply(a: Route2): Json = Json.obj(
       "pickups" -> a.pickups.asJson,
-      "dropoffs" -> a.pickups.asJson,
+      "dropoffs" -> a.dropoffs.asJson,
     )
   }
 }
