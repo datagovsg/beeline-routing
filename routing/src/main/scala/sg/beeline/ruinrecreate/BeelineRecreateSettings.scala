@@ -6,7 +6,7 @@ import sg.beeline.util.Util.Point
 import sg.beeline.util.kdtreeQuery
 
 case class BeelineRecreateSettings(
-                                   maxDetourMinutes : Double = 2.0,
+                                   maxDetourMinutes : Double = 15.0,
                                    startClusterRadius : Int = 4000,
                                    startWalkingDistance : Int = 400,
                                    endClusterRadius : Int = 4000,

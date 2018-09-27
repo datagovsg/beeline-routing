@@ -12,33 +12,45 @@ object Import {
     timeString.substring(0,2).toLong * 3600000 +
       timeString.substring(2,4).toLong * 60000
 
+  private def timeFn[T](m: String)(t: => T) = {
+    val initialTime = System.currentTimeMillis()
+
+    println(m)
+    val result = t
+    println("Completed: " + m)
+    println(m + s" took ${(System.currentTimeMillis() - initialTime) / 1000.0} seconds")
+    t
+  }
+
+
   private val liveRequestsCache : ExpiringCache[Seq[Suggestion]] = ExpiringCache(10 minutes) {
-    import slick.jdbc.PostgresProfile.api._
+    timeFn("Refreshing suggestions cache") {
+      import slick.jdbc.PostgresProfile.api._
 
-    import scala.concurrent.ExecutionContext.Implicits.global
-    import scala.concurrent.duration._
+      import scala.concurrent.ExecutionContext.Implicits.global
+      import scala.concurrent.duration._
 
-    val (scheme, username, password, host, database) = {
-      val URI = new java.net.URI(scala.util.Properties.envOrElse("DATABASE_URL", "(No database URL provided"))
-      val userPass = URI.getUserInfo.split(":")
+      val (scheme, username, password, host, database) = {
+        val URI = new java.net.URI(scala.util.Properties.envOrElse("DATABASE_URL", "(No database URL provided"))
+        val userPass = URI.getUserInfo.split(":")
 
-      (
-        URI.getScheme,
-        userPass(0),
-        userPass(1),
-        URI.getHost,
-        URI.getPath
+        (
+          URI.getScheme,
+          userPass(0),
+          userPass(1),
+          URI.getHost,
+          URI.getPath
+        )
+      }
+
+      val db = Database.forURL(
+        s"jdbc:postgresql://${host}${database}?user=${username}&" +
+          s"password=${password}&ssl=true&" +
+          s"sslfactory=org.postgresql.ssl.NonValidatingFactory",
+        driver = "org.postgresql.Driver"
       )
-    }
-
-    val db = Database.forURL(
-      s"jdbc:postgresql://${host}${database}?user=${username}&" +
-        s"password=${password}&ssl=true&" +
-        s"sslfactory=org.postgresql.ssl.NonValidatingFactory",
-      driver="org.postgresql.Driver"
-    )
-    val session = db.createSession()
-    val suggestions = sql"""
+      val session = db.createSession()
+      val suggestions = sql"""
                            |        SELECT
                            |            DISTINCT ON (board, alight, time, email)
                            |            "travelTime",
@@ -55,20 +67,21 @@ object Import {
                            |        ORDER BY board, alight, time, email
                            |
        """.stripMargin('|')
-      .as[(Long, Int, Double, Double, Double, Double, String, Long, Int, java.sql.Timestamp)]
-      .map[Seq[Suggestion]]({ results =>
-      genericWrapArray(results.view.map({
-        case (travelTime, id, boardLng, boardLat, alightLng, alightLat, email, time, daysOfWeek, createdAt) =>
-          Suggestion(
-            id=id,
-            start=Util.toSVY((boardLng, boardLat)),
-            end=Util.toSVY((alightLng, alightLat)),
-            time=time
-          )
-      }).toArray)
-    })
+        .as[(Long, Int, Double, Double, Double, Double, String, Long, Int, java.sql.Timestamp)]
+        .map[Seq[Suggestion]]({ results =>
+        genericWrapArray(results.view.map({
+          case (travelTime, id, boardLng, boardLat, alightLng, alightLat, email, time, daysOfWeek, createdAt) =>
+            Suggestion(
+              id = id,
+              start = Util.toSVY((boardLng, boardLat)),
+              end = Util.toSVY((alightLng, alightLat)),
+              time = time
+            )
+        }).toArray)
+      })
 
-    Await.result(db.run(suggestions), 60 seconds)
+      Await.result(db.run(suggestions), 60 seconds)
+    }
   }
   def getLiveRequests = liveRequestsCache.apply
 }

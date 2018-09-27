@@ -185,12 +185,11 @@ class SettingsDependentDecoders(settings: BeelineRecreateSettings) {
 }
 
 trait BeelineSuggestRouteService {
-  def executeLambda(
-                   settings: BeelineRecreateSettings,
-                   request: Request,
-                   od: (BusStop, BusStop),
-                   requests: List[Request])
-                    (implicit executionContext: ExecutionContext): Future[Route2] = {
+  def executeLambda(settings: BeelineRecreateSettings,
+                    request: Request,
+                    od: (BusStop, BusStop),
+                    requests: List[Request])
+                   (implicit executionContext: ExecutionContext): Future[Route2] = {
     import io.circe.syntax._
     import BeelineSuggestRouteService._
     import BeelineSuggestRouteSerdes._

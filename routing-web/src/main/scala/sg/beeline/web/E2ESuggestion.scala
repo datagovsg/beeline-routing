@@ -81,7 +81,7 @@ class E2ESuggestion(routingActor: ActorRef)
                 fut onComplete {
                   case Failure(e) =>
                     notifyServerOfError(suggestionId)
-                    println(s"Successfully generated a route for ${suggestionId}")
+                    println(s"Failed to generate a route for ${suggestionId}")
                     e.printStackTrace(System.err)
                   case _ => ()
                 }
@@ -95,6 +95,10 @@ class E2ESuggestion(routingActor: ActorRef)
         }
       }
     }
+
+  private def expectStatus(response: HttpResponse, message: String, status: StatusCode = StatusCodes.OK) =
+    if (response.status.value == status.value) Future.unit
+    else Future.failed(new RuntimeException(s"${message}. Got a status ${response.status.value}"))
 
   /**
     * Resolves to nothing if the suggestion belongs to the user.
@@ -111,6 +115,7 @@ class E2ESuggestion(routingActor: ActorRef)
       resp <- http.singleRequest(HttpRequest(
         uri = s"${authSettings.beelineServer}/suggestions/${suggestionId}",
         headers = List(new RawHeader("Authorization", authorization))))
+      _ <- expectStatus(resp, "Could not verify suggestion")
       json <- Unmarshal(resp._3).to[Json]
     } yield {
       val cur = json.hcursor
@@ -157,6 +162,7 @@ class E2ESuggestion(routingActor: ActorRef)
       response <- http.singleRequest(HttpRequest(
         uri=s"${authSettings.beelineServer}/publicHolidays"
       ))
+      _ <- expectStatus(response, "Could not fetch public holidays")
       listOfPublicHolidays <- response match {
         case HttpResponse(StatusCodes.OK, _, entity, _) =>
           import _root_.io.circe.generic.extras.semiauto._
@@ -239,6 +245,7 @@ class E2ESuggestion(routingActor: ActorRef)
           entity = entity
         )
       )
+      _ <- expectStatus(response, "Could not post error")
       _ = response._3.discardBytes()
     } yield response match {
       case HttpResponse(StatusCodes.OK, _, _, _) => Success(())
@@ -302,6 +309,7 @@ class E2ESuggestion(routingActor: ActorRef)
           entity = entity
         )
       )
+      _ <- expectStatus(response, "Could not post suggested route")
       _ = response._3.discardBytes()
     } yield response match {
       case HttpResponse(StatusCodes.OK, _, _, _) =>
@@ -349,6 +357,7 @@ class E2ESuggestion(routingActor: ActorRef)
       allBusStopsResponse <- http.singleRequest(HttpRequest(
         uri = s"${authSettings.beelineServer}/stops"
       ))
+      _ <- expectStatus(allBusStopsResponse, s"Could not verify suggestion")
       allBusStops <- Unmarshal(allBusStopsResponse._3).to[List[BusStopDB]]
       stopsToIdMap <- {
         val distanceToBestMatchingStop = route.stops.map({ stop =>
