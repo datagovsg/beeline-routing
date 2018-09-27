@@ -212,7 +212,7 @@ class E2ESuggestion(routingActor: ActorRef)
         } yield {
           // 1-minute dwell time imputed...
           val nextArrivalTime = lastArrivalTime - 60000 - mapsQueryResult.travelTime
-          Intermediate(lastArrivalTime, Some(mapsQueryResult)) :: acc
+          Intermediate(nextArrivalTime, Some(mapsQueryResult)) :: acc
         }
     })
 
