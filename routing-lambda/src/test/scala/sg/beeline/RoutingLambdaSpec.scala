@@ -52,14 +52,13 @@ class RoutingLambdaSpec extends FunSuite {
             json <- _root_.io.circe.parser.parse(payload)
             suggestRouteInput <- json.as[SuggestRouteInput]
             suggestRouteOutput <- SuggestRouteHandler.handle(suggestRouteInput, null)
-
           } yield suggestRouteOutput.asJson
 
           inputEither.toTry.get
         }
       }
     }
-    implicit val executionContext = ExecutionContext.fromExecutor(new ForkJoinPool(2))
+    implicit val executionContext = ExecutionContext.fromExecutor(new ForkJoinPool(50))
     import sg.beeline.ruinrecreate.BeelineSuggestRouteSerdes.route2Encoder
     import _root_.io.circe.syntax._
     val toSVY = (d: Double, e: Double) => Util.toSVY((d, e)).asJson.toString
@@ -67,18 +66,18 @@ class RoutingLambdaSpec extends FunSuite {
     val destinationBusStop = BusStop((20499.24174394127, 38342.890397198564), 101, "Destination", "Hello Lane", 3)
 
     val basicRequest1 = new BasicRequest(
-      problem, (40778.2186070438, 39589.155309929425), (29899.68739611096, 29292.2330929787), 8.5 * 3600e3, 1, BuiltIn, 2)
+      problem, (40778.2186070438, 39589.155309929425), (29899.68739611096, 29292.2330929787), 8.5 * 3600e3, 1, BuiltIn, 3)
     val seedRequest = new BasicRequest(
       problem, (21421.649051572367, 32062.31453230393), (25959.98999086392, 33974.19460209075), 8.5 * 3600e3, 1, BuiltIn, 2
     )
     val requestLambda = Await.result(TestSuggestRouteServiceProxy.executeLambda(
-      BeelineRecreateSettings.default,
+      BeelineRecreateSettings(
+        maxDetourMinutes = 2.0
+      ),
       seedRequest,
       (originBusStop, destinationBusStop),
       List(
-        new BasicRequest(
-          problem, (21421.649051572367, 32062.31453230393), (25959.98999086392, 33974.19460209075), 8.5 * 3600e3, 1, BuiltIn, 2
-        )
+        basicRequest1
       )
     ), Duration.Inf)
 
@@ -86,6 +85,6 @@ class RoutingLambdaSpec extends FunSuite {
       Array((originBusStop, List(seedRequest))),
       Array((destinationBusStop, List(seedRequest))))
 
-    assert (requestLambda.asJson.equals(expected.asJson))
+    assert { requestLambda.asJson == expected.asJson }
   }
 }
