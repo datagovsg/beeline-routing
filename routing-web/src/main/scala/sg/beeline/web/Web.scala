@@ -30,6 +30,7 @@ case class SuggestRequest(startLat: Double,
                           endLat: Double,
                           endLng: Double,
                           time: Double,
+                          daysOfWeek: Int,
                           settings: BeelineRecreateSettings) {
 }
 case class LatLng(lat : Double, lng : Double)
@@ -188,6 +189,7 @@ class IntelligentRoutingService(dataSource: DataSource,
           'endLat.as[Double],
           'endLng.as[Double],
           'time.as[Double],
+          'daysOfWeek.as[Int].?(127),
           'settings.as[BeelineRecreateSettings]
         ).as(SuggestRequest) { suggestRequest =>
           complete {

@@ -1,9 +1,11 @@
 package sg.beeline.web
 
-import io.circe.{Encoder, Json}
+import java.sql.Timestamp
+
+import io.circe.Decoder.Result
+import io.circe.{Decoder, Encoder, HCursor, Json}
 import sg.beeline.problem._
 import sg.beeline.util.Util
-
 
 object SuggestionJsonEncoder extends Encoder[Suggestion] {
   override def apply(suggestion: Suggestion): Json =
@@ -77,5 +79,32 @@ object BusStopEncoder extends Encoder[BusStop] {
         "index" -> Json.fromInt(index),
         "busStopCode" -> a.stopCode.map(Json.fromString).getOrElse(Json.Null)
       )
+  }
+}
+
+object TimestampEncoder extends Encoder[Timestamp] {
+  import java.text.DateFormat
+  import java.text.SimpleDateFormat
+  import io.circe.syntax._
+
+  val df1 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+
+  override def apply(a: Timestamp): Json =
+    df1.format(a).asJson
+}
+
+object TimestampDecoder extends Decoder[Timestamp] {
+  /**
+    * Allow an incoming timestamp to either be parsed as a long
+    * (milliseconds since epoch) or as a ISO8601 date
+    * @param c
+    * @return Timestamp
+    */
+  override def apply(c: HCursor): Result[Timestamp] = {
+    val dateAsLong = c.as[Long].right.map(l => new Timestamp(l))
+    val dateAsString = c.as[String].right.map(TimestampEncoder.df1.parse)
+        .right.map(date => new Timestamp(date.getTime))
+
+    dateAsLong.left.flatMap(_ => dateAsString)
   }
 }

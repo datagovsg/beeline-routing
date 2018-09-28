@@ -1,5 +1,6 @@
 package sg.beeline.jobs
 
+import java.sql.Timestamp
 import java.util.concurrent.ForkJoinPool
 
 import akka.actor.Actor
@@ -19,22 +20,27 @@ class RouteActor(dataSource: DataSource,
     new ForkJoinPool(Runtime.getRuntime.availableProcessors))
 
   private def routeFromRequest(suggestRequest: SuggestRequest) = suggestRequest match {
-    case SuggestRequest(sLat, sLng, eLat, eLng, time, settings) =>
+    case SuggestRequest(sLat, sLng, eLat, eLng, time, daysOfWeek, settings) =>
       val suggestions : Seq[Suggestion] = suggestionSource(settings.dataSource)
 
+      val seedSuggestion = Suggestion(
+        -999, // Some ID that would not occur naturally in the database
+        Util.toSVY((sLng, sLat)),
+        Util.toSVY((eLng, eLat)),
+        time,
+        createdAt = 0L,
+        userId = None,
+        daysOfWeek = suggestRequest.daysOfWeek
+      )
+
       val beelineProblem = new BasicRoutingProblem(
-        suggestions,
+        suggestions.filter(suggestRequest.settings.suggestionsFilter(seedSuggestion)),
         dataSource,
         settings = settings,
       )
 
       val seedRequest = new Request.RequestFromSuggestion(
-        Suggestion(
-          -999, // Some ID that would not occur naturally in the database
-          Util.toSVY((sLng, sLat)),
-          Util.toSVY((eLng, eLat)),
-          time
-        ),
+        seedSuggestion,
         beelineProblem,
         dataSource
       )
@@ -42,7 +48,6 @@ class RouteActor(dataSource: DataSource,
       val beelineSuggestRoute = new BeelineSuggestRoute(
         beelineProblem,
         beelineProblem.requests
-          .filter(suggestRequest.settings.requestsFilter(seedRequest))
           .map(_.withTime(time)),
         beelineSuggestRouteService
       )

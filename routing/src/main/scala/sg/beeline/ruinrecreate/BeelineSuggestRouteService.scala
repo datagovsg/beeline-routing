@@ -91,7 +91,10 @@ object BeelineSuggestRouteSerdes {
           a.start,
           a.end,
           a.time,
-          a.weight
+          a.weight,
+          createdAt = 0,
+          userId = None,
+          daysOfWeek = ~0
         ).asJson
     }
   }

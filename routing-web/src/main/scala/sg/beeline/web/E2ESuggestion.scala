@@ -1,5 +1,6 @@
 package sg.beeline.web
 
+import java.sql.Timestamp
 import java.time._
 
 import akka.actor.{ActorRef, ActorSystem}
@@ -111,6 +112,8 @@ class E2ESuggestion(routingActor: ActorRef)
                                  suggestionId: Int,
                                  authUserId: Int,
                                  recreateSettings: BeelineRecreateSettings): Future[SuggestRequest] = {
+    implicit val timestampDecoder = sg.beeline.web.TimestampDecoder
+
     for {
       resp <- http.singleRequest(HttpRequest(
         uri = s"${authSettings.beelineServer}/suggestions/${suggestionId}",
@@ -128,6 +131,7 @@ class E2ESuggestion(routingActor: ActorRef)
         time <- cur.downField("time").as[Int]
         daysMask <- cur.downField("daysMask").as[Int]
         userId <- cur.downField("userId").as[Int]
+        createdAt <- cur.downField("createdAt").as[Timestamp]
       } yield {
         require(userId == authUserId)
         SuggestRequest(
@@ -136,15 +140,8 @@ class E2ESuggestion(routingActor: ActorRef)
           endLat = alightLat,
           endLng = alightLng,
           time = time,
-          settings = BeelineRecreateSettings(
-            maxDetourMinutes = recreateSettings.maxDetourMinutes,
-            startClusterRadius = recreateSettings.startClusterRadius,
-            startWalkingDistance = recreateSettings.startWalkingDistance,
-            endClusterRadius = recreateSettings.endClusterRadius,
-            endWalkingDistance = recreateSettings.endWalkingDistance,
-            timeAllowance = recreateSettings.timeAllowance,
-            daysOfWeek = daysMask
-          )
+          daysOfWeek = daysMask,
+          settings = recreateSettings
         )
       }
 

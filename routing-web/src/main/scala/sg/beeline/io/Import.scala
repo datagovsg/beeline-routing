@@ -51,31 +51,34 @@ object Import {
       )
       val session = db.createSession()
       val suggestions = sql"""
-                           |        SELECT
-                           |            DISTINCT ON (board, alight, time, email)
-                           |            "travelTime",
-                           |            id,
-                           |            ST_X(board) AS board_lng,
-                           |            ST_Y(board) AS board_lat,
-                           |            ST_X(alight) AS alight_lng,
-                           |            ST_Y(alight) AS alight_lat,
-                           |            email,
-                           |            time,
-                           |            "daysMask",
-                           |            "createdAt"
-                           |        FROM suggestions
-                           |        ORDER BY board, alight, time, email
-                           |
-       """.stripMargin('|')
-        .as[(Long, Int, Double, Double, Double, Double, String, Long, Int, java.sql.Timestamp)]
+         SELECT
+             DISTINCT ON (board, alight, time, email)
+             "travelTime",
+             id,
+             ST_X(board) AS board_lng,
+             ST_Y(board) AS board_lat,
+             ST_X(alight) AS alight_lng,
+             ST_Y(alight) AS alight_lat,
+             userId,
+             email,
+             time,
+             "daysMask",
+             "createdAt"
+         FROM suggestions
+         ORDER BY board, alight, time, email
+       """
+        .as[(Long, Int, Double, Double, Double, Double, Option[Int], String, Long, Int, java.sql.Timestamp)]
         .map[Seq[Suggestion]]({ results =>
         genericWrapArray(results.view.map({
-          case (travelTime, id, boardLng, boardLat, alightLng, alightLat, email, time, daysOfWeek, createdAt) =>
+          case (travelTime, id, boardLng, boardLat, alightLng, alightLat, userId, email, time, daysOfWeek, createdAt) =>
             Suggestion(
               id = id,
               start = Util.toSVY((boardLng, boardLat)),
               end = Util.toSVY((alightLng, alightLat)),
-              time = time
+              time = time,
+              createdAt = createdAt.getTime,
+              userId = userId,
+              daysOfWeek = daysOfWeek
             )
         }).toArray)
       })

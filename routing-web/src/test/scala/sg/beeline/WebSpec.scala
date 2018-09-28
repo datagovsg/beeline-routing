@@ -50,7 +50,13 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
             val randStart = randomAroundLngLat(CBD, 2000) // City
             val randEnd = randomAroundLngLat(YEW_TEE, 2000) // Yew Tee
 
-            Suggestion(index, Util.toSVY(randStart), Util.toSVY(randEnd), hour * 3600 * 1000L, 1)
+            Suggestion(index, Util.toSVY(randStart), Util.toSVY(randEnd),
+              hour * 3600 * 1000L,
+              weight = 1,
+              createdAt = new java.util.Date(2017, 0, 1, 0, 0).getTime,
+              userId = None,
+              daysOfWeek = 0x8F
+            )
           }
         })
       })

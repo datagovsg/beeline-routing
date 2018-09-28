@@ -1,12 +1,13 @@
 package sg.beeline.ruinrecreate
 
+import java.sql.Timestamp
+
 import com.thesamet.spatial.KDTreeMap
-import sg.beeline.problem.Request
+import sg.beeline.problem.{Request, Suggestion}
 import sg.beeline.util.Util.Point
 import sg.beeline.util.kdtreeQuery
 
-case class BeelineRecreateSettings(
-                                   maxDetourMinutes : Double = 15.0,
+case class BeelineRecreateSettings(maxDetourMinutes : Double = 15.0,
                                    startClusterRadius : Int = 4000,
                                    startWalkingDistance : Int = 400,
                                    endClusterRadius : Int = 4000,
@@ -14,16 +15,25 @@ case class BeelineRecreateSettings(
 
                                    timeAllowance: Long = 1800 * 1000L, // Half an hour
                                    similarityLimit: Float = 0.3f,
-                                   daysOfWeek: Int = 31, // 0b0011111 = Mon-Fri
+
+                                   includeAnonymous: Boolean = true,
+                                   matchDaysOfWeek: Boolean = true,
+                                   createdSince: Long = 0L,
 
                                    dataSource : String = "suggestions"
                              ) {
 
-  def requestsFilter(seedRequest: Request): Request => Boolean = {
-    (r: Request) =>
-      (r.time - seedRequest.time).abs <= timeAllowance &&
-        kdtreeQuery.squaredDistance(seedRequest.start, r.start) < startClusterRadius * startClusterRadius &&
-        kdtreeQuery.squaredDistance(seedRequest.end, r.end) < endClusterRadius * endClusterRadius
+  def suggestionsFilter(reference: Suggestion): Suggestion => Boolean = { s: Suggestion =>
+    // Determine whether or not to allow anonymous suggestions
+    (includeAnonymous || s.userId.nonEmpty) &&
+      // Min created time (to ignore the really old requests)
+      s.createdAt > createdSince &&
+      // Ensure arrival time is plus/minus some value
+      (s.time - reference.time).abs <= timeAllowance &&
+      // Ensure that the daysOfWeek mask overlaps to some extent
+      (!matchDaysOfWeek || (s.daysOfWeek & reference.daysOfWeek) != 0) &&
+      kdtreeQuery.squaredDistance(reference.start, s.start) < startClusterRadius * startClusterRadius &&
+      kdtreeQuery.squaredDistance(reference.end, s.end) < endClusterRadius * endClusterRadius
   }
 }
 

@@ -44,7 +44,6 @@ class RoutingLambdaSpec extends FunSuite {
 
   test("Route2 encoder works") {
     import sg.beeline.ruinrecreate.BeelineSuggestRouteSerdes._
-    import _root_.io.circe.Printer.noSpaces.pretty
 
     val seedRequest = new BasicRequest(
       problem,
