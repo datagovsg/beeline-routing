@@ -22,7 +22,7 @@ class Route2(val routingProblem: RoutingProblem)
     s.sliding(2).map { case Seq(a, b) =>
       // require(a != b)
       if (a == b) 1000000000 // don't throw an error -- but make this choice highly undesirable
-      else routingProblem.distance(a, b) + 60000
+      else routingProblem.distance(a, b) + routingProblem.settings.imputedDwellTime
     }.sum
   }
 

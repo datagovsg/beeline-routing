@@ -15,6 +15,8 @@ case class BeelineRecreateSettings(maxDetourMinutes : Double = 15.0,
 
                                    timeAllowance: Long = 1800 * 1000L, // Half an hour
                                    similarityLimit: Float = 0.3f,
+                                   imputedDwellTime: Long = 60000,
+                                   suboptimalStopChoiceAllowance: Long = 60000,
 
                                    includeAnonymous: Boolean = true,
                                    matchDaysOfWeek: Boolean = true,

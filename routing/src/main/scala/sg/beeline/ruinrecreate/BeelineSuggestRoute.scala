@@ -54,7 +54,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     s.sliding(2).map({
       case Seq(x, y) =>
         if (x != y)
-          routingProblem.distance(x, y) + 60000.0
+          routingProblem.distance(x, y) + routingProblem.settings.imputedDwellTime
         else
           0.0
     }).sum
@@ -87,7 +87,8 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     val feasibleTop50Ods = top5Ods.filter(
       od => {
         val topOd = top5Ods(0)
-        routingProblem.distance(od._1, od._2) - routingProblem.distance(topOd._1, topOd._2) < 60000
+        routingProblem.distance(od._1, od._2) - routingProblem.distance(topOd._1, topOd._2) <
+          routingProblem.settings.suboptimalStopChoiceAllowance
       }
     )
 
