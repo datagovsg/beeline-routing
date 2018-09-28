@@ -59,7 +59,7 @@ object Import {
              ST_Y(board) AS board_lat,
              ST_X(alight) AS alight_lng,
              ST_Y(alight) AS alight_lat,
-             userId,
+             "userId",
              email,
              time,
              "daysMask",
