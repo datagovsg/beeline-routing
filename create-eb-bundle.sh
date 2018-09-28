@@ -2,11 +2,11 @@
 
 set -eou pipefail
 
-sbt routing/assembly
+sbt routingOnMaps/assembly
 sbt routingWeb/assembly
 
 # Ensure file exists
-ROUTING_JAR_FILE=./routing/target/scala-2.12/routing-assembly-1.0.jar
+ROUTING_JAR_FILE=./routing-on-maps/target/scala-2.12/routingOnMaps-assembly-1.0.jar
 WEB_JAR_FILE=./routing-web/target/scala-2.12/routing-web-assembly-1.0.jar
 [ -f $ROUTING_JAR_FILE ] || (echo "$ROUTING_JAR_FILE does not exist" && false)
 [ -f $WEB_JAR_FILE ] || (echo "$WEB_JAR_FILE does not exist" && false)

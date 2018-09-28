@@ -25,15 +25,9 @@ lazy val routing = (project in file("routing"))
     name := "routing",
     libraryDependencies ++= Seq(
       "io.jeo" % "jeo" % "0.7",
-      "com.graphhopper" % "graphhopper" % "0.7.0",
       "com.thesamet" %% "kdtree" % "1.0.5",
       "org.scalactic" %% "scalactic" % "3.0.0" % Test,
       scalatest,
-      "org.postgresql" % "postgresql" % "42.1.3",
-      "com.typesafe.akka"   %%  "akka-actor"    % "2.5.13",
-      "com.typesafe.akka"   %%  "akka-testkit"  % "2.5.13"   % "test",
-      "com.typesafe.akka"   %% "akka-stream" % "2.5.13",
-
 
       // for AWS
       "com.amazonaws" % "aws-java-sdk-lambda" % "1.11.385",
@@ -47,6 +41,16 @@ lazy val routing = (project in file("routing"))
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(cacheOutput = false)
   )
 
+lazy val routingOnMaps = (project in file("routing-on-maps"))
+  .dependsOn(routing)
+  .settings(
+    commonSettings,
+    name := "routingOnMaps",
+    libraryDependencies ++= Seq(
+      "com.graphhopper" % "graphhopper" % "0.7.0",
+    )
+  )
+
 lazy val routingWeb = (project in file("routing-web"))
   .settings(
     commonSettings,
@@ -54,9 +58,13 @@ lazy val routingWeb = (project in file("routing-web"))
     libraryDependencies ++= Seq(
       scalatest,
       "org.scalactic" %% "scalactic" % "3.0.0",
+      "org.postgresql" % "postgresql" % "42.1.3",
 
+      "com.typesafe.akka"   %% "akka-stream" % "2.5.13",
+      "com.typesafe.akka"   %% "akka-actor" % "2.5.13",
+      "com.typesafe.akka"   %%  "akka-testkit"  % "2.5.13" % Test,
       "com.typesafe.akka"   %% "akka-http" % "10.1.0",
-      "com.typesafe.akka"   %%  "akka-http-testkit"  % "10.1.0" % "test",
+      "com.typesafe.akka"   %%  "akka-http-testkit"  % "10.1.0" % Test,
 
       // for CORS support
       "ch.megard" %% "akka-http-cors" % "0.3.0",
@@ -76,8 +84,15 @@ lazy val routingWeb = (project in file("routing-web"))
     test in assembly := {},
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(cacheOutput = false)
   )
-  .dependsOn(routing)
+  .dependsOn(routing, routingOnMaps)
 
+/**
+  * This is the slimmed down package for AWS Lambda.
+  * It does not contain:
+  * 1) GraphHopper
+  * 2) Akka Http / Actors
+  * 3) Postgres
+  */
 lazy val routingLambda = (project in file("routing-lambda"))
   .dependsOn(routing)
   .settings(
