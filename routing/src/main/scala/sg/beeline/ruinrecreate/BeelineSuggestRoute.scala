@@ -96,6 +96,10 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
         .map(i => (i, od))
     })
 
+    /**
+      * Obviously we don't need 50 threads to make 50 HTTP requests. Problem is that AWS lambda library
+      * has a Java Future, which instead of Future.traverse requires an "ExecutorCompletionService")
+      */
     implicit val highlyParallelExecutionContext = ExecutionContext.fromExecutor(new ForkJoinPool(50))
 
     val feasibleTop50Routes = Await.result(Future.traverse(feasible){ case (i, od) =>
