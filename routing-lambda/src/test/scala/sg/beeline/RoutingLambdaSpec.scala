@@ -42,6 +42,49 @@ class RoutingLambdaSpec extends FunSuite {
 //    }
   }
 
+  test("Route2 encoder works") {
+    import sg.beeline.ruinrecreate.BeelineSuggestRouteSerdes._
+    import _root_.io.circe.Printer.noSpaces.pretty
+
+    val seedRequest = new BasicRequest(
+      problem,
+      (21421.649051572367, 32062.31453230393),
+      (25959.98999086392, 33974.19460209075),
+      8.5 * 3600e3,
+      1, BuiltIn, 2
+    )
+
+    val route2 = new Route2(problem)(
+      IndexedSeq((problem.dataSource.busStops(10), List(seedRequest))),
+      IndexedSeq((problem.dataSource.busStops(100), List(seedRequest)))
+    )
+
+    val json = route2.asJson
+
+    assert {
+      json == json"""
+      {
+        "pickups": [
+          [
+            10,
+            [
+              ${seedRequest.asInstanceOf[Request].asJson}
+            ]
+          ]
+        ],
+        "dropoffs": [
+          [
+            100,
+            [
+              ${seedRequest.asInstanceOf[Request].asJson}
+            ]
+          ]
+        ]
+      }
+      """
+    }
+  }
+
   test("E2E test") {
 
     object TestSuggestRouteServiceProxy extends BeelineSuggestRouteService {
