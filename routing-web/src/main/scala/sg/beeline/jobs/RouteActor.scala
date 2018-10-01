@@ -30,6 +30,7 @@ class RouteActor(dataSource: DataSource,
         time,
         createdAt = 0L,
         userId = None,
+        email = None,
         daysOfWeek = suggestRequest.daysOfWeek
       )
 

@@ -61,7 +61,10 @@ class BeelineSuggestRouteSpec extends FunSuite {
             val randEnd = gridToLngLat(
               30 + scala.util.Random.nextDouble() * 20,
               30 + scala.util.Random.nextDouble() * 20)
-            Suggestion(index, Util.toSVY(randStart), Util.toSVY(randEnd), hour * 3600 * 1000L, 1)
+            Suggestion(index, Util.toSVY(randStart), Util.toSVY(randEnd),
+              hour * 3600 * 1000L, 1,
+              createdAt = 0L, userId = None, email = None, daysOfWeek = 31
+            )
           }
         })
       })

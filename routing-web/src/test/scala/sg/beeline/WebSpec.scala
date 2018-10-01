@@ -55,7 +55,8 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
               weight = 1,
               createdAt = new java.util.Date(2017, 0, 1, 0, 0).getTime,
               userId = None,
-              daysOfWeek = 0x8F
+              email=None,
+              daysOfWeek = 0x8F,
             )
           }
         })

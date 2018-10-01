@@ -26,7 +26,10 @@ class RuinSpec extends FlatSpec with Matchers {
   val starts = Random.shuffle(latlngs).map(ll => toSVY(perturb(ll)))
   val ends = Random.shuffle(latlngs).map(ll => toSVY(perturb(ll)))
 
-  val requests = (starts zip ends).zipWithIndex.map({case ((s,e), i) => Suggestion(i, s, e, TIME)})
+  val requests = (starts zip ends).zipWithIndex.map {case ((s,e), i) =>
+    Suggestion(i, s, e, TIME, 1,
+      createdAt = 0L, userId = None, email = None, daysOfWeek = 31)
+  }
 
   val testDataSource = new DataSource {
     override def busStops: Seq[BusStop] = myBusStops

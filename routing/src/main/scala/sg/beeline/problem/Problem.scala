@@ -29,7 +29,7 @@ case class BusStop(
 
 case class Suggestion(id: Int, start: Util.Point, end: Util.Point, time: Double,
                       weight : Int = 1, createdAt: Long, userId: Option[Int],
-                      daysOfWeek: Int) {
+                      email: Option[String], daysOfWeek: Int) {
   lazy val startLngLat = Util.toWGS(start)
   lazy val endLngLat = Util.toWGS(end)
 

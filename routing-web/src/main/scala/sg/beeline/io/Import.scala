@@ -67,7 +67,7 @@ object Import {
          FROM suggestions
          ORDER BY board, alight, time, email
        """
-        .as[(Long, Int, Double, Double, Double, Double, Option[Int], String, Long, Int, java.sql.Timestamp)]
+        .as[(Long, Int, Double, Double, Double, Double, Option[Int], Option[String], Long, Int, java.sql.Timestamp)]
         .map[Seq[Suggestion]]({ results =>
         genericWrapArray(results.view.map({
           case (travelTime, id, boardLng, boardLat, alightLng, alightLat, userId, email, time, daysOfWeek, createdAt) =>
@@ -78,7 +78,8 @@ object Import {
               time = time,
               createdAt = createdAt.getTime,
               userId = userId,
-              daysOfWeek = daysOfWeek
+              daysOfWeek = daysOfWeek,
+              email = email
             )
         }).toArray)
       })

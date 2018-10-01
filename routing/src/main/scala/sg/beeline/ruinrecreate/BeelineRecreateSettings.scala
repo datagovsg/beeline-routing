@@ -27,7 +27,7 @@ case class BeelineRecreateSettings(maxDetourMinutes : Double = 15.0,
 
   def suggestionsFilter(reference: Suggestion): Suggestion => Boolean = { s: Suggestion =>
     // Determine whether or not to allow anonymous suggestions
-    (includeAnonymous || s.userId.nonEmpty) &&
+    (includeAnonymous || s.userId.nonEmpty || s.email.nonEmpty) &&
       // Min created time (to ignore the really old requests)
       s.createdAt > createdSince &&
       // Ensure arrival time is plus/minus some value

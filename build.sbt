@@ -107,7 +107,7 @@ lazy val routingLambda = (project in file("routing-lambda"))
   )
 
 lazy val root = (project in file("."))
-  .aggregate(fuzzyClustering, routingWeb, routingLambda)
+  .aggregate(fuzzyClustering, routingWeb, routingLambda, routing, routingOnMaps)
   .settings(
     commonSettings,
     name := "beeline-routing",
