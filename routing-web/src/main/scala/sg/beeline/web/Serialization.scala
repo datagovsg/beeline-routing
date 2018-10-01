@@ -87,7 +87,7 @@ object TimestampEncoder extends Encoder[Timestamp] {
   import java.text.SimpleDateFormat
   import io.circe.syntax._
 
-  val df1 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+  val df1 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
 
   override def apply(a: Timestamp): Json =
     df1.format(a).asJson
