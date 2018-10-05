@@ -75,7 +75,9 @@ class BeelineSuggestRouteSpec extends FunSuite {
   // Some assertions on our assumptions
   require { getRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
   require { testDataSource.busStops.zipWithIndex.forall { case (o, i) => o.index == i} }
-  test ("BeelineSuggestRoute skips over suggestions without stops") {
+
+  // This is ignored, because we now force every suggestion to have a stop
+  ignore ("BeelineSuggestRoute skips over suggestions without stops") {
     implicit val executionContext = ExecutionContext.fromExecutor(new ForkJoinPool(2))
     val problem = new BasicRoutingProblem(List(), testDataSource, BeelineRecreateSettings.default)
     val bsr = new BeelineSuggestRoute(
