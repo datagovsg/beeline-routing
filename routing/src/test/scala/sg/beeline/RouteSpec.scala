@@ -35,7 +35,7 @@ class RouteSpec extends FlatSpec with Matchers {
     override def nearestBusStop(point: (Double, Double)): BusStop =
       busStops.minBy(b => kdtreeQuery.squaredDistance(point, b.xy))
 
-    override def settings: BeelineRecreateSettings = ???
+    override def settings: BeelineRecreateSettings = BeelineRecreateSettings.default
   }
   val testDataSource = new DataSource {
     override def busStops: Seq[BusStop] = ZeroDistance.busStops
