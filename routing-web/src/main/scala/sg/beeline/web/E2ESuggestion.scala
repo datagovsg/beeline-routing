@@ -14,6 +14,7 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import io.circe.Json
 import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim, JwtOptions}
+import sg.beeline.io.BuiltIn
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{ExpiringCache, Util}
@@ -210,8 +211,12 @@ class E2ESuggestion(routingActor: ActorRef)
           mapsQueryResult <-
             mapsAPIQuery.getP2PGoogleMapsTravelTime(
               from.coordinates, to.coordinates,
-              workingDate, lastArrivalTime,
-              authSettings.googleMapsApiKey)
+              workingDay = workingDate,
+              // Previously we used arrival_time. However, this is not possible
+              // if we want to let Google estimate the duration in traffic.
+              // So we provide Google the estimated "departure_time" = expected arrival time - previous compute time
+              departureTime = lastArrivalTime - BuiltIn.distanceMatrix(from.index)(to.index).toInt,
+              googleMapsApiKey = authSettings.googleMapsApiKey)
         } yield {
           // 1-minute dwell time imputed...
           val nextArrivalTime = lastArrivalTime - 60000 - mapsQueryResult.travelTime

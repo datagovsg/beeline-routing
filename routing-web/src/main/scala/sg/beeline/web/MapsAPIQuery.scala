@@ -29,10 +29,10 @@ class MapsAPIQuery(http: HttpExt,
 
   def getP2PGoogleMapsTravelTime(from: Point, to: Point,
                                  workingDay: LocalDate,
-                                 arrivalTime: Int,
+                                 departureTime: Int,
                                  googleMapsApiKey: String): Future[MapsQueryResult] = {
     case class QDuration(value: Int)
-    case class QLeg(duration: QDuration)
+    case class QLeg(duration_in_traffic: QDuration)
     case class QPolyline(points: String)
     case class QRoute(legs: List[QLeg], overview_polyline: Option[QPolyline])
     case class QResult(routes: List[QRoute])
@@ -46,9 +46,10 @@ class MapsAPIQuery(http: HttpExt,
             "origin" -> s"${from._2},${from._1}",
             "destination" -> s"${to._2},${to._1}",
             "mode" -> "driving",
-            "arrival_time" ->
+            "traffic_model" -> "best_guess",
+            "departure_time" ->
               // Singapore time
-              ZonedDateTime.of(workingDay, LocalTime.ofSecondOfDay(arrivalTime / 1000), ZoneId.of("Asia/Singapore"))
+              ZonedDateTime.of(workingDay, LocalTime.ofSecondOfDay(departureTime / 1000), ZoneId.of("Asia/Singapore"))
                 .toEpochSecond
                 .toString,
             "key" -> googleMapsApiKey
@@ -59,7 +60,7 @@ class MapsAPIQuery(http: HttpExt,
       // Google API provides times in seconds
       // We convert them to milliseconds for consistency
       MapsQueryResult(
-        qresult.routes.head.legs.map(_.duration.value).sum * 1000,
+        qresult.routes.head.legs.map(_.duration_in_traffic.value).sum * 1000,
         qresult.routes.head.overview_polyline.map(_.points)
       )
     }
