@@ -10,6 +10,7 @@ trait RoutingProblem {
   def distance(a : BusStop, b : BusStop) : Double
   def initialize: (Traversable[Route], Traversable[Request], Traversable[Request])
   def nearBusStops(point : Point, maxDistance: Double): Seq[BusStop]
+  def nearestBusStop(point : Point): BusStop
   def settings: BeelineRecreateSettings
 }
 

@@ -30,6 +30,10 @@ class BasicRoutingProblem(val suggestions: Seq[Suggestion],
     .sortBy(_._1)
     .map(_._2)
 
+  override def nearestBusStop(point : Point) =
+    busStopsTree.findNearest(point, 1)
+      .head._2
+
   // Start with a solution where everyone is ferried directly from the nearest
   def initialize = {
     val (routes, badRequests) = DirectFerryRecreate.recreate(this, List(), requests)

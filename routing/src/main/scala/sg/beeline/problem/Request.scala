@@ -17,8 +17,15 @@ trait Request {
 
   def dataSource: DataSource
 
-  lazy val startStops = routingProblem.nearBusStops(start, routingProblem.settings.startWalkingDistance).toIndexedSeq
-  lazy val endStops = routingProblem.nearBusStops(end, routingProblem.settings.endWalkingDistance).toIndexedSeq
+  private def busStopsWithinRadiusOrNearest(point: Point, distance: Double): IndexedSeq[BusStop] = {
+    val stopsWithinRadius = routingProblem.nearBusStops(point, distance)
+
+    if (stopsWithinRadius.nonEmpty) stopsWithinRadius.toArray[BusStop]
+    else Array(routingProblem.nearestBusStop(point))
+  }
+
+  lazy val startStops = busStopsWithinRadiusOrNearest(start, routingProblem.settings.startWalkingDistance)
+  lazy val endStops = busStopsWithinRadiusOrNearest(end, routingProblem.settings.endWalkingDistance)
 
   lazy val startStopsSet = startStops.toSet
   lazy val endStopsSet = endStops.toSet
