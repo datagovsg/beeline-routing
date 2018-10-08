@@ -21,6 +21,7 @@ case class BeelineRecreateSettings(maxDetourMinutes : Double = 15.0,
                                    includeAnonymous: Boolean = true,
                                    matchDaysOfWeek: Boolean = true,
                                    createdSince: Long = 0L,
+                                   minRequests: Int = 15,
 
                                    dataSource : String = "suggestions"
                              ) {

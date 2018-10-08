@@ -14,6 +14,7 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import io.circe.Json
 import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim, JwtOptions}
+import sg.beeline.exc
 import sg.beeline.io.BuiltIn
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
@@ -65,7 +66,7 @@ class E2ESuggestion(routingActor: ActorRef)
                   routes <- (routingActor ? suggestRequest).mapTo[List[Route2]]
                   _ <- {
                     if (routes.isEmpty) {
-                      Future.failed(new RuntimeException("No suitable routes were found"))
+                      Future.failed(new exc.NoRoutesFound)
                     } else {
                       val bestRoute = routes.maxBy(_.requests.size)
 
@@ -82,7 +83,12 @@ class E2ESuggestion(routingActor: ActorRef)
 
                 fut onComplete {
                   case Failure(e) =>
-                    notifyServerOfError(suggestionId)
+                    e match {
+                      case re : exc.RoutingException =>
+                        notifyServerOfError(suggestionId, re.reason)
+                      case _ =>
+                        notifyServerOfError(suggestionId, "internal_server_error")
+                    }
                     println(s"Failed to generate a route for ${suggestionId}")
                     e.printStackTrace(System.err)
                   case _ => ()
@@ -133,8 +139,8 @@ class E2ESuggestion(routingActor: ActorRef)
         daysMask <- cur.downField("daysMask").as[Int]
         userId <- cur.downField("userId").as[Int]
         createdAt <- cur.downField("createdAt").as[Timestamp]
+        _ <- Either.cond(userId == authUserId, (), new exc.UserNotAuthorized)
       } yield {
-        require(userId == authUserId)
         SuggestRequest(
           startLat = boardLat,
           startLng = boardLng,
@@ -224,20 +230,27 @@ class E2ESuggestion(routingActor: ActorRef)
         }
     })
 
-    arrivalTimesAndPaths.map { immList =>
-      val travelTimes = immList.map(_.arrivalTime)
-      val paths = immList.map(_.mapsQueryResult.flatMap(_.encodedPath))
+    arrivalTimesAndPaths
+      .map { immList =>
+        val travelTimes = immList.map(_.arrivalTime)
+        val paths = immList.map(_.mapsQueryResult.flatMap(_.encodedPath))
 
-      (travelTimes, paths)
-    }
+        (travelTimes, paths)
+      }
+      .recoverWith { case _ =>
+        Future.failed { new exc.FailedToEstimateTravelTime }
+      }
   }
 
-  private def notifyServerOfError(suggestionId: Int): Future[Unit] = {
+  private def notifyServerOfError(suggestionId: Int, reason: String): Future[Unit] = {
     import io.circe.syntax._
 
     for {
       entity <- {
-        Marshal(false.asJson).to[RequestEntity]
+        Marshal(Json.obj(
+          "status" -> "Failure".asJson,
+          "reason" -> reason.asJson
+        )).to[RequestEntity]
       }
       response <- http.singleRequest(
         HttpRequest(
@@ -293,13 +306,18 @@ class E2ESuggestion(routingActor: ActorRef)
           )
         }
 
-        val submission = Json.arr((pickups ++ dropoffs, googleMapsTimings, paths).zipped.map {
+        val stops = Json.arr((pickups ++ dropoffs, googleMapsTimings, paths).zipped.map {
           case (stopJson, time, path) =>
             stopJson.mapObject(_
               .add("time", time.asJson)
               .add("pathToNext", path.asJson)
             )
         } : _*)
+
+        val submission = Json.obj(
+          "stops" -> stops,
+          "status" -> "Success".asJson
+        )
 
         Marshal(submission).to[RequestEntity]
       }
@@ -317,7 +335,7 @@ class E2ESuggestion(routingActor: ActorRef)
       case HttpResponse(StatusCodes.OK, _, _, _) =>
         println(s"Successfully generated a route for ${suggestionId}")
         Success(())
-      case r => Failure(new RuntimeException(s"Posting of suggested route returned ${r.status.value}"))
+      case r => Failure(new exc.FailedToSubmitRoute(s"Posting of suggested route returned ${r.status.value}"))
     }
   }
 
@@ -341,9 +359,9 @@ class E2ESuggestion(routingActor: ActorRef)
   private def syncBusStops(route: Route2): Future[Map[BusStop, Int]] = {
     case class DBGeometry(coordinates: Array[Double])
     case class BusStopDB(
-                        coordinates: DBGeometry,
-                        description: String = "Unnamed Bus Stop",
-                        id: Int
+                          coordinates: DBGeometry,
+                          description: String = "Unnamed Bus Stop",
+                          id: Int
                         )
 
     import _root_.io.circe.generic.extras.auto._
@@ -355,51 +373,53 @@ class E2ESuggestion(routingActor: ActorRef)
       { stop: BusStop => squaredDistance(stop.xy, xy) }
     }
 
-    for {
-      allBusStopsResponse <- http.singleRequest(HttpRequest(
-        uri = s"${authSettings.beelineServer}/stops"
-      ))
-      _ <- expectStatus(allBusStopsResponse, s"Could not verify suggestion")
-      allBusStops <- Unmarshal(allBusStopsResponse._3).to[List[BusStopDB]]
-      stopsToIdMap <- {
-        val distanceToBestMatchingStop = route.stops.map({ stop =>
-          allBusStops.map(stopInDB => (stop, stopInDB, dist(stopInDB)(stop)))
-            .minBy(_._3)
-        })
+    {
+      for {
+        allBusStopsResponse <- http.singleRequest(HttpRequest(
+          uri = s"${authSettings.beelineServer}/stops"
+        ))
+        _ <- expectStatus(allBusStopsResponse, s"Could not verify suggestion")
+        allBusStops <- Unmarshal(allBusStopsResponse._3).to[List[BusStopDB]]
+        stopsToIdMap <- {
+          val distanceToBestMatchingStop = route.stops.map({ stop =>
+            allBusStops.map(stopInDB => (stop, stopInDB, dist(stopInDB)(stop)))
+              .minBy(_._3)
+          })
 
-        // Create the stops
-        val stopCreationFuture = Future.traverse(distanceToBestMatchingStop)({ case (stop, dbStop, dist) =>
-          if (dist < 20)
-            Future(stop -> dbStop.id)
-          else
+          // Create the stops
+          val stopCreationFuture = Future.traverse(distanceToBestMatchingStop)({ case (stop, dbStop, dist) =>
+            if (dist < 20)
+              Future(stop -> dbStop.id)
+            else
             // create the stop
-            for {
-              postData <- {
-                val json = Json.obj(
-                  "road" -> Json.fromString(""),
-                  "description" -> Json.fromString(stop.description + " (created by routing)"),
-                  "postcode" -> Json.Null,
-                  "label" -> stop.stopCode.map(Json.fromString).getOrElse(Json.Null),
-                  "coordinates" -> Json.obj(
-                    "type" -> Json.fromString("Point"),
-                    "coordinates" -> Json.arr(
-                      List(stop.coordinates._1, stop.coordinates._2).map(Json.fromDoubleOrNull): _*)
+              for {
+                postData <- {
+                  val json = Json.obj(
+                    "road" -> Json.fromString(""),
+                    "description" -> Json.fromString(stop.description + " (created by routing)"),
+                    "postcode" -> Json.Null,
+                    "label" -> stop.stopCode.map(Json.fromString).getOrElse(Json.Null),
+                    "coordinates" -> Json.obj(
+                      "type" -> Json.fromString("Point"),
+                      "coordinates" -> Json.arr(
+                        List(stop.coordinates._1, stop.coordinates._2).map(Json.fromDoubleOrNull): _*)
+                    )
                   )
-                )
-                Marshal(json).to[RequestEntity]
-              }
-              postResponse <- http.singleRequest(HttpRequest(
-                uri = s"${authSettings.beelineServer}/stops",
-                method = HttpMethods.POST,
-                entity = postData,
-                headers = List(superadminHeader())
-              ))
-              newStop <- Unmarshal(postResponse._3).to[BusStopDB]
-            } yield stop -> newStop.id
-        })
+                  Marshal(json).to[RequestEntity]
+                }
+                postResponse <- http.singleRequest(HttpRequest(
+                  uri = s"${authSettings.beelineServer}/stops",
+                  method = HttpMethods.POST,
+                  entity = postData,
+                  headers = List(superadminHeader())
+                ))
+                newStop <- Unmarshal(postResponse._3).to[BusStopDB]
+              } yield stop -> newStop.id
+          })
 
-        stopCreationFuture.map(_.toMap)
-      }
-    } yield stopsToIdMap
+          stopCreationFuture.map(_.toMap)
+        }
+      } yield stopsToIdMap
+    }.recoverWith { case _ => Future.failed(new exc.FailedToGenerateStops) }
   }
 }
