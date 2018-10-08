@@ -76,36 +76,25 @@ class BeelineSuggestRouteSpec extends FunSuite {
   require { getRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
   require { testDataSource.busStops.zipWithIndex.forall { case (o, i) => o.index == i} }
 
-  // This is ignored, because we now force every suggestion to have a stop
-  ignore ("BeelineSuggestRoute skips over suggestions without stops") {
+  test ("All suggestions have an associated stop (albeit far)") {
     implicit val executionContext = ExecutionContext.fromExecutor(new ForkJoinPool(2))
     val problem = new BasicRoutingProblem(List(), testDataSource, BeelineRecreateSettings.default)
+    val otherRequest = new BasicRequest(
+      problem,
+      Util.toSVY(gridToLngLat(-2, -2)),
+      Util.toSVY(gridToLngLat(53, 53)),
+      8.5 * 3600e3,
+      1,
+      testDataSource,
+      1
+    )
     val bsr = new BeelineSuggestRoute(
       problem,
-      List(
-        new BasicRequest(
-          problem,
-          Util.toSVY(gridToLngLat(-2, -2)),
-          Util.toSVY(gridToLngLat(53, 53)),
-          8.5 * 3600e3,
-          1,
-          testDataSource,
-          1
-        )
-      ),
+      List(otherRequest),
       LocalCPUSuggestRouteService
     )
-    val routes = bsr.generatePotentialRoutesFromRequest(
-      new BasicRequest(
-        problem,
-        Util.toSVY(gridToLngLat(1.5, 1.5)),
-        Util.toSVY(gridToLngLat(49.5, 49.5)),
-        8.5*3600e3,
-        1,
-        testDataSource,
-        2
-      )
-    )
-    assert { routes.nonEmpty && routes.forall { route => route.pickups.length + route.dropoffs.length == 2 } }
+
+    assert {otherRequest.startStops.size == 1}
+    assert {otherRequest.endStops.size == 1}
   }
 }
