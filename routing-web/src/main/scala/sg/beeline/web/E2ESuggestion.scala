@@ -66,7 +66,7 @@ class E2ESuggestion(routingActor: ActorRef)
                   routes <- (routingActor ? suggestRequest).mapTo[List[Route2]]
                   _ <- {
                     if (routes.isEmpty) {
-                      Future.failed(new exc.NoRoutesFound)
+                      Future.failed(exc.NoRoutesFound())
                     } else {
                       val bestRoute = routes.maxBy(_.requests.size)
 
@@ -139,7 +139,7 @@ class E2ESuggestion(routingActor: ActorRef)
         daysMask <- cur.downField("daysMask").as[Int]
         userId <- cur.downField("userId").as[Int]
         createdAt <- cur.downField("createdAt").as[Timestamp]
-        _ <- Either.cond(userId == authUserId, (), new exc.UserNotAuthorized)
+        _ <- Either.cond(userId == authUserId, (), exc.UserNotAuthorized())
       } yield {
         SuggestRequest(
           startLat = boardLat,
@@ -238,7 +238,7 @@ class E2ESuggestion(routingActor: ActorRef)
         (travelTimes, paths)
       }
       .recoverWith { case _ =>
-        Future.failed { new exc.FailedToEstimateTravelTime }
+        Future.failed { exc.FailedToEstimateTravelTime() }
       }
   }
 
@@ -335,7 +335,7 @@ class E2ESuggestion(routingActor: ActorRef)
       case HttpResponse(StatusCodes.OK, _, _, _) =>
         println(s"Successfully generated a route for ${suggestionId}")
         Success(())
-      case r => Failure(new exc.FailedToSubmitRoute(s"Posting of suggested route returned ${r.status.value}"))
+      case r => Failure(exc.FailedToSubmitRoute(s"Posting of suggested route returned ${r.status.value}"))
     }
   }
 
@@ -420,6 +420,6 @@ class E2ESuggestion(routingActor: ActorRef)
           stopCreationFuture.map(_.toMap)
         }
       } yield stopsToIdMap
-    }.recoverWith { case _ => Future.failed(new exc.FailedToGenerateStops) }
+    }.recoverWith { case _ => Future.failed(exc.FailedToGenerateStops()) }
   }
 }
