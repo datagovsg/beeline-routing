@@ -39,6 +39,45 @@ object DefaultE2EAuthSettings extends E2EAuthSettings {
   override val beelineServer = sys.env("BEELINE_SERVER")
 }
 
+object E2ESuggestion {
+  val IMPUTED_DWELL_TIME = 60000
+  val SCHEDULING_OPTIMISM = 3 * 60000
+
+  /**
+    * Adjust the times using the formula:
+    *
+    * t_sched(0) = t_predicted(0)
+    * t_sched(i) = max { t_sched(i - 1) + 1min, t_predicted(i) - 3 mins } for pickup stops
+    * t_sched(i) = t_predicted(i) for dropoff stops
+    *
+    * The idea is that scheduled buses can always arrive a bit later than scheduled, but never earlier.
+    * Therefore we should predict a slightly later arrival time.
+    *
+    * However, we also need to maintain adequate spacing between the bus stops, hence the enforced 1min gap.
+    *
+    * @param timings
+    * @return
+    */
+  def tweakPathTimings(timings: List[Int], numberOfPickupStops: Int): List[Int] = {
+    val arrayBuffer = new ArrayBuffer[Int]()
+
+    arrayBuffer += timings.head
+
+    timings.zipWithIndex.tail.foreach { case (gmapPredictedTiming, index) =>
+      val isPickupStop = index < numberOfPickupStops
+
+      val newSchedTiming =
+        if (isPickupStop)
+          ((arrayBuffer.last + IMPUTED_DWELL_TIME) max (gmapPredictedTiming - SCHEDULING_OPTIMISM))
+        else
+          gmapPredictedTiming
+
+      arrayBuffer += newSchedTiming
+    }
+    arrayBuffer.toList
+  }
+}
+
 class E2ESuggestion(routingActor: ActorRef)
                    (implicit system: ActorSystem,
                     executionContext: ExecutionContext,
@@ -48,12 +87,10 @@ class E2ESuggestion(routingActor: ActorRef)
   import JsonMarshallers._
   import BeelineJsonMarshallers._
   import objectJsonMarshallers._
+  import E2ESuggestion._
 
   val http = Http()
   val mapsAPIQuery = new MapsAPIQuery(http, materializer, executionContext)
-
-  val IMPUTED_DWELL_TIME = 60000
-  val SCHEDULING_OPTIMISM = 3 * 60000
 
   val e2eRoutes =
     path("suggestions" / IntNumber / "update") { suggestionId =>
@@ -78,7 +115,7 @@ class E2ESuggestion(routingActor: ActorRef)
                         (googleMapsTimings, paths) <- {
                           getGoogleMapsTimingsAndPaths(bestRoute, workingDay.toLocalDate, suggestRequest.time.toInt)
                         }
-                        optimisticTimings <- tweakPathTimings(googleMapsTimings).toList
+                        optimisticTimings = tweakPathTimings(googleMapsTimings, bestRoute.pickups.size)
                         result <- pushToServer(suggestionId, optimisticTimings, paths, bestRoute)
                       } yield result
                     }
@@ -106,31 +143,6 @@ class E2ESuggestion(routingActor: ActorRef)
   private def expectStatus(response: HttpResponse, message: String, status: StatusCode = StatusCodes.OK) =
     if (response.status.value == status.value) Future.unit
     else Future.failed(new RuntimeException(s"${message}. Got a status ${response.status.value}"))
-
-  /**
-    * Adjust the times using the formula:
-    *
-    * t_sched(i) = t_sched(i - 1) + max { 1min, t_predicted(i) - 3 mins }
-    *
-    * The idea is that scheduled buses can always arrive a bit later than scheduled, but never earlier.
-    * Therefore we should predict a slightly later arrival time.
-    *
-    * However, we also need to maintain adequate spacing between the bus stops, hence the enforced 1min gap.
-    *
-    * @param timings
-    * @return
-    */
-  private def tweakPathTimings(timings: Seq[Int]): Seq[Int] = {
-    val arrayBuffer = new ArrayBuffer[Int]()
-
-    arrayBuffer += timings.head
-
-    timings.tail.foreach { gmapPredictedTiming =>
-      arrayBuffer += arrayBuffer.last +
-        (IMPUTED_DWELL_TIME max (gmapPredictedTiming - SCHEDULING_OPTIMISM))
-    }
-    arrayBuffer
-  }
 
   /**
     * Resolves to nothing if the suggestion belongs to the user.

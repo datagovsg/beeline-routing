@@ -12,7 +12,7 @@ import sg.beeline.problem.{BusStop, Suggestion}
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, LocalCPUSuggestRouteService}
 import sg.beeline.util.Util
 import sg.beeline.util.Util.Point
-import sg.beeline.web.{E2EAuthSettings, IntelligentRoutingService}
+import sg.beeline.web.{E2EAuthSettings, E2ESuggestion, IntelligentRoutingService}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -259,5 +259,19 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
       val allowOrigin = header[`Access-Control-Allow-Origin`].get
       assert { allowOrigin.range matches HttpOrigin("https://www.beeline.sg") }
     }
+  }
+
+  test("Optimistic scheduled times") {
+    /**
+      * First stop time should be the same
+      * Second stop should be minimally spaced 1 min from the first stop
+      * Third stop should be max of (*)second stop + 1min, and of sched time - 180e3
+      * Fourth stop shoudl be max of third stop + 1 min, and of (*)sched time - 180e3
+      * Fifth stop should be the same, because it's not a pickup stop
+      */
+    val list = List(100000, 150000, 300000, 500000, 480000)
+    val expected = List(100000, 160000, 220000, 320000, 480000)
+
+    assert { E2ESuggestion.tweakPathTimings(list, 4) == expected }
   }
 }
