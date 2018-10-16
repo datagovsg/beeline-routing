@@ -23,6 +23,7 @@ import sg.beeline.web.Auth.User
 import sg.beeline.web.MapsAPIQuery.MapsQueryResult
 
 import scala.annotation.tailrec
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -51,6 +52,9 @@ class E2ESuggestion(routingActor: ActorRef)
   val http = Http()
   val mapsAPIQuery = new MapsAPIQuery(http, materializer, executionContext)
 
+  val IMPUTED_DWELL_TIME = 60000
+  val SCHEDULING_OPTIMISM = 3 * 60000
+
   val e2eRoutes =
     path("suggestions" / IntNumber / "update") { suggestionId =>
       post {
@@ -74,7 +78,8 @@ class E2ESuggestion(routingActor: ActorRef)
                         (googleMapsTimings, paths) <- {
                           getGoogleMapsTimingsAndPaths(bestRoute, workingDay.toLocalDate, suggestRequest.time.toInt)
                         }
-                        result <- pushToServer(suggestionId, googleMapsTimings, paths, bestRoute)
+                        optimisticTimings <- tweakPathTimings(googleMapsTimings).toList
+                        result <- pushToServer(suggestionId, optimisticTimings, paths, bestRoute)
                       } yield result
                     }
                   }
@@ -101,6 +106,31 @@ class E2ESuggestion(routingActor: ActorRef)
   private def expectStatus(response: HttpResponse, message: String, status: StatusCode = StatusCodes.OK) =
     if (response.status.value == status.value) Future.unit
     else Future.failed(new RuntimeException(s"${message}. Got a status ${response.status.value}"))
+
+  /**
+    * Adjust the times using the formula:
+    *
+    * t_sched(i) = t_sched(i - 1) + max { 1min, t_predicted(i) - 3 mins }
+    *
+    * The idea is that scheduled buses can always arrive a bit later than scheduled, but never earlier.
+    * Therefore we should predict a slightly later arrival time.
+    *
+    * However, we also need to maintain adequate spacing between the bus stops, hence the enforced 1min gap.
+    *
+    * @param timings
+    * @return
+    */
+  private def tweakPathTimings(timings: Seq[Int]): Seq[Int] = {
+    val arrayBuffer = new ArrayBuffer[Int]()
+
+    arrayBuffer += timings.head
+
+    timings.tail.foreach { gmapPredictedTiming =>
+      arrayBuffer += arrayBuffer.last +
+        (IMPUTED_DWELL_TIME max (gmapPredictedTiming - SCHEDULING_OPTIMISM))
+    }
+    arrayBuffer
+  }
 
   /**
     * Resolves to nothing if the suggestion belongs to the user.
@@ -219,7 +249,7 @@ class E2ESuggestion(routingActor: ActorRef)
               googleMapsApiKey = authSettings.googleMapsApiKey)
         } yield {
           // 1-minute dwell time imputed...
-          val nextArrivalTime = lastArrivalTime - 60000 - mapsQueryResult.travelTime
+          val nextArrivalTime = lastArrivalTime - IMPUTED_DWELL_TIME - mapsQueryResult.travelTime
           Intermediate(nextArrivalTime, Some(mapsQueryResult)) :: acc
         }
     })
