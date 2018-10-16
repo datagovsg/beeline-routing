@@ -3,7 +3,7 @@ package sg.beeline.ruinrecreate
 import java.util.concurrent.ForkJoinPool
 
 import io.circe.parser._
-import sg.beeline.exc.TooFewSuggestions
+import sg.beeline.exc
 import sg.beeline.problem._
 import sg.beeline.util.WeightedRandomShuffle
 
@@ -79,7 +79,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     println(s"${compatibleRequests.size} compatible requests")
 
     if (compatibleRequests.size < settings.minRequests) {
-      throw new TooFewSuggestions
+      throw exc.TooFewSuggestions()
     }
 
     // You can take the, say, top 5 ODs that has minimum travel
