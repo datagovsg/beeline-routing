@@ -51,7 +51,7 @@ object E2ESuggestion {
     * t_sched(i) = t_predicted(i) for dropoff stops
     *
     * The idea is that scheduled buses can always arrive a bit later than scheduled, but never earlier.
-    * Therefore we should predict a slightly later arrival time.
+    * Therefore we should schedule a slightly earlier arrival time than what's predicted.
     *
     * However, we also need to maintain adequate spacing between the bus stops, hence the enforced 1min gap.
     *
