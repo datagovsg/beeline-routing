@@ -26,7 +26,7 @@ import sg.beeline.web.MapsAPIQuery.MapsQueryResult
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 trait E2EAuthSettings {
   def googleMapsApiKey: String
@@ -104,7 +104,7 @@ class E2ESuggestion(routingActor: ActorRef)
 
                 val fut = for {
                   suggestRequest <- verifySuggestionId(authorization, suggestionId, userId, recreateSettings)
-                  routes <- (routingActor ? suggestRequest).mapTo[List[Route2]]
+                  routes <- (routingActor ? suggestRequest).mapTo[Try[List[Route2]]].map(_.get)
                   _ <- {
                     if (routes.isEmpty) {
                       Future.failed(exc.NoRoutesFound())

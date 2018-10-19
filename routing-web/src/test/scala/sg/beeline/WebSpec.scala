@@ -186,6 +186,60 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
     }
   }
 
+  // TODO: Test for the following
+  // - Distance restriction works (all stops are within X m from a request)
+  // - Cluster restriction works (all stops are within X m from centre)
+  // - Implement time restriction
+  test ("/routing/begin returns a UUID and polling finally returns a negative result if error thrown") {
+    import _root_.io.circe.syntax._
+    import scala.concurrent.duration._
+
+    implicit val recreateSettingsEncoder = _root_.io.circe.generic
+      .semiauto.deriveEncoder[BeelineRecreateSettings]
+    implicit val defaultTimeout = RouteTestTimeout(80 seconds)
+
+    // Use a suggestion from the getRequests() --> ensure that at least this one is served
+    Get(Uri("/routing/begin").withQuery(Uri.Query(
+      "startLat" -> CBD._2.toString,
+      "startLng" -> CBD._1.toString,
+      "endLat" -> YEW_TEE._2.toString,
+      "endLng" -> YEW_TEE._1.toString,
+      "time" -> (8.5 * 3600e3).toString,
+      "settings" -> _root_.io.circe.Printer.noSpaces.pretty(
+        BeelineRecreateSettings(
+          maxDetourMinutes = 10.0,
+          startClusterRadius = 1500,
+          startWalkingDistance = 200,
+          endClusterRadius = 1500,
+          endWalkingDistance = 200,
+          minRequests = 100000 // this can never be met
+        ).asJson
+      ))
+    )) ~> testService ~> check {
+      val response = responseAs[String]
+      val uuidTry = Try { UUID.fromString(response) }
+
+      assert { uuidTry.isSuccess }
+
+      def tryUntilResult(n: Int = 1): Future[Unit] = {
+        Get(Uri("/routing/poll").withQuery(Uri.Query("uuid" -> response))) ~> testService ~>
+          check {
+            if (status == StatusCodes.Accepted) {
+              akka.pattern.after(1 second, using = system.scheduler)({
+                tryUntilResult(n + 1)
+              })(ExecutionContext.Implicits.global)
+            } else if (status == StatusCodes.InternalServerError) { // Because minRequests is too high, expect an error
+              Future.successful(())
+            } else {
+              Future.failed(new IllegalStateException(s"Unacceptable status code $status"))
+            }
+          }
+      }
+
+      scala.concurrent.Await.result(tryUntilResult(2), 60 seconds)
+    }
+  }
+
   test("/travel_times returns the travel times") {
     Get("/travel_times/5/10/15/100/150") ~> testService ~> check {
       val travelTimes = _root_.io.circe.parser.parse(responseAs[String])

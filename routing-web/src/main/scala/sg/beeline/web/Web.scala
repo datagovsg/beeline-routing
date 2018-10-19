@@ -79,7 +79,7 @@ class IntelligentRoutingService(dataSource: DataSource,
       _ => suggestionsSource,
       beelineSuggestRouteService)
   }), "intelligent-routing")
-  val jobQueue = new JobQueue[SuggestRequest, List[Route2]](
+  val jobQueue = new JobQueue[SuggestRequest, Try[List[Route2]]](
     routingActor, 10 minutes,5 minutes, actorSystem = Some(system))
 
   val myRoute = cors() {
@@ -223,7 +223,11 @@ class IntelligentRoutingService(dataSource: DataSource,
                   complete((
                     StatusCodes.InternalServerError,
                     s"The job errored with: ${exc.getMessage}"))
-                case JobSucceeded(res) =>
+                case JobSucceeded(Failure(exc)) =>
+                  complete((
+                    StatusCodes.InternalServerError,
+                    s"The job errored with: ${exc.getMessage}"))
+                case JobSucceeded(Success(res)) =>
                   complete(res.asJson)
               }
           }

@@ -11,6 +11,7 @@ import sg.beeline.util.Util
 import sg.beeline.web.SuggestRequest
 
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 class RouteActor(dataSource: DataSource,
                  suggestionSource: String => Seq[Suggestion],
@@ -53,7 +54,9 @@ class RouteActor(dataSource: DataSource,
         beelineSuggestRouteService
       )
 
-      beelineSuggestRoute.generatePotentialRoutesFromRequest(seedRequest).toList
+      Try {
+        beelineSuggestRoute.generatePotentialRoutesFromRequest(seedRequest).toList
+      }
   }
 
   def receive = {
