@@ -14,10 +14,13 @@ import scala.reflect.ClassTag
 // - a list of dropoff stops
 // - pickup stops will always come before the dropoff stops
 // - time of request is irrelevant
+// However for this algorithm to work, pickup and dropoff stops must be strictly disjoint
 class Route2(val routingProblem: RoutingProblem)
             (val pickups: IndexedSeq[(BusStop, List[Request])],
              val dropoffs: IndexedSeq[(BusStop, List[Request])])
 {
+//  require { (pickups.map(_._1).toSet intersect dropoffs.map(_._1).toSet).isEmpty }
+
   def travelCosts(s: Iterable[BusStop]) = {
     s.sliding(2).map { case Seq(a, b) =>
       // require(a != b)
@@ -35,6 +38,9 @@ class Route2(val routingProblem: RoutingProblem)
     val detourBudget = beelineRecreateSettings.maxDetourMinutes * 60e3
     val matchingPickupIndex = pickups.indexWhere(request.startStopsSet contains _._1)
     val matchingDropoffIndex = dropoffs.indexWhere(request.endStopsSet contains _._1)
+
+    val pickupsSet = pickups.map(_._1).toSet
+    val dropoffsSet = dropoffs.map(_._1).toSet
 
     // Because Array.concat only accepts a sequence of arrays? WTF?
     def arrayConcat[X: ClassTag](xss: Seq[X]*) = {
@@ -77,6 +83,7 @@ class Route2(val routingProblem: RoutingProblem)
     lazy val insertPickupCosts: IndexedSeq[(Double, () => SingleSet)] = for {
         insertBefore <- pickups.indices.drop(1)
         start <- request.startStops
+        if !dropoffsSet(start)
         sunkCost = travelCosts(Array(pickups(insertBefore - 1)._1, pickups(insertBefore)._1))
         newCost = travelCosts(Array(pickups(insertBefore - 1)._1, start, pickups(insertBefore)._1))
       } yield (
@@ -91,6 +98,7 @@ class Route2(val routingProblem: RoutingProblem)
     lazy val insertDropoffCosts: IndexedSeq[(Double, () => SingleSet)] = for {
       insertBefore <- dropoffs.indices.drop(1)
       end <- request.endStops
+      if !pickupsSet(end)
       sunkCost = travelCosts(Array(dropoffs(insertBefore - 1)._1, dropoffs(insertBefore)._1))
       newCost = travelCosts(Array(dropoffs(insertBefore - 1)._1, end, dropoffs(insertBefore)._1))
     } yield (
@@ -129,6 +137,7 @@ class Route2(val routingProblem: RoutingProblem)
         for {
           start <- request.startStops
           end <- request.endStops
+          if start != end && !pickupsSet(end) && !dropoffsSet(start)
           detour = currentTravelCost + // A1_A2 + A2_A3 + A3_B1 + B1_B2
             travelCosts(Array(start, pickups.head._1)) + // + A0_A1
             travelCosts(Array(pickups.last._1, end, dropoffs.head._1)) - // + A3_B0 + B0_B1
@@ -148,6 +157,7 @@ class Route2(val routingProblem: RoutingProblem)
         for {
           start <- request.startStops
           end <- request.endStops
+          if start != end && !pickupsSet(end) && !dropoffsSet(start)
           detour = currentTravelCost + // A1_A2 + A2_A3 + A3_B1 + B1_B2
             travelCosts(Array(start, pickups.head._1)) + // + A0_A1
             travelCosts(Array(dropoffs.last._1, end)) - // + B2_B3
@@ -166,6 +176,7 @@ class Route2(val routingProblem: RoutingProblem)
         for {
           start <- request.startStops
           end <- request.endStops
+          if start != end && !pickupsSet(end) && !dropoffsSet(start)
           detour = currentDetour +
             travelCosts(Array(pickups.last._1, start, end, dropoffs.head._1)) -
             travelCosts(Array(pickups.last._1, dropoffs.head._1))
@@ -183,6 +194,7 @@ class Route2(val routingProblem: RoutingProblem)
         for {
           start <- request.startStops
           end <- request.endStops
+          if start != end && !pickupsSet(end) && !dropoffsSet(start)
           detour = currentTravelCost + // A1_A2 + A2_A3 + A3_B1 + B1_B2
             travelCosts(Array(pickups.last._1, start, dropoffs.head._1)) - // + A3_A4 + A4_B1
             travelCosts(Array(pickups.last._1, dropoffs.head._1)) + // - A3_B1
@@ -206,6 +218,7 @@ class Route2(val routingProblem: RoutingProblem)
         { // before first pickup stop
           for {
             start <- request.startStops
+            if !dropoffsSet(start)
             detour = currentTravelCost +
               travelCosts(Array(start, pickups.head._1)) -
               travelCosts(Array(start, dropoffs.last._1))
@@ -217,20 +230,16 @@ class Route2(val routingProblem: RoutingProblem)
         { // after last pickup stop
           for {
             start <- request.startStops
+            if !dropoffsSet(start)
             detour = currentDetour +
               travelCosts(Array(pickups.last._1, start, dropoffs.head._1)) -
               travelCosts(Array(pickups.last._1, dropoffs.head._1))
           } yield (
-            currentDetour + detour,
+            detour,
             () => arrayConcat(pickups, List((start, List(request))))
           )
         }
       ).flatten
-
-      val combined: Option[(Double, () => SingleSet)] =
-        (pickupSpecialCases.iterator ++
-        insertPickupCosts.iterator.map { case (change, f) => (currentDetour + change, f) })
-        .safeMinBy(_._1)
 
       (pickupSpecialCases.iterator ++ insertPickupCosts.map { case (change, f) => (currentDetour + change, f) })
         .safeMinBy(_._1)
@@ -243,6 +252,7 @@ class Route2(val routingProblem: RoutingProblem)
         { // before first dropoff stop
           for {
             end <- request.endStops
+            if !pickupsSet(end)
             detour = currentDetour +
               travelCosts(Array(pickups.last._1, end, dropoffs.head._1)) -
               travelCosts(Array(pickups.last._1, dropoffs.head._1))
@@ -254,11 +264,12 @@ class Route2(val routingProblem: RoutingProblem)
         { // after last pickup stop
           for {
             end <- request.endStops
+            if !pickupsSet(end)
             detour = currentTravelCost +
               travelCosts(Array(dropoffs.last._1, end)) -
               travelCosts(Array(pickups.head._1, end))
           } yield (
-            currentDetour + detour,
+            detour,
             () => arrayConcat(dropoffs, Array((end, List(request))))
           )
         }
