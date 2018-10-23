@@ -70,7 +70,9 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
     println(s"Average # start stops ${requests.map(_.startStops.size).sum / requests.size.toDouble}")
     println(s"Average # end stops ${requests.map(_.endStops.size).sum / requests.size.toDouble}")
 
+    // Route2 has a bug in which, if start_stop == end_stop, it'll go crazy
     val ods = odCombis(request)
+      .filter { case (a, b) => a != b }
 
     val compatibleRequests = {
       requests.filter(other => isCompatible(request, other)).toSet
@@ -88,18 +90,12 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
       od => routingProblem.distance(od._1, od._2)
     ).take(5)
 
-    val feasibleTop50Ods = top5Ods.filter(
-      od => {
+    val feasible = top5Ods.filter { od =>
         val topOd = top5Ods(0)
         routingProblem.distance(od._1, od._2) - routingProblem.distance(topOd._1, topOd._2) <
           routingProblem.settings.suboptimalStopChoiceAllowance
       }
-    )
-
-    val feasible = feasibleTop50Ods.flatMap(od => {
-      (0 until 10)
-        .map(i => (i, od))
-    })
+      .flatMap(od => Array.fill(10)(od))
 
     /**
       * Obviously we don't need 50 threads to make 50 HTTP requests. Problem is that AWS lambda library
@@ -107,7 +103,7 @@ class BeelineSuggestRoute(routingProblem : RoutingProblem,
       */
     implicit val highlyParallelExecutionContext = ExecutionContext.fromExecutor(new ForkJoinPool(50))
 
-    val feasibleTop50Routes = Await.result(Future.traverse(feasible){ case (i, od) =>
+    val feasibleTop50Routes = Await.result(Future.traverse(feasible){ od =>
       beelineSuggestRouteService.executeLambda(settings, request, od, compatibleRequests.toList)
     }, Duration.Inf)
 
