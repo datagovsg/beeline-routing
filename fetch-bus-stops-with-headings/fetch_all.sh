@@ -21,3 +21,6 @@ done
 python find_stop_headings.py
 
 python migrate_bus_stops.py
+
+echo "Open the web browser to http://localhost:5678 and manually annotate the remaining headings"
+python manually_determine_headings.py
