@@ -7,7 +7,7 @@ import akka.actor.Actor
 import sg.beeline.io.{BuiltIn, DataSource}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate._
-import sg.beeline.util.Util
+import sg.beeline.util.Projections
 import sg.beeline.web.SuggestRequest
 
 import scala.concurrent.ExecutionContext
@@ -26,8 +26,8 @@ class RouteActor(dataSource: DataSource,
 
       val seedSuggestion = Suggestion(
         -999, // Some ID that would not occur naturally in the database
-        Util.toSVY((sLng, sLat)),
-        Util.toSVY((eLng, eLat)),
+        Projections.toSVY((sLng, sLat)),
+        Projections.toSVY((eLng, eLat)),
         time,
         createdAt = 0L,
         userId = None,

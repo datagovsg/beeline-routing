@@ -1,7 +1,7 @@
 package sg.beeline.io
 
 import sg.beeline.problem.{BusStop, Suggestion}
-import sg.beeline.util.{ExpiringCache, Util}
+import sg.beeline.util.{ExpiringCache, Projections}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -73,8 +73,8 @@ object Import {
           case (travelTime, id, boardLng, boardLat, alightLng, alightLat, userId, email, time, daysOfWeek, createdAt) =>
             Suggestion(
               id = id,
-              start = Util.toSVY((boardLng, boardLat)),
-              end = Util.toSVY((alightLng, alightLat)),
+              start = Projections.toSVY((boardLng, boardLat)),
+              end = Projections.toSVY((alightLng, alightLat)),
               time = time,
               createdAt = createdAt.getTime,
               userId = userId,

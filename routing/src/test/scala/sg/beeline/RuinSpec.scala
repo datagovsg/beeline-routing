@@ -4,8 +4,8 @@ import org.scalatest._
 import sg.beeline.io.DataSource
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate._
-import sg.beeline.util.Util.toSVY
-import sg.beeline.util.{Util, kdtreeQuery}
+import sg.beeline.util.Projections.toSVY
+import sg.beeline.util.squaredDistance
 
 import scala.util.Random
 
@@ -34,7 +34,7 @@ class RuinSpec extends FlatSpec with Matchers {
   val testDataSource = new DataSource {
     override def busStops: Seq[BusStop] = myBusStops
     override def distanceFunction(a: BusStop, b: BusStop): Double =
-      kdtreeQuery.squaredDistance(a.xy, b.xy) / 11 / 60
+      squaredDistance(a.xy, b.xy) / 11 / 60
   }
 
   val problem = new BasicRoutingProblem(requests, dataSource = testDataSource, settings = BeelineRecreateSettings.default)

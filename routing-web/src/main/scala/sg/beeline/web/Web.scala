@@ -12,12 +12,11 @@ import sg.beeline.io.DataSource
 import sg.beeline.jobs.{JobQueue, RouteActor}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRouteService}
-import sg.beeline.util.{ExpiringCache, Geo, Util, kdtreeQuery}
+import sg.beeline.util.{Geo, Point, squaredDistance}
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
 import io.circe.{Decoder, Json}
 import io.circe.generic.extras.Configuration
-import sg.beeline.util.Util.Point
 import sg.beeline.web.Auth.User
 
 import scala.annotation.tailrec
@@ -146,8 +145,8 @@ class IntelligentRoutingService(dataSource: DataSource,
         parameters(
           'maxDistance.as[Double]
         ) { maxDistance =>
-          def withinReach(p: Util.Point, q: Util.Point) =
-            kdtreeQuery.squaredDistance(p, q) <= maxDistance * maxDistance
+          def withinReach(p: Point, q: Point) =
+            squaredDistance(p, q) <= maxDistance * maxDistance
 
           /**
             * A list of stops serve a suggestion if

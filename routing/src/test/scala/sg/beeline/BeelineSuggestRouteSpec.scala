@@ -6,7 +6,7 @@ import org.scalatest.FunSuite
 import sg.beeline.io.DataSource
 import sg.beeline.problem.{BasicRequest, BasicRoutingProblem, BusStop, Suggestion}
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRoute, LocalCPUSuggestRouteService}
-import sg.beeline.util.Util
+import sg.beeline.util.{Projections}
 
 import scala.concurrent.ExecutionContext
 
@@ -61,7 +61,7 @@ class BeelineSuggestRouteSpec extends FunSuite {
             val randEnd = gridToLngLat(
               30 + scala.util.Random.nextDouble() * 20,
               30 + scala.util.Random.nextDouble() * 20)
-            Suggestion(index, Util.toSVY(randStart), Util.toSVY(randEnd),
+            Suggestion(index, Projections.toSVY(randStart), Projections.toSVY(randEnd),
               hour * 3600 * 1000L, 1,
               createdAt = 0L, userId = None, email = None, daysOfWeek = 31
             )
@@ -81,8 +81,8 @@ class BeelineSuggestRouteSpec extends FunSuite {
     val problem = new BasicRoutingProblem(List(), testDataSource, BeelineRecreateSettings.default)
     val otherRequest = new BasicRequest(
       problem,
-      Util.toSVY(gridToLngLat(-2, -2)),
-      Util.toSVY(gridToLngLat(53, 53)),
+      Projections.toSVY(gridToLngLat(-2, -2)),
+      Projections.toSVY(gridToLngLat(53, 53)),
       8.5 * 3600e3,
       1,
       testDataSource,

@@ -2,8 +2,7 @@ package sg.beeline.ruinrecreate
 
 import com.thesamet.spatial.KDTreeMap
 import sg.beeline.problem._
-import sg.beeline.util.kdtreeQuery
-import kdtreeQuery.KDTreeMapBall
+import sg.beeline.util.KDTreeQuery.KDTreeMapBall
 
 import scala.annotation.tailrec
 import scala.collection.immutable.HashMap
