@@ -11,7 +11,7 @@ import sg.beeline.lambda.SuggestRouteHandler
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRouteService}
 import sg.beeline.ruinrecreate.BeelineSuggestRouteService.{OD, SuggestRouteInput}
-import sg.beeline.util.Util
+import sg.beeline.util.Projections
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -103,7 +103,7 @@ class RoutingLambdaSpec extends FunSuite {
     implicit val executionContext = ExecutionContext.fromExecutor(new ForkJoinPool(50))
     import sg.beeline.ruinrecreate.BeelineSuggestRouteSerdes.route2Encoder
     import _root_.io.circe.syntax._
-    val toSVY = (d: Double, e: Double) => Util.toSVY((d, e)).asJson.toString
+    val toSVY = (d: Double, e: Double) => Projections.toSVY((d, e)).asJson.toString
     val originBusStop = BusStop((21421.649051572367, 32062.31453230393), 100, "Origin", "Hello", 2)
     val destinationBusStop = BusStop((20499.24174394127, 38342.890397198564), 101, "Destination", "Hello Lane", 3)
 

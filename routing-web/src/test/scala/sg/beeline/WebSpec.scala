@@ -10,8 +10,7 @@ import org.scalatest.FunSuite
 import sg.beeline.io.{BuiltIn, DataSource}
 import sg.beeline.problem.{BusStop, Suggestion}
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, LocalCPUSuggestRouteService}
-import sg.beeline.util.Util
-import sg.beeline.util.Util.Point
+import sg.beeline.util.{Projections, Point}
 import sg.beeline.web.{E2EAuthSettings, E2ESuggestion, IntelligentRoutingService}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -29,9 +28,9 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   }
 
   def randomAroundLngLat(p: Point, distance: Double) = {
-    val svy = Util.toSVY(p)
+    val svy = Projections.toSVY(p)
 
-    Util.toWGS((
+    Projections.toWGS((
       svy._1 + (scala.util.Random.nextDouble() * (2 * distance) - distance),
       svy._2 + (scala.util.Random.nextDouble() * (2 * distance) - distance)
     ))
@@ -50,7 +49,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
             val randStart = randomAroundLngLat(CBD, 2000) // City
             val randEnd = randomAroundLngLat(YEW_TEE, 2000) // Yew Tee
 
-            Suggestion(index, Util.toSVY(randStart), Util.toSVY(randEnd),
+            Suggestion(index, Projections.toSVY(randStart), Projections.toSVY(randEnd),
               hour * 3600 * 1000L,
               weight = 1,
               createdAt = new java.util.Date(2017, 0, 1, 0, 0).getTime,
@@ -258,7 +257,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   }
 
   test("/paths_requests/x/y/z returns the requests served by x --> y --> z") {
-    import sg.beeline.util.kdtreeQuery.squaredDistance
+    import sg.beeline.util.squaredDistance
 
     val DIST = 500
     val twoSuggestions = () => {

@@ -18,8 +18,7 @@ import sg.beeline.exc
 import sg.beeline.io.BuiltIn
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
-import sg.beeline.util.{ExpiringCache, Util}
-import sg.beeline.util.Util.Point
+import sg.beeline.util.{ExpiringCache, Projections, Point}
 import sg.beeline.web.Auth.User
 import sg.beeline.web.MapsAPIQuery.MapsQueryResult
 
@@ -409,8 +408,8 @@ class E2ESuggestion(routingActor: ActorRef)
     import _root_.io.circe.generic.extras.auto._
 
     def dist(busStopDB: BusStopDB) = {
-      import sg.beeline.util.kdtreeQuery.squaredDistance
-      val xy = Util.toSVY((busStopDB.coordinates.coordinates(0), busStopDB.coordinates.coordinates(1)))
+      import sg.beeline.util.squaredDistance
+      val xy = Projections.toSVY((busStopDB.coordinates.coordinates(0), busStopDB.coordinates.coordinates(1)))
 
       { stop: BusStop => squaredDistance(stop.xy, xy) }
     }

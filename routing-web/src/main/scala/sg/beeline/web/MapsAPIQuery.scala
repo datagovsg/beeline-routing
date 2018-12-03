@@ -7,8 +7,7 @@ import akka.http.scaladsl.model.{HttpRequest, Uri}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import io.circe.Json
-import sg.beeline.problem.Route2
-import sg.beeline.util.Util.Point
+import sg.beeline.util.Point
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -3,8 +3,7 @@ package sg.beeline.problem
 import com.thesamet.spatial.KDTreeMap
 import sg.beeline.io.DataSource
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, DirectFerryRecreate}
-import sg.beeline.util.Util._
-import sg.beeline.util.{Util, kdtreeQuery}
+import sg.beeline.util.{Point, KDTreeQuery}
 
 class BasicRoutingProblem(val suggestions: Seq[Suggestion],
                           val dataSource: DataSource,
@@ -26,7 +25,7 @@ class BasicRoutingProblem(val suggestions: Seq[Suggestion],
   def distance(a : BusStop, b: BusStop) : Double = dataSource.distanceFunction(a, b)
 
   override def nearBusStops(point : Point, maxDistance: Double) =
-    kdtreeQuery.queryBall(busStopsTree, point, maxDistance)
+    KDTreeQuery.queryBall(busStopsTree, point, maxDistance)
     .sortBy(_._1)
     .map(_._2)
 

@@ -2,10 +2,7 @@ package sg.beeline.problem
 
 import sg.beeline.io.DataSource
 import sg.beeline.problem.Request.RequestOverrideTime
-import sg.beeline.util.Util
-import sg.beeline.util.Util.Point
-
-import scala.math.min
+import sg.beeline.util.{Projections, Point}
 
 trait Request {
   def routingProblem : RoutingProblem
@@ -30,10 +27,10 @@ trait Request {
   lazy val startStopsSet = startStops.toSet
   lazy val endStopsSet = endStops.toSet
 
-  lazy val startWGS = Util.toWGS(start)
-  lazy val endWGS = Util.toWGS(end)
+  lazy val startWGS = Projections.toWGS(start)
+  lazy val endWGS = Projections.toWGS(end)
 
-  override def toString: String = (Util.toWGS(start), Util.toWGS(end), time).toString
+  override def toString: String = (Projections.toWGS(start), Projections.toWGS(end), time).toString
 
   def withTime(time: Double) = new RequestOverrideTime(this, time)
 }

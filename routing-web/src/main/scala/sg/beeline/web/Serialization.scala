@@ -5,14 +5,14 @@ import java.sql.Timestamp
 import io.circe.Decoder.Result
 import io.circe.{Decoder, Encoder, HCursor, Json}
 import sg.beeline.problem._
-import sg.beeline.util.Util
+import sg.beeline.util.Projections
 
 object SuggestionJsonEncoder extends Encoder[Suggestion] {
   override def apply(suggestion: Suggestion): Json =
     Json.obj(
       "id" -> Json.fromInt(suggestion.id),
-      "start" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(suggestion.start))),
-      "end" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(suggestion.end))),
+      "start" -> Json.fromFields(RouteJsonEncoder.latLng(Projections.toWGS(suggestion.start))),
+      "end" -> Json.fromFields(RouteJsonEncoder.latLng(Projections.toWGS(suggestion.end))),
       "time" -> Json.fromDouble(suggestion.time).get
     )
 }
@@ -20,8 +20,8 @@ object SuggestionJsonEncoder extends Encoder[Suggestion] {
 object RequestJsonEncoder extends Encoder[Request] {
   override def apply(request: Request) =
     Json.obj(
-      "start" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(request.start))),
-      "end" -> Json.fromFields(RouteJsonEncoder.latLng(Util.toWGS(request.end))),
+      "start" -> Json.fromFields(RouteJsonEncoder.latLng(Projections.toWGS(request.start))),
+      "end" -> Json.fromFields(RouteJsonEncoder.latLng(Projections.toWGS(request.end))),
       "time" -> Json.fromDouble(request.time).get
     )
 }

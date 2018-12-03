@@ -4,7 +4,7 @@ import org.scalatest._
 import sg.beeline.io.DataSource
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
-import sg.beeline.util.kdtreeQuery
+import sg.beeline.util.squaredDistance
 
 class RouteSpec extends FlatSpec with Matchers {
 
@@ -33,7 +33,7 @@ class RouteSpec extends FlatSpec with Matchers {
     override def nearBusStops(point: (Double, Double), maxDistance: Double): Seq[BusStop] = busStops
 
     override def nearestBusStop(point: (Double, Double)): BusStop =
-      busStops.minBy(b => kdtreeQuery.squaredDistance(point, b.xy))
+      busStops.minBy(b => squaredDistance(point, b.xy))
 
     override def settings: BeelineRecreateSettings = BeelineRecreateSettings.default
   }

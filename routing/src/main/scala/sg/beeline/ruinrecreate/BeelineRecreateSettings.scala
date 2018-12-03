@@ -1,11 +1,7 @@
 package sg.beeline.ruinrecreate
 
-import java.sql.Timestamp
-
-import com.thesamet.spatial.KDTreeMap
-import sg.beeline.problem.{Request, Suggestion}
-import sg.beeline.util.Util.Point
-import sg.beeline.util.kdtreeQuery
+import sg.beeline.problem.Suggestion
+import sg.beeline.util.squaredDistance
 
 case class BeelineRecreateSettings(maxDetourMinutes : Double = 15.0,
                                    startClusterRadius : Int = 4000,
@@ -35,8 +31,8 @@ case class BeelineRecreateSettings(maxDetourMinutes : Double = 15.0,
       (s.time - reference.time).abs <= timeAllowance &&
       // Ensure that the daysOfWeek mask overlaps to some extent
       (!matchDaysOfWeek || (s.daysOfWeek & reference.daysOfWeek) != 0) &&
-      kdtreeQuery.squaredDistance(reference.start, s.start) < startClusterRadius * startClusterRadius &&
-      kdtreeQuery.squaredDistance(reference.end, s.end) < endClusterRadius * endClusterRadius
+      squaredDistance(reference.start, s.start) < startClusterRadius * startClusterRadius &&
+      squaredDistance(reference.end, s.end) < endClusterRadius * endClusterRadius
   }
 }
 
