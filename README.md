@@ -28,8 +28,7 @@ These neighbours and the data point form the first cluster. Then we repeat for t
 point with the largest number of still unclustered neighbours, until there are no unclustered
 data points left.
 
-This algorithm is useful for identifying O/D hotspots, but we do not have a public demonstration
-of this algorithm yet.
+This algorithm is useful for identifying O/D hotspots. A demo of this can be found at https://cluster-fu.data.gov.sg.
 
 Global routing algorithm
 ------------------------
