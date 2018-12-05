@@ -1,12 +1,13 @@
 package sg.beeline.io
 
-import sg.beeline.problem.{BusStop, Suggestion}
+import sg.beeline.problem.Suggestion
+import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{ExpiringCache, Projections}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-object Import {
+class SuggestionsSource {
   // Return the number of seconds since midnight
   def convertTime(timeString: String) =
     timeString.substring(0,2).toLong * 3600000 +
@@ -87,5 +88,12 @@ object Import {
       Await.result(db.run(suggestions), 60 seconds)
     }
   }
-  def getLiveRequests = liveRequestsCache.apply
+  def getLiveRequests: Seq[Suggestion] = liveRequestsCache.apply
+
+  def similarTo(s: Suggestion, settings: BeelineRecreateSettings): Seq[Suggestion] =
+    getLiveRequests.filter(settings.suggestionsFilter(s))
+}
+
+object SuggestionsSource {
+  val DEFAULT = new SuggestionsSource
 }

@@ -37,5 +37,5 @@ case class BeelineRecreateSettings(maxDetourMinutes : Double = 15.0,
 }
 
 object BeelineRecreateSettings {
-  lazy val default = new BeelineRecreateSettings()
+  lazy val DEFAULT = new BeelineRecreateSettings()
 }

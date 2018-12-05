@@ -21,7 +21,7 @@ class RoutingLambdaSpec extends FunSuite {
   val problem = new BasicRoutingProblem(
     List(),
     dataSource = BuiltIn,
-    settings = BeelineRecreateSettings.default)
+    settings = BeelineRecreateSettings.DEFAULT)
 
   ignore("Route encoder works with empty Activity classes") {
     import sg.beeline.ruinrecreate.BeelineSuggestRouteSerdes._

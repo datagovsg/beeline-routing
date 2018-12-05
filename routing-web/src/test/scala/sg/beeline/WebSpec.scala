@@ -7,10 +7,10 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.model.headers._
 import org.scalatest.FunSuite
-import sg.beeline.io.{BuiltIn, DataSource}
+import sg.beeline.io.{BuiltIn, DataSource, SuggestionsSource}
 import sg.beeline.problem.{BusStop, Suggestion}
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, LocalCPUSuggestRouteService}
-import sg.beeline.util.{Projections, Point}
+import sg.beeline.util.{Point, Projections}
 import sg.beeline.web.{E2EAuthSettings, E2ESuggestion, IntelligentRoutingService}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -40,40 +40,42 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
   val YEW_TEE = (103.747077, 1.395824)
 
   // Make a whole bunch of requests
-  val getSuggestions: Seq[Suggestion] = {
-    genericWrapArray(List(8.0, 8.5, 9.0, 9.5)
-      .view
-      .flatMap({ hour =>
-        (0 until 3000).map({ _ =>
-          (index: Int) => {
-            val randStart = randomAroundLngLat(CBD, 2000) // City
-            val randEnd = randomAroundLngLat(YEW_TEE, 2000) // Yew Tee
+  val suggestionsSource = new SuggestionsSource {
+    override val getLiveRequests: Seq[Suggestion] = {
+      genericWrapArray(List(8.0, 8.5, 9.0, 9.5)
+        .view
+        .flatMap({ hour =>
+          (0 until 3000).map({ _ =>
+            (index: Int) => {
+              val randStart = randomAroundLngLat(CBD, 2000) // City
+              val randEnd = randomAroundLngLat(YEW_TEE, 2000) // Yew Tee
 
-            Suggestion(index, Projections.toSVY(randStart), Projections.toSVY(randEnd),
-              hour * 3600 * 1000L,
-              weight = 1,
-              createdAt = new java.util.Date(2017, 0, 1, 0, 0).getTime,
-              userId = None,
-              email=None,
-              daysOfWeek = 0x8F,
-            )
-          }
+              Suggestion(index, Projections.toSVY(randStart), Projections.toSVY(randEnd),
+                hour * 3600 * 1000L,
+                weight = 1,
+                createdAt = new java.util.Date(2017, 0, 1, 0, 0).getTime,
+                userId = None,
+                email=None,
+                daysOfWeek = 0x8F,
+              )
+            }
+          })
         })
-      })
-      .zipWithIndex
-      .map({ case (f, i) => f(i) })
-      .toArray)
+        .zipWithIndex
+        .map({ case (f, i) => f(i) })
+        .toArray)
+    }
   }
 
   // FIXME: Because the Lambda ALWAYS takes data from `BuiltIn`
   // It's not possible for us to test with a custom data source
   val testService = new IntelligentRoutingService(
     BuiltIn,
-    getSuggestions,
+    suggestionsSource,
     LocalCPUSuggestRouteService).myRoute
 
   // Some assertions on our assumptions
-  require { getSuggestions.zipWithIndex.forall { case (o, i) => o.id == i} }
+  require { suggestionsSource.getLiveRequests.zipWithIndex.forall { case (o, i) => o.id == i} }
 
   test("/bus_stops fetches all bus stops") {
     Get("/bus_stops") ~> testService ~> check {
@@ -261,7 +263,7 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
 
     val DIST = 500
     val twoSuggestions = () => {
-      scala.util.Random.shuffle(getSuggestions)
+      scala.util.Random.shuffle(suggestionsSource.getLiveRequests)
         .flatMap { suggestion =>
           val startBusStop = BuiltIn.busStops.find(stop =>
             squaredDistance(stop.xy, suggestion.start) <= DIST * DIST

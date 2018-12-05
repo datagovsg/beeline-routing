@@ -37,7 +37,7 @@ class RuinSpec extends FlatSpec with Matchers {
       squaredDistance(a.xy, b.xy) / 11 / 60
   }
 
-  val problem = new BasicRoutingProblem(requests, dataSource = testDataSource, settings = BeelineRecreateSettings.default)
+  val problem = new BasicRoutingProblem(requests, dataSource = testDataSource, settings = BeelineRecreateSettings.DEFAULT)
 
   val (routes, validRequests, badRequests) = problem.initialize
 

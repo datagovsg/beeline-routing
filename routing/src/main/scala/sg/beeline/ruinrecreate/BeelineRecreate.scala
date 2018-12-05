@@ -9,7 +9,7 @@ import scala.collection.immutable.HashMap
 import scala.util.Random
 
 class BeelineRecreate(routingProblem : RoutingProblem, requests: Traversable[Request])
-                     (implicit settings : BeelineRecreateSettings = BeelineRecreateSettings.default) extends Recreate {
+                     (implicit settings : BeelineRecreateSettings = BeelineRecreateSettings.DEFAULT) extends Recreate {
   type Insertion = (Double, Activity, Activity, (Activity, Activity), (Activity, Activity))
 
   var count: Int = 0

@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 class RouteActor(dataSource: DataSource,
-                 suggestionSource: String => Seq[Suggestion],
+                 suggestionsSource: (Suggestion, BeelineRecreateSettings) => Seq[Suggestion],
                  beelineSuggestRouteService: BeelineSuggestRouteService) extends Actor {
   // If we don't set this, Scalatest hangs when running multiple threads
   implicit val executionContext = ExecutionContext.fromExecutor(
@@ -22,8 +22,6 @@ class RouteActor(dataSource: DataSource,
 
   private def routeFromRequest(suggestRequest: SuggestRequest) = suggestRequest match {
     case SuggestRequest(sLat, sLng, eLat, eLng, time, daysOfWeek, settings) =>
-      val suggestions : Seq[Suggestion] = suggestionSource(settings.dataSource)
-
       val seedSuggestion = Suggestion(
         -999, // Some ID that would not occur naturally in the database
         Projections.toSVY((sLng, sLat)),
@@ -35,8 +33,10 @@ class RouteActor(dataSource: DataSource,
         daysOfWeek = suggestRequest.daysOfWeek
       )
 
+      val suggestions: Seq[Suggestion] = suggestionsSource(seedSuggestion, suggestRequest.settings)
+
       val beelineProblem = new BasicRoutingProblem(
-        suggestions.filter(suggestRequest.settings.suggestionsFilter(seedSuggestion)),
+        suggestions,
         dataSource,
         settings = settings,
       )

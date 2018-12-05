@@ -78,7 +78,7 @@ class BeelineSuggestRouteSpec extends FunSuite {
 
   test ("All suggestions have an associated stop (albeit far)") {
     implicit val executionContext = ExecutionContext.fromExecutor(new ForkJoinPool(2))
-    val problem = new BasicRoutingProblem(List(), testDataSource, BeelineRecreateSettings.default)
+    val problem = new BasicRoutingProblem(List(), testDataSource, BeelineRecreateSettings.DEFAULT)
     val otherRequest = new BasicRequest(
       problem,
       Projections.toSVY(gridToLngLat(-2, -2)),
