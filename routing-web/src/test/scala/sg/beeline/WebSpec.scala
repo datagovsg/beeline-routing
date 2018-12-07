@@ -10,7 +10,7 @@ import org.scalatest.FunSuite
 import sg.beeline.io.{BuiltIn, DataSource, SuggestionsSource}
 import sg.beeline.problem.{BusStop, Suggestion}
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, LocalCPUSuggestRouteService}
-import sg.beeline.util.{Point, Projections}
+import sg.beeline.util.{Point, Projections, squaredDistance}
 import sg.beeline.web.{E2EAuthSettings, E2ESuggestion, IntelligentRoutingService}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -65,6 +65,23 @@ class WebSpec extends FunSuite with ScalatestRouteTest {
         .map({ case (f, i) => f(i) })
         .toArray)
     }
+
+    private def suggestionsFilter(settings: BeelineRecreateSettings, reference: Suggestion): Suggestion => Boolean = {
+      s =>
+        // Determine whether or not to allow anonymous suggestions
+        (settings.includeAnonymous || s.userId.nonEmpty || s.email.nonEmpty) &&
+        // Min created time (to ignore the really old requests)
+        s.createdAt > settings.createdSince &&
+        // Ensure arrival time is plus/minus some value
+        (s.time - reference.time).abs <= settings.timeAllowance &&
+        // Ensure that the daysOfWeek mask overlaps to some extent
+        (!settings.matchDaysOfWeek || (s.daysOfWeek & reference.daysOfWeek) != 0) &&
+        squaredDistance(reference.start, s.start) < settings.startClusterRadius * settings.startClusterRadius &&
+        squaredDistance(reference.end, s.end) < settings.endClusterRadius * settings.endClusterRadius
+    }
+
+    override def similarTo(s: Suggestion, settings: BeelineRecreateSettings): Seq[Suggestion] =
+      getLiveRequests.filter(suggestionsFilter(settings, s))
   }
 
   // FIXME: Because the Lambda ALWAYS takes data from `BuiltIn`
