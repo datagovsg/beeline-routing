@@ -1,6 +1,6 @@
 package sg.beeline.web
 
-import sg.beeline.io.{BuiltIn, Import}
+import sg.beeline.io.{BuiltIn, SuggestionsSource}
 import sg.beeline.ruinrecreate.AWSLambdaSuggestRouteServiceProxy
 import sg.beeline.util.Geo
 
@@ -19,7 +19,7 @@ object RoutingApp extends App {
   val bindingFuture = Http().bindAndHandle(
     new IntelligentRoutingService(
       BuiltIn,
-      Import.getLiveRequests,
+      SuggestionsSource.DEFAULT,
       AWSLambdaSuggestRouteServiceProxy).myRoute,
     "0.0.0.0",
     scala.util.Properties.envOrElse("PORT", "8080").toInt

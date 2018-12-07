@@ -8,7 +8,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.server.{Directives, ExceptionHandler}
-import sg.beeline.io.DataSource
+import sg.beeline.io.{DataSource, SuggestionsSource}
 import sg.beeline.jobs.{JobQueue, RouteActor}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.{BeelineRecreateSettings, BeelineSuggestRouteService}
@@ -59,7 +59,7 @@ object BeelineJsonMarshallers {
 
 // this trait defines our service behavior independently from the service actor
 class IntelligentRoutingService(dataSource: DataSource,
-                                suggestionsSource: => Seq[Suggestion],
+                                suggestionsSource: SuggestionsSource,
                                 beelineSuggestRouteService: BeelineSuggestRouteService)
                                (implicit val system: ActorSystem,
                                 val authSettings: E2EAuthSettings)
@@ -75,7 +75,7 @@ class IntelligentRoutingService(dataSource: DataSource,
   val routingActor = system.actorOf(Props({
     new RouteActor(
       dataSource,
-      _ => suggestionsSource,
+      suggestionsSource.similarTo,
       beelineSuggestRouteService)
   }), "intelligent-routing")
   val jobQueue = new JobQueue[SuggestRequest, Try[List[Route2]]](
@@ -156,7 +156,7 @@ class IntelligentRoutingService(dataSource: DataSource,
             * i.e. minimum index of stops that serve the pickup point is
             * less than the maximum index that serve the dropoff point
             */
-          def pathServesSuggestion(busStops : IndexedSeq[BusStop], suggestion: Suggestion) = {
+          def servedBy(busStops : IndexedSeq[BusStop]) = (suggestion: Suggestion) => {
             val minPickupStop =
               busStops.indices
                 .filter(i => withinReach(busStops(i).xy, suggestion.start))
@@ -174,8 +174,7 @@ class IntelligentRoutingService(dataSource: DataSource,
             .map(s => dataSource.busStopsByIndex(s.toInt))
 
           complete({
-            suggestionsSource
-            .filter(suggestion => pathServesSuggestion(busStops, suggestion))
+            suggestionsSource.getLiveRequests.filter(servedBy(busStops))
           }.asJson)
         }
       }
