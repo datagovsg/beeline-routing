@@ -1,10 +1,9 @@
 package sg.beeline.jobs
 
-import java.sql.Timestamp
 import java.util.concurrent.ForkJoinPool
 
 import akka.actor.Actor
-import sg.beeline.io.{BuiltIn, DataSource}
+import sg.beeline.io.DataSource
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate._
 import sg.beeline.util.Projections
