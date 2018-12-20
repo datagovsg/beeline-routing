@@ -15,7 +15,7 @@ import akka.util.Timeout
 import io.circe.Json
 import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim, JwtOptions}
 import sg.beeline.exc
-import sg.beeline.io.BuiltIn
+import sg.beeline.io.{BuiltIn, SuggestionsSource}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{ExpiringCache, Point, Projections}
@@ -79,7 +79,7 @@ object E2ESuggestion {
   }
 }
 
-class E2ESuggestion(routingActor: ActorRef)
+class E2ESuggestion(routingActor: ActorRef, suggestionsSource: SuggestionsSource)
                    (implicit system: ActorSystem,
                     executionContext: ExecutionContext,
                     timeout: Timeout,
@@ -100,8 +100,8 @@ class E2ESuggestion(routingActor: ActorRef)
         entity(as[BeelineRecreateSettings]) { recreateSettings =>
           headerValueByName("Authorization") { authorization =>
             import akka.pattern.ask
-            val (suggestRequest, lastTriggerTime) = Await.result(verifySuggestionId(authorization, suggestionId, userId, recreateSettings), 60 seconds)
-            if (lastTriggerTime.map(System.currentTimeMillis - _.getTime).exists(_ < 20.seconds.toMillis)) {
+            val (suggestRequest, lastTriggerMillis) = makeSuggestRequest(suggestionId, userId, recreateSettings)
+            if (lastTriggerMillis.map(System.currentTimeMillis - _).exists(_ < 20.seconds.toMillis)) {
               complete(StatusCodes.TooManyRequests, s"Last trigger request made too soon to make a new one")
             } else {
               Await.result(markTriggerTimestamp(authorization, suggestionId), 60 seconds)
@@ -151,58 +151,32 @@ class E2ESuggestion(routingActor: ActorRef)
     else Future.failed(new RuntimeException(s"${message}. Got a status ${response.status.value}"))
 
   /**
-    * Resolves to nothing if the suggestion belongs to the user.
-    * Otherwise throws a failed future
-    * @param authorization
-    * @param suggestionId
-    * @return
+    * @param suggestionId the suggestion id
+    * @param authUserId the user id looking up the suggestion
+    * @return a SuggestRequest with corresponding last trigger time, if any
+    *
     */
-  private def verifySuggestionId(authorization: String,
-                                 suggestionId: Int,
+  private def makeSuggestRequest(suggestionId: Int,
                                  authUserId: Int,
-                                 recreateSettings: BeelineRecreateSettings): Future[(SuggestRequest, Option[Timestamp])] = {
-    implicit val timestampDecoder = sg.beeline.web.TimestampDecoder
+                                 recreateSettings: BeelineRecreateSettings): (SuggestRequest, Option[Long]) = {
 
-    for {
-      resp <- http.singleRequest(HttpRequest(
-        uri = s"${authSettings.beelineServer}/suggestions/${suggestionId}",
-        headers = List(new RawHeader("Authorization", authorization))))
-      _ <- expectStatus(resp, "Could not verify suggestion")
-      json <- Unmarshal(resp._3).to[Json]
-    } yield {
-      val cur = json.hcursor
-      // Extract the suggestion parameters
-      val suggestionEither = for {
-        boardLng <- cur.downField("board").downField("coordinates").downN(0).as[Double]
-        boardLat <- cur.downField("board").downField("coordinates").downN(1).as[Double]
-        alightLng <- cur.downField("alight").downField("coordinates").downN(0).as[Double]
-        alightLat <- cur.downField("alight").downField("coordinates").downN(1).as[Double]
-        time <- cur.downField("time").as[Int]
-        daysMask <- cur.downField("daysMask").as[Int]
-        userId <- cur.downField("userId").as[Int]
-        createdAt <- cur.downField("createdAt").as[Timestamp]
-        lastTriggerTime <- cur.downField("lastTriggerTime").as[Option[Timestamp]]
-        _ <- Either.cond(userId == authUserId, (), exc.UserNotAuthorized())
-      } yield {
-        (
-          SuggestRequest(
-            startLat = boardLat,
-            startLng = boardLng,
-            endLat = alightLat,
-            endLng = alightLng,
-            time = time,
-            daysOfWeek = daysMask,
-            settings = recreateSettings
-          ),
-          lastTriggerTime
-        )
-      }
-
-      suggestionEither match {
-        case Right(suggestion) => suggestion
-        case Left(exc) => throw exc
-      }
+    val suggestion = suggestionsSource.byId(suggestionId).map {
+      case s if s.userId.contains(authUserId) => (
+        SuggestRequest(
+          startLat = s.startLngLat._2,
+          startLng = s.startLngLat._1,
+          endLat = s.endLngLat._2,
+          endLng = s.endLngLat._1,
+          time = s.time,
+          daysOfWeek = s.daysOfWeek,
+          settings = recreateSettings
+        ),
+        s.lastTriggerMillis
+      )
+      case _ => throw exc.UserNotAuthorized()
     }
+
+    suggestion.get
   }
 
   private def markTriggerTimestamp(authorization: String, suggestionId: Int) =

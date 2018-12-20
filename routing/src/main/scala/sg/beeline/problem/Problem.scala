@@ -1,7 +1,5 @@
 package sg.beeline.problem
 
-import java.sql.Timestamp
-
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.Point
 import sg.beeline.util.Projections._
@@ -30,7 +28,7 @@ case class BusStop(
 
 case class Suggestion(id: Int, start: Point, end: Point, time: Double,
                       weight : Int = 1, createdAt: Long, userId: Option[Int],
-                      email: Option[String], daysOfWeek: Int) {
+                      email: Option[String], daysOfWeek: Int, lastTriggerMillis: Option[Long] = None) {
   lazy val startLngLat = toWGS(start)
   lazy val endLngLat = toWGS(end)
 

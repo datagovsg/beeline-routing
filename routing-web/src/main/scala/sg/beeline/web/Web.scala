@@ -83,7 +83,7 @@ class IntelligentRoutingService(dataSource: DataSource,
   val jobQueue = new JobQueue[SuggestRequest, Try[List[Route2]]](
     routingActor, 10 minutes,5 minutes, actorSystem = Some(system))
 
-  val e2eSuggestion = new E2ESuggestion(routingActor)
+  val e2eSuggestion = new E2ESuggestion(routingActor, suggestionsSource)
 
   val myRoute = cors() {
     path("bus_stops") {
