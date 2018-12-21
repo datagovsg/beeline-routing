@@ -4,7 +4,7 @@ import java.sql.Timestamp
 import java.time._
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.http.scaladsl.Http
+import akka.http.scaladsl.{Http, server}
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken, RawHeader}
@@ -15,6 +15,7 @@ import akka.util.Timeout
 import io.circe.Json
 import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim, JwtOptions}
 import sg.beeline.exc
+import sg.beeline.exc.RoutingException
 import sg.beeline.io.{BuiltIn, SuggestionsSource}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
@@ -94,55 +95,67 @@ class E2ESuggestion(routingActor: ActorRef, suggestionsSource: SuggestionsSource
   val http = Http()
   val mapsAPIQuery = new MapsAPIQuery(http, materializer, executionContext)
 
-  def triggerRouteGeneration(suggestionId: Int) = {
+  def triggerRouteGeneration(suggestionId: Int): server.Route = {
     Auth(authSettings).authDirective {
       case User(userId) =>
         entity(as[BeelineRecreateSettings]) { recreateSettings =>
           headerValueByName("Authorization") { authorization =>
-            import akka.pattern.ask
-            val (suggestRequest, lastTriggerMillis) = makeSuggestRequest(suggestionId, userId, recreateSettings)
-            if (lastTriggerMillis.map(System.currentTimeMillis - _).exists(_ < 20.seconds.toMillis)) {
-              complete(StatusCodes.TooManyRequests, s"Last trigger request made too soon to make a new one")
-            } else {
-              Await.result(markTriggerTimestamp(authorization, suggestionId), 60 seconds)
-              val fut = for {
-                routes <- (routingActor ? suggestRequest).mapTo[Try[List[Route2]]].map(_.get)
-                _ <- {
-                  if (routes.isEmpty) {
-                    Future.failed(exc.NoRoutesFound())
-                  } else {
-                    val bestRoute = routes.maxBy(_.requests.size)
 
-                    for {
-                      workingDay <- getNextWorkingDay()
-                      (googleMapsTimings, paths) <- {
-                        getGoogleMapsTimingsAndPaths(bestRoute, workingDay.toLocalDate, suggestRequest.time.toInt)
-                      }
-                      optimisticTimings = tweakPathTimings(googleMapsTimings, bestRoute.pickups.size)
-                      result <- pushToServer(suggestionId, optimisticTimings, paths, bestRoute)
-                    } yield result
-                  }
-                }
-              } yield ()
-
-              fut onComplete {
-                case Failure(e) =>
-                  e match {
-                    case re: exc.RoutingException =>
-                      notifyServerOfError(suggestionId, re.reason)
-                    case _ =>
-                      notifyServerOfError(suggestionId, "internal_server_error")
-                  }
-                  println(s"Failed to generate a route for ${suggestionId}")
-                  e.printStackTrace(System.err)
-                case _ => ()
+            val trySuggest = makeSuggestRequest(suggestionId, userId, recreateSettings)
+            trySuggest match {
+              case Left(e) => e match {
+                case StatusCodes.Unauthorized => complete(e, s"Suggestion $suggestionId is not available to user $userId")
+                case _ => complete(e)
               }
-              complete(StatusCodes.Accepted, "Job Queued")
+              case Right((_, lastTriggerMillis)) if lastTriggerMillis.map(System.currentTimeMillis - _).exists(_ < 20.seconds.toMillis) =>
+                complete(StatusCodes.TooManyRequests, s"Last trigger request made too soon to make a new one")
+              case Right((suggestRequest, _)) => {
+                Try(Await.result(markTriggerTimestamp(authorization, suggestionId), 60 seconds))
+                  .recover({ case e => notifyServerOfError(suggestionId, e.getMessage) })
+                scheduleRouteGeneration(suggestionId, suggestRequest)
+                complete(StatusCodes.Accepted, "Job Queued")
+              }
             }
           }
         } ~ complete(StatusCodes.BadRequest)
       case _ =>
         complete(StatusCodes.Forbidden)
+    }
+  }
+
+  private def scheduleRouteGeneration(suggestionId: Int, suggestRequest: SuggestRequest) = {
+    import akka.pattern.ask
+    val fut = for {
+      routes <- (routingActor ? suggestRequest).mapTo[Try[List[Route2]]].map(_.get)
+      _ <- {
+        if (routes.isEmpty) {
+          Future.failed(exc.NoRoutesFound())
+        } else {
+          val bestRoute = routes.maxBy(_.requests.size)
+
+          for {
+            workingDay <- getNextWorkingDay()
+            (googleMapsTimings, paths) <- {
+              getGoogleMapsTimingsAndPaths(bestRoute, workingDay.toLocalDate, suggestRequest.time.toInt)
+            }
+            optimisticTimings = tweakPathTimings(googleMapsTimings, bestRoute.pickups.size)
+            result <- pushToServer(suggestionId, optimisticTimings, paths, bestRoute)
+          } yield result
+        }
+      }
+    } yield ()
+
+    fut onComplete {
+      case Failure(e) =>
+        e match {
+          case re: RoutingException =>
+            notifyServerOfError(suggestionId, re.reason)
+          case _ =>
+            notifyServerOfError(suggestionId, "internal_server_error")
+        }
+        println(s"Failed to generate a route for $suggestionId")
+        e.printStackTrace(System.err)
+      case _ => ()
     }
   }
 
@@ -154,14 +167,13 @@ class E2ESuggestion(routingActor: ActorRef, suggestionsSource: SuggestionsSource
     * @param suggestionId the suggestion id
     * @param authUserId the user id looking up the suggestion
     * @return a SuggestRequest with corresponding last trigger time, if any
-    *
     */
   private def makeSuggestRequest(suggestionId: Int,
                                  authUserId: Int,
-                                 recreateSettings: BeelineRecreateSettings): (SuggestRequest, Option[Long]) = {
+                                 recreateSettings: BeelineRecreateSettings): Either[StatusCode, (SuggestRequest, Option[Long])] = {
 
     val suggestion = suggestionsSource.byId(suggestionId).map {
-      case s if s.userId.contains(authUserId) => (
+      case s if s.userId.contains(authUserId) => Right((
         SuggestRequest(
           startLat = s.startLngLat._2,
           startLng = s.startLngLat._1,
@@ -172,11 +184,11 @@ class E2ESuggestion(routingActor: ActorRef, suggestionsSource: SuggestionsSource
           settings = recreateSettings
         ),
         s.lastTriggerMillis
-      )
-      case _ => throw exc.UserNotAuthorized()
+      ))
+      case _ => Left(StatusCodes.Unauthorized)
     }
 
-    suggestion.get
+    suggestion.getOrElse(Left(StatusCodes.NotFound))
   }
 
   private def markTriggerTimestamp(authorization: String, suggestionId: Int) =
