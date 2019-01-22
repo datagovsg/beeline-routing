@@ -7,7 +7,7 @@ import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{ExpiringCache, Projections}
 import slick.jdbc.SQLActionBuilder
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.Properties
 import slick.jdbc.PostgresProfile.api._
@@ -164,6 +164,16 @@ class SuggestionsSource {
     """
 
     Await.result(db.run(suggestionsFrom(query)), 60 seconds).headOption
+  }
+
+  def markTriggerTimestamp(suggestionId: Int): Unit = {
+    val statement = sqlu"""
+      UPDATE suggestions
+      SET "lastTriggerTime" = NOW()
+      WHERE id = $suggestionId
+    """
+
+    Await.result(db.run(statement), 60 seconds)
   }
 }
 

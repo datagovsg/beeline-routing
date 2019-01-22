@@ -108,9 +108,9 @@ class E2ESuggestion(routingActor: ActorRef, suggestionsSource: SuggestionsSource
                 case _ => complete(e)
               }
               case Right((_, lastTriggerMillis)) if lastTriggerMillis.map(System.currentTimeMillis - _).exists(_ < 20.seconds.toMillis) =>
-                complete(StatusCodes.TooManyRequests, s"Last trigger request made too soon to make a new one")
+                complete(StatusCodes.TooManyRequests, s"Last trigger request made less than 20 seconds ago")
               case Right((suggestRequest, _)) => {
-                Try(Await.result(markTriggerTimestamp(authorization, suggestionId), 60 seconds))
+                Try(suggestionsSource.markTriggerTimestamp(suggestionId))
                   .recover({ case e => notifyServerOfError(suggestionId, e.getMessage) })
                 scheduleRouteGeneration(suggestionId, suggestRequest)
                 complete(StatusCodes.Accepted, "Job Queued")
@@ -190,13 +190,6 @@ class E2ESuggestion(routingActor: ActorRef, suggestionsSource: SuggestionsSource
 
     suggestion.getOrElse(Left(StatusCodes.NotFound))
   }
-
-  private def markTriggerTimestamp(authorization: String, suggestionId: Int) =
-    http.singleRequest(HttpRequest(
-      uri = s"${authSettings.beelineServer}/suggestions/$suggestionId/mark_trigger_timestamp",
-      headers = List(new RawHeader("Authorization", authorization)),
-      method = HttpMethods.POST
-    ))
 
   private def fetchNextWorkingDay: Future[ZonedDateTime] = {
     case class DateEntry(date: String, summary: String)
