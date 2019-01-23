@@ -2,6 +2,7 @@ package sg.beeline.io
 
 import java.sql.Timestamp
 
+import io.circe.Json
 import sg.beeline.problem.Suggestion
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{ExpiringCache, Projections}
@@ -174,6 +175,14 @@ class SuggestionsSource {
     """
 
     Await.result(db.run(statement), 60 seconds)
+  }
+
+  def insertSuggestedRoute(seedSuggestionId: Int, route: Json): Future[Int] = {
+    val statement = sqlu"""
+      INSERT INTO "suggestedRoutes" ("seedSuggestionId", route, "adminEmail", "createdAt", "updatedAt")
+      VALUES ($seedSuggestionId, CAST(${route.noSpaces} AS jsonb), 'routing@beeline.sg', NOW(), NOW())
+    """
+    db.run(statement)
   }
 }
 

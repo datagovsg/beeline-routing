@@ -1,33 +1,32 @@
 package sg.beeline.web
 
-import java.sql.Timestamp
 import java.time._
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.{Http, server}
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken, RawHeader}
+import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import io.circe.Json
-import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim, JwtOptions}
+import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim}
 import sg.beeline.exc
 import sg.beeline.exc.RoutingException
 import sg.beeline.io.{BuiltIn, SuggestionsSource}
 import sg.beeline.problem._
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
-import sg.beeline.util.{ExpiringCache, Point, Projections}
+import sg.beeline.util.{ExpiringCache, Projections}
 import sg.beeline.web.Auth.User
 import sg.beeline.web.MapsAPIQuery.MapsQueryResult
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Try}
 
 trait E2EAuthSettings {
   def googleMapsApiKey: String
@@ -274,30 +273,16 @@ class E2ESuggestion(routingActor: ActorRef, suggestionsSource: SuggestionsSource
       }
   }
 
-  private def notifyServerOfError(suggestionId: Int, reason: String): Future[Unit] = {
+  private def notifyServerOfError(suggestionId: Int, reason: String): Future[Int] = {
     import io.circe.syntax._
 
-    for {
-      entity <- {
-        Marshal(Json.obj(
-          "status" -> "Failure".asJson,
-          "reason" -> reason.asJson
-        )).to[RequestEntity]
-      }
-      response <- http.singleRequest(
-        HttpRequest(
-          uri=Uri(s"${authSettings.beelineServer}/suggestions/${suggestionId}/suggested_routes"),
-          headers = List(superadminHeader()),
-          method = HttpMethods.POST,
-          entity = entity
-        )
+    suggestionsSource.insertSuggestedRoute(
+      suggestionId,
+      Json.obj(
+        "status" -> "Failure".asJson,
+        "reason" -> reason.asJson
       )
-      _ <- expectStatus(response, "Could not post error")
-      _ = response._3.discardBytes()
-    } yield response match {
-      case HttpResponse(StatusCodes.OK, _, _, _) => Success(())
-      case r => Failure(new RuntimeException(s"Notification of route suggestion failure returned ${r.status.value}"))
-    }
+    )
   }
 
   private def pushToServer(suggestionId: Int,
@@ -309,7 +294,7 @@ class E2ESuggestion(routingActor: ActorRef, suggestionsSource: SuggestionsSource
 
     for {
       stopToStopId <- stopToStopIdFut
-      entity <- {
+      route <- {
         import io.circe.syntax._
 
         val pickups = route.pickups.map { case (stop, requests) =>
@@ -346,28 +331,16 @@ class E2ESuggestion(routingActor: ActorRef, suggestionsSource: SuggestionsSource
             )
         } : _*)
 
-        val submission = Json.obj(
-          "stops" -> stops,
-          "status" -> "Success".asJson
+        Future.successful(
+          Json.obj(
+            "stops" -> stops,
+            "status" -> "Success".asJson
+          )
         )
-
-        Marshal(submission).to[RequestEntity]
       }
-      response <- http.singleRequest(
-        HttpRequest(
-          uri=Uri(s"${authSettings.beelineServer}/suggestions/${suggestionId}/suggested_routes"),
-          headers = List(superadminHeader()),
-          method = HttpMethods.POST,
-          entity = entity
-        )
-      )
-      _ <- expectStatus(response, "Could not post suggested route")
-      _ = response._3.discardBytes()
-    } yield response match {
-      case HttpResponse(StatusCodes.OK, _, _, _) =>
-        println(s"Successfully generated a route for ${suggestionId}")
-        Success(())
-      case r => Failure(exc.FailedToSubmitRoute(s"Posting of suggested route returned ${r.status.value}"))
+      response <- suggestionsSource.insertSuggestedRoute(suggestionId, route)
+    } yield {
+      response
     }
   }
 
