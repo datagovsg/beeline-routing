@@ -1,5 +1,6 @@
 package sg.beeline.web
 
+import java.sql.Timestamp
 import java.time._
 import java.util.{NoSuchElementException, UUID}
 
@@ -7,6 +8,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
+import akka.http.scaladsl.server.Directives.{path, post}
 import akka.http.scaladsl.server.{Directives, ExceptionHandler}
 import sg.beeline.io.{DataSource, SuggestionsSource}
 import sg.beeline.jobs.{JobQueue, RouteActor}
@@ -80,6 +82,8 @@ class IntelligentRoutingService(dataSource: DataSource,
   }), "intelligent-routing")
   val jobQueue = new JobQueue[SuggestRequest, Try[List[Route2]]](
     routingActor, 10 minutes,5 minutes, actorSystem = Some(system))
+
+  val e2eSuggestion = new E2ESuggestion(routingActor, suggestionsSource)
 
   val myRoute = cors() {
     path("bus_stops") {
@@ -232,7 +236,16 @@ class IntelligentRoutingService(dataSource: DataSource,
         }
       }
     } ~
-    new E2ESuggestion(routingActor).e2eRoutes
+    path("suggestions" / IntNumber / "update") { suggestionId =>
+      post {
+        e2eSuggestion.triggerRouteGeneration(suggestionId)
+      }
+    } ~
+    path("suggestions" / IntNumber / "trigger_route_generation") { suggestionId =>
+      post {
+        e2eSuggestion.triggerRouteGeneration(suggestionId)
+      }
+    }
   }
 
 }

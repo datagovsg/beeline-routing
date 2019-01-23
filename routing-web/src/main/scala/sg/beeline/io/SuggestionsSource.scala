@@ -7,7 +7,7 @@ import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{ExpiringCache, Projections}
 import slick.jdbc.SQLActionBuilder
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.Properties
 import slick.jdbc.PostgresProfile.api._
@@ -55,10 +55,10 @@ class SuggestionsSource {
 
   private def suggestionsFrom(query: SQLActionBuilder)(implicit executionContext: ExecutionContext) = {
     query
-      .as[(Long, Int, Double, Double, Double, Double, Option[Int], Option[String], Long, Int, Timestamp)]
+      .as[(Long, Int, Double, Double, Double, Double, Option[Int], Option[String], Long, Int, Timestamp, Option[Timestamp])]
       .map[Seq[Suggestion]]({ results =>
       genericWrapArray(results.view.map({
-        case (travelTime, id, boardLng, boardLat, alightLng, alightLat, userId, email, time, daysOfWeek, createdAt) =>
+        case (travelTime, id, boardLng, boardLat, alightLng, alightLat, userId, email, time, daysOfWeek, createdAt, lastTriggerTime) =>
           Suggestion(
             id = id,
             start = Projections.toSVY((boardLng, boardLat)),
@@ -67,7 +67,8 @@ class SuggestionsSource {
             createdAt = createdAt.getTime,
             userId = userId,
             daysOfWeek = daysOfWeek,
-            email = email
+            email = email,
+            lastTriggerMillis = lastTriggerTime.map(_.getTime)
           )
       }).toArray)
     })
@@ -76,7 +77,6 @@ class SuggestionsSource {
   private val liveRequestsCache : ExpiringCache[Seq[Suggestion]] = ExpiringCache(10 minutes) {
     timeFn("Refreshing suggestions cache") {
       import scala.concurrent.ExecutionContext.Implicits.global
-      import scala.concurrent.duration._
 
       val query = sql"""
         SELECT
@@ -91,7 +91,8 @@ class SuggestionsSource {
           email,
           time,
           "daysMask",
-          "createdAt"
+          "createdAt",
+          "lastTriggerTime"
         FROM suggestions
         ORDER BY board, alight, time, email
       """
@@ -104,7 +105,6 @@ class SuggestionsSource {
 
   def similarTo(s: Suggestion, settings: BeelineRecreateSettings): Seq[Suggestion] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    import scala.concurrent.duration._
 
     val query = sql"""
       SELECT
@@ -119,7 +119,8 @@ class SuggestionsSource {
         email,
         time,
         "daysMask",
-        "createdAt"
+        "createdAt",
+        "lastTriggerTime"
       FROM suggestions
       WHERE
         (${settings.includeAnonymous} OR "userId" is not null OR email is not null)
@@ -138,6 +139,41 @@ class SuggestionsSource {
     """
 
     Await.result(db.run(suggestionsFrom(query)), 60 seconds)
+  }
+
+  def byId(id: Int): Option[Suggestion] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    val query = sql"""
+      SELECT
+        DISTINCT ON (board, alight, time, email)
+        "travelTime",
+        id,
+        ST_X(board) AS board_lng,
+        ST_Y(board) AS board_lat,
+        ST_X(alight) AS alight_lng,
+        ST_Y(alight) AS alight_lat,
+        "userId",
+        email,
+        time,
+        "daysMask",
+        "createdAt",
+        "lastTriggerTime"
+      FROM suggestions
+      WHERE
+        id = $id
+    """
+
+    Await.result(db.run(suggestionsFrom(query)), 60 seconds).headOption
+  }
+
+  def markTriggerTimestamp(suggestionId: Int): Unit = {
+    val statement = sqlu"""
+      UPDATE suggestions
+      SET "lastTriggerTime" = NOW()
+      WHERE id = $suggestionId
+    """
+
+    Await.result(db.run(statement), 60 seconds)
   }
 }
 
