@@ -19,6 +19,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
 import io.circe.{Decoder, Json}
 import io.circe.generic.extras.Configuration
+import sg.beeline.io.SuggestionsSource.SuggestedRoute
 import sg.beeline.web.Auth.User
 
 import scala.annotation.tailrec
@@ -48,6 +49,8 @@ object BeelineJsonMarshallers {
   implicit val suggestionFormat = SuggestionJsonEncoder
   implicit val requestFormat = RequestJsonEncoder
   implicit val beelineRecreateSettingsDecoder = deriveDecoder[BeelineRecreateSettings]
+
+  implicit val suggestedRouteEncoder = SuggestedRouteEncoder
 
   implicit val beelineRecreateSettingsUnmarshaller: Unmarshaller[String, BeelineRecreateSettings]
   = stringToJsonUnmarshaller
@@ -244,6 +247,11 @@ class IntelligentRoutingService(dataSource: DataSource,
     path("suggestions" / IntNumber / "trigger_route_generation") { suggestionId =>
       post {
         e2eSuggestion.triggerRouteGeneration(suggestionId)
+      }
+    } ~
+    path("suggestions" / IntNumber / "suggested_routes") { suggestionId =>
+      get {
+        complete(suggestionsSource.getSuggestedRoutes(suggestionId).asJson)
       }
     }
   }

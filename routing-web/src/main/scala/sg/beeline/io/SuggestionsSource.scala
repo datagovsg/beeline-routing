@@ -3,6 +3,7 @@ package sg.beeline.io
 import java.sql.Timestamp
 
 import io.circe.Json
+import sg.beeline.io.SuggestionsSource.{SuggestedRoute, SuggestedRouteTuple}
 import sg.beeline.problem.Suggestion
 import sg.beeline.ruinrecreate.BeelineRecreateSettings
 import sg.beeline.util.{ExpiringCache, Projections}
@@ -184,8 +185,30 @@ class SuggestionsSource {
     """
     db.run(statement)
   }
+
+  def getSuggestedRoutes(suggestionId: Int)(implicit executionContext: ExecutionContext): Seq[SuggestedRoute] = {
+    val query = sql"""
+      SELECT "id", "seedSuggestionId", "userId", "routeId", "adminEmail", "route", "createdAt", "updatedAt"
+      FROM "suggestedRoutes"
+      WHERE "seedSuggestionId" = $suggestionId
+      ORDER BY "id" DESC
+    """
+    val queryThenMap = query
+      .as[SuggestedRouteTuple]
+      .map(_.view.map(s => new SuggestedRoute(s)))
+    Await.result(db.run(queryThenMap), 60 seconds)
+  }
+
 }
 
 object SuggestionsSource {
   val DEFAULT = new SuggestionsSource
+
+  type SuggestedRouteTuple = (Int, Int, Option[Int], Option[Int], Option[String], String, Timestamp, Timestamp)
+
+  case class SuggestedRoute(id: Int, seedSuggestionId: Int, userId: Option[Int], routeId: Option[Int], adminEmail: Option[String], route: Json, createdAt: Long, updatedAt: Long) {
+    def this(s: SuggestedRouteTuple) {
+      this(s._1, s._2, s._3, s._4, s._5, io.circe.parser.parse(s._6).right.get, s._7.getTime, s._8.getTime)
+    }
+  }
 }

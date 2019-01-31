@@ -4,6 +4,7 @@ import java.sql.Timestamp
 
 import io.circe.Decoder.Result
 import io.circe.{Decoder, Encoder, HCursor, Json}
+import sg.beeline.io.SuggestionsSource.SuggestedRoute
 import sg.beeline.problem._
 import sg.beeline.util.Projections
 
@@ -106,5 +107,21 @@ object TimestampDecoder extends Decoder[Timestamp] {
         .right.map(date => new Timestamp(date.getTime))
 
     dateAsLong.left.flatMap(_ => dateAsString)
+  }
+}
+
+object SuggestedRouteEncoder extends Encoder[SuggestedRoute] {
+  override def apply(s: SuggestedRoute): Json = {
+    import io.circe.syntax.EncoderOps
+    Json.obj(
+      "id" -> Json.fromInt(s.id),
+      "seedSuggestionId" -> Json.fromInt(s.seedSuggestionId),
+      "userId" -> s.userId.asJson,
+      "routeId" -> s.routeId.asJson,
+      "adminEmail" -> s.adminEmail.asJson,
+      "route" -> s.route,
+      "createdAt" -> Json.fromLong(s.createdAt),
+      "updatedAt" -> Json.fromLong(s.updatedAt)
+    )
   }
 }
